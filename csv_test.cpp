@@ -714,7 +714,7 @@ bool test_write_libcsv(const CSV_data data, const std::string & expected_text)
     return output == expected_text;
 }
 
-int main(int argc, char * argv[])
+int main(int, char *[])
 {
     test::Test<const std::string&, const CSV_data&> test_read({
         test_read_mine_c,
