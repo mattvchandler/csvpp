@@ -630,7 +630,7 @@ namespace csv
             if(header_row)
                 return *header_row;
             else
-                throw std::runtime_error("can't get header row");
+                throw Parse_error("Can't get header row", 0, 0);
         }
 
     public:
@@ -670,7 +670,7 @@ namespace csv
             else
             {
                 if(std::size(*row) > std::size(headers))
-                    throw std::length_error("Too many columns");
+                    throw Out_of_range_error("Too many columns");
 
                 for(std::size_t i = 0; i < std::size(*row); ++i)
                     obj[headers[i]] = (*row)[i];

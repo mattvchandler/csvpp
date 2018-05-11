@@ -529,6 +529,68 @@ bool test_read_mine_cpp_row_range(const std::string & csv_text, const CSV_data &
     }
 }
 
+bool test_read_mine_cpp_map(const std::string & csv_text, const CSV_data & expected_data)
+{
+    try
+    {
+        csv::Map_reader_iter w(csv_text);
+
+        if(w.get_headers() != expected_data.at(0))
+            return false;
+
+        std::size_t i = 1;
+        for(; w != csv::Map_reader_iter() && i < std::size(expected_data); ++w, ++i)
+        {
+            if(std::size(expected_data[i]) != std::size(w.get_headers()))
+                throw test::Skip_test{};
+
+            std::vector<std::string> row;
+            for(auto & col: *w)
+                row.push_back(col.second);
+
+            if(row != expected_data[i])
+                return false;
+        }
+        if(i != std::size(expected_data) || w != csv::Map_reader_iter())
+            return false;
+
+        return true;
+    }
+    catch(const csv::Parse_error & e)
+    {
+        if(e.what() == std::string{"Error parsing CSV at line: 0, col: 0: Can't get header row"} && std::size(expected_data) == 0)
+            return true;
+        else
+        {
+            std::cerr<<e.what()<<"\n";
+            return false;
+        }
+    }
+    catch(const csv::Out_of_range_error &e)
+    {
+        if(e.what() == std::string{"Too many columns"})
+            throw test::Skip_test{};
+        else
+            throw;
+    }
+}
+bool test_read_mine_cpp_variadic(const std::string & csv_text, const CSV_data & expected_data)
+{
+    return false;
+}
+bool test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & expected_data)
+{
+    return false;
+}
+bool test_read_mine_cpp_row_variadic(const std::string & csv_text, const CSV_data & expected_data)
+{
+    return false;
+}
+bool test_read_mine_cpp_row_tuple(const std::string & csv_text, const CSV_data & expected_data)
+{
+    return false;
+}
+
 struct libcsv_read_status
 {
     CSV_data expected_data;
@@ -673,6 +735,36 @@ bool test_write_mine_cpp_iter(const CSV_data data, const std::string & expected_
     return str.str() == expected_text;
 }
 
+bool test_write_mine_cpp_map(const CSV_data data, const std::string & expected_text)
+{
+    std::ostringstream str;
+    if(!std::empty(data))
+    {
+        auto headers =  data[0];
+        csv::Map_writer_iter w(str, headers);
+        for(auto row = std::begin(data) + 1; row != std::end(data); ++row, ++w)
+        {
+            if(std::size(*row) != std::size(headers))
+                throw test::Skip_test{};
+
+            std::map<std::string, std::string> out_row;
+            for(std::size_t i = 0; i < std::size(headers); ++i)
+                out_row[headers[i]] = (*row)[i];
+
+            w = out_row;
+        }
+    }
+    return str.str() == expected_text;
+}
+bool test_write_mine_cpp_variadic(const CSV_data data, const std::string & expected_text)
+{
+    return false;
+}
+bool test_write_mine_cpp_tuple(const CSV_data data, const std::string & expected_text)
+{
+    return false;
+}
+
 bool test_write_libcsv(const CSV_data data, const std::string & expected_text)
 {
     std::string output = "";
@@ -730,6 +822,11 @@ int main(int, char *[])
         test_read_mine_cpp_row_fields,
         test_read_mine_cpp_row_stream,
         test_read_mine_cpp_row_range,
+        test_read_mine_cpp_map,
+        // test_read_mine_cpp_variadic,
+        // test_read_mine_cpp_tuple,
+        // test_read_mine_cpp_row_variadic,
+        // test_read_mine_cpp_row_tuple,
         test_read_libcsv
     });
 
@@ -738,6 +835,9 @@ int main(int, char *[])
         test_write_mine_cpp_stream,
         test_write_mine_cpp_row,
         test_write_mine_cpp_iter,
+        test_write_mine_cpp_map,
+        // test_write_mine_cpp_variadic,
+        // test_write_mine_cpp_tuple,
         test_write_libcsv
     }};
 
@@ -831,6 +931,12 @@ int main(int, char *[])
     test_read.test_pass("Read test: multiple rows",
             "1,2,3,4\r\n5,6,7,8\r\n", {{"1", "2", "3", "4"}, {"5", "6", "7", "8"}});
 
+    test_read.test_pass("Read test: fewer than header",
+            "1,2,3,4\r\n5,6,7\r\n", {{"1", "2", "3", "4"}, {"5", "6", "7"}});
+
+    test_read.test_pass("Read test: more than header",
+            "1,2,3,4\r\n5,6,7,8,9\r\n", {{"1", "2", "3", "4"}, {"5", "6", "7", "8", "9"}});
+
     test_read.test_pass("Read test: field reallocation",
             "1,123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412342,3,4",
             {{"1", "123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412342", "3", "4"}});
@@ -876,6 +982,12 @@ int main(int, char *[])
 
     test_write.test_pass("Write test: empty fields",
             {{"1", "2", "3", ""}, {"", "6", "7", "8"}}, "1,2,3,\r\n,6,7,8\r\n");
+
+    test_write.test_pass("Write test: fewer than header",
+            {{"1", "2", "3", "4"}, {"5", "6", "7"}}, "1,2,3,4\r\n5,6,7\r\n");
+
+    test_write.test_pass("Write test: more than header",
+            {{"1", "2", "3", "4"}, {"5", "6", "7", "8", "9"}}, "1,2,3,4\r\n5,6,7,8,9\r\n");
 
     std::cout<<"\n";
 
