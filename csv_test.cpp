@@ -15,6 +15,22 @@
 
 #include "test.hpp"
 
+template <typename T>
+std::ostream & operator<<(std::ostream & o, const std::vector<T> & v)
+{
+    o<<'[';
+    bool first = true;
+    for(auto & i: v)
+    {
+        if(!first)
+            o<<',';
+        o<<i;
+        first = false;
+    }
+    o<<']';
+    return o;
+}
+
 using CSV_data = std::vector<std::vector<std::string>>;
 
 bool test_read_mine_c(const std::string & csv_text, const CSV_data & expected_data)
@@ -529,6 +545,31 @@ bool test_read_mine_cpp_row_range(const std::string & csv_text, const CSV_data &
     }
 }
 
+bool test_read_mine_cpp_row_row_vec(const std::string & csv_text, const CSV_data & expected_data)
+{
+    try
+    {
+        csv::Reader w(csv_text);
+
+        for(auto & expected_row: expected_data)
+        {
+            if(w.eof())
+                return false;
+
+            auto row = w.get_row().read_vec();
+            if(row != expected_row)
+                return false;
+        }
+
+        return w.eof();
+    }
+    catch(const csv::Parse_error & e)
+    {
+        std::cerr<<e.what()<<"\n";
+        return false;
+    }
+}
+
 bool test_read_mine_cpp_map(const std::string & csv_text, const CSV_data & expected_data)
 {
     try
@@ -576,19 +617,196 @@ bool test_read_mine_cpp_map(const std::string & csv_text, const CSV_data & expec
 }
 bool test_read_mine_cpp_variadic(const std::string & csv_text, const CSV_data & expected_data)
 {
-    return false;
+    try
+    {
+        csv::Reader w(csv_text);
+
+        CSV_data data;
+        for(auto & expected_row: expected_data)
+        {
+            if(std::size(expected_row) > 5)
+                throw test::Skip_test{};
+
+            std::vector<std::string> row(5);
+            w.read_row_v(row[0], row[1], row[2], row[3], row[4]);
+
+            if(std::size(expected_row) < 5 && row[std::size(expected_row)] != "")
+                return false;
+
+            row.resize(std::size(expected_row));
+            data.push_back(row);
+            if(w.eof())
+                break;
+        }
+        return w.eof() && data == expected_data;
+    }
+    catch(const csv::Parse_error & e)
+    {
+        std::cerr<<e.what()<<"\n";
+        return false;
+    }
 }
 bool test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & expected_data)
 {
-    return false;
+    try
+    {
+        csv::Reader w(csv_text);
+
+        CSV_data data;
+        for(auto & expected_row: expected_data)
+        {
+            if(std::size(expected_row) > 5)
+                throw test::Skip_test{};
+
+            auto row_t = w.read_row_tuple<std::string, std::string, std::string, std::string, std::string, std::string>();
+            if(!row_t)
+                break;
+
+            std::vector row{std::get<0>(*row_t), std::get<1>(*row_t), std::get<2>(*row_t), std::get<3>(*row_t), std::get<4>(*row_t)};
+
+            if(std::size(expected_row) < 5 && row[std::size(expected_row)] != "")
+                return false;
+
+            row.resize(std::size(expected_row));
+            data.push_back(row);
+        }
+        return w.eof() && data == expected_data;
+    }
+    catch(const csv::Parse_error & e)
+    {
+        std::cerr<<e.what()<<"\n";
+        return false;
+    }
 }
 bool test_read_mine_cpp_row_variadic(const std::string & csv_text, const CSV_data & expected_data)
 {
-    return false;
+    try
+    {
+        csv::Reader w(csv_text);
+
+        for(auto & expected_row: expected_data)
+        {
+            if(w.eof())
+                return false;
+
+            auto row_obj = w.get_row();
+            std::vector<std::string> row(std::size(expected_row), "NOT SET");
+
+            try
+            {
+                switch(std::size(row))
+                {
+                case 0:
+                    break;
+                case 1:
+                    row_obj.read_v(row[0]);
+                    break;
+                case 2:
+                    row_obj.read_v(row[0], row[1]);
+                    break;
+                case 3:
+                    row_obj.read_v(row[0], row[1], row[2]);
+                    break;
+                case 4:
+                    row_obj.read_v(row[0], row[1], row[2], row[3]);
+                    break;
+                case 5:
+                    row_obj.read_v(row[0], row[1], row[2], row[3], row[4]);
+                    break;
+                default:
+                    throw test::Skip_test{};
+                }
+            }
+            catch(csv::Out_of_range_error)
+            {
+                return false;
+            }
+
+            if(row != expected_row)
+                return false;
+        }
+
+        return w.eof();
+    }
+    catch(const csv::Parse_error & e)
+    {
+        std::cerr<<e.what()<<"\n";
+        return false;
+    }
 }
 bool test_read_mine_cpp_row_tuple(const std::string & csv_text, const CSV_data & expected_data)
 {
-    return false;
+    try
+    {
+        csv::Reader w(csv_text);
+
+        for(auto & expected_row: expected_data)
+        {
+            if(w.eof())
+                return false;
+
+            auto row_obj = w.get_row();
+            std::vector<std::string> row;
+
+            try
+            {
+                switch(std::size(expected_row))
+                {
+                case 0:
+                    break;
+                case 1:
+                {
+                    auto row_tuple = row_obj.read_tuple<std::string>();
+                    row = {std::get<0>(row_tuple)};
+                    break;
+                }
+                case 2:
+                {
+                    auto row_tuple = row_obj.read_tuple<std::string, std::string>();
+                    row = {std::get<0>(row_tuple), std::get<1>(row_tuple)};
+                    break;
+                }
+                case 3:
+                {
+                    auto row_tuple = row_obj.read_tuple<std::string, std::string, std::string>();
+                    row = {std::get<0>(row_tuple), std::get<1>(row_tuple), std::get<2>(row_tuple)};
+                    break;
+                }
+                    break;
+                case 4:
+                {
+                    auto row_tuple = row_obj.read_tuple<std::string, std::string, std::string, std::string>();
+                    row = {std::get<0>(row_tuple), std::get<1>(row_tuple), std::get<2>(row_tuple), std::get<3>(row_tuple)};
+                    break;
+                }
+                    break;
+                case 5:
+                {
+                    auto row_tuple = row_obj.read_tuple<std::string, std::string, std::string, std::string, std::string>();
+                    row = {std::get<0>(row_tuple), std::get<1>(row_tuple), std::get<2>(row_tuple), std::get<3>(row_tuple), std::get<4>(row_tuple)};
+                    break;
+                }
+                    break;
+                default:
+                    throw test::Skip_test{};
+                }
+            }
+            catch(csv::Out_of_range_error)
+            {
+                return false;
+            }
+
+            if(row != expected_row)
+                return false;
+        }
+
+        return w.eof();
+    }
+    catch(const csv::Parse_error & e)
+    {
+        std::cerr<<e.what()<<"\n";
+        return false;
+    }
 }
 
 struct libcsv_read_status
@@ -758,11 +976,71 @@ bool test_write_mine_cpp_map(const CSV_data data, const std::string & expected_t
 }
 bool test_write_mine_cpp_variadic(const CSV_data data, const std::string & expected_text)
 {
-    return false;
+    std::ostringstream str;
+    { // scoped so dtor is called before checking result
+        csv::Writer w(str);
+        for(auto & row: data)
+        {
+            switch(std::size(row))
+            {
+            case 0:
+                w.end_row();
+                break;
+            case 1:
+                w.write_row_v(row[0]);
+                break;
+            case 2:
+                w.write_row_v(row[0], row[1]);
+                break;
+            case 3:
+                w.write_row_v(row[0], row[1], row[2]);
+                break;
+            case 4:
+                w.write_row_v(row[0], row[1], row[2], row[3]);
+                break;
+            case 5:
+                w.write_row_v(row[0], row[1], row[2], row[3], row[4]);
+                break;
+            default:
+                throw test::Skip_test{};
+            }
+        }
+    }
+    return str.str() == expected_text;
 }
 bool test_write_mine_cpp_tuple(const CSV_data data, const std::string & expected_text)
 {
-    return false;
+    std::ostringstream str;
+    { // scoped so dtor is called before checking result
+        csv::Writer w(str);
+        for(auto & row: data)
+        {
+            switch(std::size(row))
+            {
+            case 0:
+                w.end_row();
+                break;
+            case 1:
+                w.write_row(std::tuple{row[0]});
+                break;
+            case 2:
+                w.write_row(std::tuple{row[0], row[1]});
+                break;
+            case 3:
+                w.write_row(std::tuple{row[0], row[1], row[2]});
+                break;
+            case 4:
+                w.write_row(std::tuple{row[0], row[1], row[2], row[3]});
+                break;
+            case 5:
+                w.write_row(std::tuple{row[0], row[1], row[2], row[3], row[4]});
+                break;
+            default:
+                throw test::Skip_test{};
+            }
+        }
+    }
+    return str.str() == expected_text;
 }
 
 bool test_write_libcsv(const CSV_data data, const std::string & expected_text)
@@ -822,11 +1100,12 @@ int main(int, char *[])
         test_read_mine_cpp_row_fields,
         test_read_mine_cpp_row_stream,
         test_read_mine_cpp_row_range,
+        test_read_mine_cpp_row_row_vec,
         test_read_mine_cpp_map,
-        // test_read_mine_cpp_variadic,
-        // test_read_mine_cpp_tuple,
-        // test_read_mine_cpp_row_variadic,
-        // test_read_mine_cpp_row_tuple,
+        test_read_mine_cpp_variadic,
+        test_read_mine_cpp_tuple,
+        test_read_mine_cpp_row_variadic,
+        test_read_mine_cpp_row_tuple,
         test_read_libcsv
     });
 
@@ -836,8 +1115,8 @@ int main(int, char *[])
         test_write_mine_cpp_row,
         test_write_mine_cpp_iter,
         test_write_mine_cpp_map,
-        // test_write_mine_cpp_variadic,
-        // test_write_mine_cpp_tuple,
+        test_write_mine_cpp_variadic,
+        test_write_mine_cpp_tuple,
         test_write_libcsv
     }};
 
