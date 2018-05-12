@@ -15,6 +15,27 @@
 
 #include "test.hpp"
 
+template<typename Tuple, std::size_t N>
+constexpr void print_tuple(std::ostream &o, const Tuple & t)
+{
+    if constexpr(N == 1)
+    {
+        o<<std::get<0>(t);
+    }
+    else
+    {
+        print_tuple<decltype(t), N - 1>(o, t);
+        o<<','<<std::get<N - 1>(t);
+    }
+}
+template<typename ... Packed>
+std::ostream & operator<<(std::ostream & o, const std::tuple<Packed...> & t)
+{
+    o<<'(';
+    print_tuple<decltype(t), sizeof...(Packed)> (o, t);
+    return o<<')';
+}
+
 template <typename T>
 std::ostream & operator<<(std::ostream & o, const std::vector<T> & v)
 {
@@ -317,7 +338,7 @@ bool test_read_mine_cpp_stream(const std::string & csv_text, const CSV_data & ex
                 {
                     w>>field;
                 }
-                catch(csv::Out_of_range_error)
+                catch(const csv::Out_of_range_error&)
                 {
                     return false;
                 }
@@ -352,7 +373,7 @@ bool test_read_mine_cpp_fields(const std::string & csv_text, const CSV_data & ex
                 {
                     field = w.read_field();;
                 }
-                catch(csv::Out_of_range_error)
+                catch(const csv::Out_of_range_error&)
                 {
                     return false;
                 }
@@ -446,7 +467,7 @@ bool test_read_mine_cpp_row_fields(const std::string & csv_text, const CSV_data 
                 row.read_field();
                 return false;
             }
-            catch(csv::Out_of_range_error) {}
+            catch(const csv::Out_of_range_error&) {}
 
             if(!row.end_of_row())
                 return false;
@@ -491,7 +512,7 @@ bool test_read_mine_cpp_row_stream(const std::string & csv_text, const CSV_data 
                 row>>after_field;
                 return false;
             }
-            catch(csv::Out_of_range_error) {}
+            catch(const csv::Out_of_range_error&) {}
 
             if(!row.end_of_row())
                 return false;
@@ -624,19 +645,44 @@ bool test_read_mine_cpp_variadic(const std::string & csv_text, const CSV_data & 
         CSV_data data;
         for(auto & expected_row: expected_data)
         {
+            if(w.eof())
+                break;
+
             if(std::size(expected_row) > 5)
                 throw test::Skip_test{};
 
-            std::vector<std::string> row(5);
-            w.read_row_v(row[0], row[1], row[2], row[3], row[4]);
-
-            if(std::size(expected_row) < 5 && row[std::size(expected_row)] != "")
+            std::vector<std::string> row(std::size(expected_row));
+            try
+            {
+                switch(std::size(row))
+                {
+                case 0:
+                    break;
+                case 1:
+                    w.read_row_v(row[0]);
+                    break;
+                case 2:
+                    w.read_row_v(row[0], row[1]);
+                    break;
+                case 3:
+                    w.read_row_v(row[0], row[1], row[2]);
+                    break;
+                case 4:
+                    w.read_row_v(row[0], row[1], row[2], row[3]);
+                    break;
+                case 5:
+                    w.read_row_v(row[0], row[1], row[2], row[3], row[4]);
+                    break;
+                default:
+                    throw test::Skip_test{};
+                }
+            }
+            catch(const csv::Out_of_range_error& e)
+            {
                 return false;
+            }
 
-            row.resize(std::size(expected_row));
             data.push_back(row);
-            if(w.eof())
-                break;
         }
         return w.eof() && data == expected_data;
     }
@@ -658,16 +704,60 @@ bool test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & exp
             if(std::size(expected_row) > 5)
                 throw test::Skip_test{};
 
-            auto row_t = w.read_row_tuple<std::string, std::string, std::string, std::string, std::string, std::string>();
-            if(!row_t)
-                break;
+            std::vector<std::string> row;
 
-            std::vector row{std::get<0>(*row_t), std::get<1>(*row_t), std::get<2>(*row_t), std::get<3>(*row_t), std::get<4>(*row_t)};
-
-            if(std::size(expected_row) < 5 && row[std::size(expected_row)] != "")
+            try
+            {
+                switch(std::size(expected_row))
+                {
+                case 0:
+                    break;
+                case 1:
+                {
+                    auto row_tuple = w.read_row_tuple<std::string>().value();
+                    row = {std::get<0>(row_tuple)};
+                    break;
+                }
+                case 2:
+                {
+                    auto row_tuple = w.read_row_tuple<std::string, std::string>().value();
+                    row = {std::get<0>(row_tuple), std::get<1>(row_tuple)};
+                    break;
+                }
+                case 3:
+                {
+                    auto row_tuple = w.read_row_tuple<std::string, std::string, std::string>().value();
+                    row = {std::get<0>(row_tuple), std::get<1>(row_tuple), std::get<2>(row_tuple)};
+                    break;
+                }
+                    break;
+                case 4:
+                {
+                    auto row_tuple = w.read_row_tuple<std::string, std::string, std::string, std::string>().value();
+                    row = {std::get<0>(row_tuple), std::get<1>(row_tuple), std::get<2>(row_tuple), std::get<3>(row_tuple)};
+                    break;
+                }
+                    break;
+                case 5:
+                {
+                    auto row_tuple = w.read_row_tuple<std::string, std::string, std::string, std::string, std::string>().value();
+                    row = {std::get<0>(row_tuple), std::get<1>(row_tuple), std::get<2>(row_tuple), std::get<3>(row_tuple), std::get<4>(row_tuple)};
+                    break;
+                }
+                    break;
+                default:
+                    throw test::Skip_test{};
+                }
+            }
+            catch(const csv::Out_of_range_error&)
+            {
                 return false;
+            }
+            catch(const std::bad_optional_access&)
+            {
+                break;
+            }
 
-            row.resize(std::size(expected_row));
             data.push_back(row);
         }
         return w.eof() && data == expected_data;
@@ -717,7 +807,7 @@ bool test_read_mine_cpp_row_variadic(const std::string & csv_text, const CSV_dat
                     throw test::Skip_test{};
                 }
             }
-            catch(csv::Out_of_range_error)
+            catch(const csv::Out_of_range_error&)
             {
                 return false;
             }
@@ -791,7 +881,7 @@ bool test_read_mine_cpp_row_tuple(const std::string & csv_text, const CSV_data &
                     throw test::Skip_test{};
                 }
             }
-            catch(csv::Out_of_range_error)
+            catch(const csv::Out_of_range_error&)
             {
                 return false;
             }

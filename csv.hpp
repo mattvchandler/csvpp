@@ -420,9 +420,15 @@ namespace csv
         void read_row_v(T & store, Others & ... others)
         {
             if(end_of_row())
-                store = {};
+            {
+                _start_of_row = true;
+                _end_of_row = false;
+                throw Out_of_range_error("Read past end of row");
+            }
             else
+            {
                 store = read_field<T>();
+            }
 
             if constexpr(sizeof...(others) > 0)
             {
@@ -430,8 +436,11 @@ namespace csv
             }
             else
             {
-                _start_of_row = true;
-                _end_of_row = false;
+                if(end_of_row())
+                {
+                    _start_of_row = true;
+                    _end_of_row = false;
+                }
             }
         }
 
@@ -455,9 +464,15 @@ namespace csv
         void read_row_tuple_helper(std::tuple<Args...> & ret)
         {
             if(end_of_row())
-                std::get<I>(ret) = {};
+            {
+                _start_of_row = true;
+                _end_of_row = false;
+                throw Out_of_range_error("Read past end of row");
+            }
             else
+            {
                 std::get<I>(ret) = read_field<typename std::decay<decltype(std::get<I>(ret))>::type>();
+            }
 
             if constexpr(I < sizeof...(Args) - 1)
             {
