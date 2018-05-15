@@ -205,7 +205,7 @@ namespace csv
             std::tuple<Args...> read_tuple()
             {
                 std::tuple<Args...> ret;
-                read_tuple_helper<0, Args...>(ret);
+                read_tuple_helper(ret, std::index_sequence_for<Args...>{});
                 return ret;
             }
 
@@ -222,15 +222,10 @@ namespace csv
         private:
             friend Reader;
 
-            template <std::size_t I, typename ... Args>
-            void read_tuple_helper(std::tuple<Args...> & ret)
+            template <typename Tuple, std::size_t ... Is>
+            void read_tuple_helper(Tuple & t, std::index_sequence<Is...>)
             {
-                std::get<I>(ret) = read_field<typename std::decay<decltype(std::get<I>(ret))>::type>();
-
-                if constexpr(I < sizeof...(Args) - 1)
-                {
-                    read_tuple_helper<I + 1, Args...>(ret);
-                }
+                (void)((*this >> std::get<Is>(t)), ...);
             }
 
             Row(): reader(nullptr) {}
@@ -439,7 +434,13 @@ namespace csv
                 return {};
 
             std::tuple<Args...> ret;
-            read_row_tuple_helper<0, Args...>(ret);
+            read_row_tuple_helper(ret, std::index_sequence_for<Args...>{});
+
+            if(end_of_row())
+            {
+                _start_of_row = true;
+                _end_of_row = false;
+            }
 
             return ret;
         }
@@ -485,32 +486,10 @@ namespace csv
             *this >> t;
         }
 
-        template <std::size_t I, typename ... Args>
-        void read_row_tuple_helper(std::tuple<Args...> & ret)
+        template <typename Tuple, std::size_t ... Is>
+        void read_row_tuple_helper(Tuple & t, std::index_sequence<Is...>)
         {
-            if(end_of_row())
-            {
-                _start_of_row = true;
-                _end_of_row = false;
-                throw Out_of_range_error("Read past end of row");
-            }
-            else
-            {
-                std::get<I>(ret) = read_field<typename std::decay<decltype(std::get<I>(ret))>::type>();
-            }
-
-            if constexpr(I < sizeof...(Args) - 1)
-            {
-                read_row_tuple_helper<I + 1, Args...>(ret);
-            }
-            else
-            {
-                if(end_of_row())
-                {
-                    _end_of_row = false;
-                    _start_of_row = true;
-                }
-            }
+            (read_row_variadic_helper(std::get<Is>(t)), ...);
         }
 
         std::string parse()
