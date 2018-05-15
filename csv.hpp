@@ -1,6 +1,8 @@
 #ifndef CSV_HPP
 #define CSV_HPP
 
+#include <experimental/type_traits>
+
 #include <exception>
 #include <fstream>
 #include <map>
@@ -34,6 +36,42 @@ namespace csv
             std::runtime_error("Could not convert '" + field + "' to requested type")
         {}
     };
+
+    namespace detail
+    {
+        template <typename T>
+        using std_to_string_expr = decltype(std::to_string(std::declval<T>()));
+        template <typename T>
+        constexpr bool has_std_to_string = std::experimental::is_detected_v<std_to_string_expr, T>;
+
+        template <typename T>
+        using to_string_expr = decltype(to_string(std::declval<T>()));
+        template <typename T>
+        constexpr bool has_to_string = std::experimental::is_detected_v<to_string_expr, T>;
+
+        template <typename T>
+        using ostr_expr = decltype(std::declval<std::ostringstream&>() << std::declval<T>());
+        template <typename T>
+        constexpr bool has_ostr = std::experimental::is_detected_v<ostr_expr, T>;
+    };
+
+    template <typename T, typename std::enable_if<detail::has_std_to_string<T>, int>::type = 0>
+    std::string str(const T & t)
+    {
+        return std::to_string(t);
+    }
+
+    template <typename T, typename std::enable_if<!detail::has_std_to_string<T> && detail::has_to_string<T>, int>::type = 0>
+    std::string str(const T & t)
+    {
+        return to_string(t);
+    }
+
+    template <typename T, typename std::enable_if<!detail::has_std_to_string<T> && !detail::has_to_string<T> && detail::has_ostr<T>, int>::type = 0>
+    std::string str(const T & t)
+    {
+        return(std::ostringstream{}<<t).str();
+    }
 
     class Reader
     {
@@ -722,32 +760,6 @@ namespace csv
         return !lhs.equals(rhs);
     }
 
-    namespace detail
-    {
-        using std::to_string;
-        template<typename T>
-        class can_to_string
-        {
-            template<typename TT>
-            static auto test(int) -> decltype(to_string(std::declval<TT>()), std::true_type());
-            template<typename>
-            static auto test(...) -> std::false_type;
-        public:
-            static constexpr bool value = decltype(test<T>(0))::value;
-        };
-
-        template<typename S, typename T>
-        class can_ostream
-        {
-            template<typename SS, typename TT>
-            static auto test(int) -> decltype(std::declval<SS&>() << std::declval<TT>(), std::true_type());
-            template<typename, typename>
-            static auto test(...) -> std::false_type;
-        public:
-            static constexpr bool value = decltype(test<S, T>(0))::value;
-        };
-    };
-
     class Writer
     {
     public:
@@ -880,23 +892,14 @@ namespace csv
         std::string quote(const T & field)
         {
             std::string field_str;
-            using std::to_string;
-
-            static_assert(std::disjunction_v<std::is_convertible<T, std::string>, detail::can_ostream<std::ostringstream, T>, detail::can_to_string<T>>, "Can't convert to string for output");
 
             if constexpr(std::is_convertible_v<T, std::string>)
             {
                 field_str = field;
             }
-            else if constexpr(detail::can_ostream<std::ostringstream, T>::value)
+            else
             {
-                std::ostringstream oss;
-                oss<<field;
-                field_str = oss.str();
-            }
-            else if constexpr(detail::can_to_string<T>::value)
-            {
-                field_str = to_string(field);
+                field_str = str(field);
             }
 
             auto escaped_chars = {'"', '\r', '\n', ','};
