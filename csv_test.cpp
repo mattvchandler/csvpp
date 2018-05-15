@@ -657,6 +657,7 @@ bool test_read_mine_cpp_variadic(const std::string & csv_text, const CSV_data & 
                 switch(std::size(row))
                 {
                 case 0:
+                    w.read_row_v();
                     break;
                 case 1:
                     w.read_row_v(row[0]);
@@ -679,7 +680,9 @@ bool test_read_mine_cpp_variadic(const std::string & csv_text, const CSV_data & 
             }
             catch(const csv::Out_of_range_error& e)
             {
-                return false;
+                if(e.what() == std::string{"Read past end of row"})
+                    return false;
+                throw;
             }
 
             data.push_back(row);
@@ -711,6 +714,7 @@ bool test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & exp
                 switch(std::size(expected_row))
                 {
                 case 0:
+                    // w.read_row_tuple<>(); // Doesn't compile :(
                     break;
                 case 1:
                 {
@@ -749,9 +753,11 @@ bool test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & exp
                     throw test::Skip_test{};
                 }
             }
-            catch(const csv::Out_of_range_error&)
+            catch(const csv::Out_of_range_error & e)
             {
-                return false;
+                if(e.what() == std::string{"Read past end of row"})
+                    return false;
+                throw;
             }
             catch(const std::bad_optional_access&)
             {
@@ -787,6 +793,7 @@ bool test_read_mine_cpp_row_variadic(const std::string & csv_text, const CSV_dat
                 switch(std::size(row))
                 {
                 case 0:
+                    row_obj.read_v();
                     break;
                 case 1:
                     row_obj.read_v(row[0]);
@@ -1074,7 +1081,7 @@ bool test_write_mine_cpp_variadic(const CSV_data data, const std::string & expec
             switch(std::size(row))
             {
             case 0:
-                w.end_row();
+                w.write_row_v();
                 break;
             case 1:
                 w.write_row_v(row[0]);
@@ -1108,7 +1115,7 @@ bool test_write_mine_cpp_tuple(const CSV_data data, const std::string & expected
             switch(std::size(row))
             {
             case 0:
-                w.end_row();
+                w.write_row(std::tuple{});
                 break;
             case 1:
                 w.write_row(std::tuple{row[0]});

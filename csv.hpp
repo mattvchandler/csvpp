@@ -209,20 +209,10 @@ namespace csv
                 return ret;
             }
 
-            template <typename T, typename ... Others>
-            void read_v(T & store, Others & ... others)
+            template <typename ... Data>
+            void read_v(Data & ... data)
             {
-                store = read_field<T>();
-
-                if constexpr(sizeof...(others) > 0)
-                {
-                    read_v(others...);
-                }
-                else
-                {
-                    reader->_start_of_row = true;
-                    reader->_end_of_row = false;
-                }
+                (void)(*this >> ... >> data);
             }
 
             bool end_of_row() const { return _end_of_row; }
@@ -454,31 +444,14 @@ namespace csv
             return ret;
         }
 
-        template <typename T, typename ... Others>
-        void read_row_v(T & store, Others & ... others)
+        template <typename ... Data>
+        void read_row_v(Data & ... data)
         {
+            (read_row_variadic_helper(data), ...);
             if(end_of_row())
             {
                 _start_of_row = true;
                 _end_of_row = false;
-                throw Out_of_range_error("Read past end of row");
-            }
-            else
-            {
-                store = read_field<T>();
-            }
-
-            if constexpr(sizeof...(others) > 0)
-            {
-                read_row_v(others...);
-            }
-            else
-            {
-                if(end_of_row())
-                {
-                    _start_of_row = true;
-                    _end_of_row = false;
-                }
             }
         }
 
@@ -498,6 +471,20 @@ namespace csv
         }
 
     private:
+        // essentially the same as operator<<, but throws if caller tries to read beyond the end of a row
+        template <typename T>
+        void read_row_variadic_helper(T & t)
+        {
+            if(end_of_row())
+            {
+                _start_of_row = true;
+                _end_of_row = false;
+                throw Out_of_range_error("Read past end of row");
+            }
+
+            *this >> t;
+        }
+
         template <std::size_t I, typename ... Args>
         void read_row_tuple_helper(std::tuple<Args...> & ret)
         {
@@ -845,16 +832,11 @@ namespace csv
             std::apply(&Writer::write_row_v<Args...>, std::tuple_cat(std::tuple(std::ref(*this)), data));
         }
 
-        template<typename T, typename ...Others>
-        void write_row_v(const T & data, const Others & ...others)
+        template<typename ...Data>
+        void write_row_v(const Data & ...data)
         {
-            write_field(data);
-            if constexpr(sizeof...(others) > 0)
-            {
-                write_row_v(others...);
-            }
-            else
-                end_row();
+            (void)(*this << ... << data);
+            end_row();
         }
 
         template<typename T>
