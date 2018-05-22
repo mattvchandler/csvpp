@@ -683,6 +683,9 @@ namespace csv
         value_type & operator*() { return obj; }
         value_type * operator->() { return &obj; }
 
+        value_type::mapped_type & operator[](const value_type::key_type & key) { return obj.at(key); }
+        const value_type::mapped_type & operator[](const value_type::key_type & key) const { return obj.at(key); }
+
         Map_reader_iter & operator++()
         {
             auto row = reader->read_row_vec();
