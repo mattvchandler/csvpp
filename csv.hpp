@@ -70,7 +70,9 @@ namespace csv
     template <typename T, typename std::enable_if<!detail::has_std_to_string<T> && !detail::has_to_string<T> && detail::has_ostr<T>, int>::type = 0>
     std::string str(const T & t)
     {
-        return(std::ostringstream{}<<t).str();
+        std::ostringstream os;
+        os<<t;
+        return os.str();
     }
 
     class Reader
