@@ -26,7 +26,9 @@
 #include <exception>
 #include <fstream>
 #include <map>
+#include <optional>
 #include <regex>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -247,7 +249,7 @@ namespace csv
             template <typename Tuple, std::size_t ... Is>
             void read_tuple_helper(Tuple & t, std::index_sequence<Is...>)
             {
-                (void)((*this >> std::get<Is>(t)), ...);
+                ((*this >> std::get<Is>(t)), ...);
             }
 
             Row(): reader(nullptr) {}

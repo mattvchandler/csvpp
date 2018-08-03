@@ -67,7 +67,7 @@ namespace test
                     if(f(args...) == test_for_pass)
                         ++count;
                 }
-                catch(Skip_test)
+                catch(Skip_test&)
                 {
                     --total;
                 }
