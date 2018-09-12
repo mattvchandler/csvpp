@@ -21,8 +21,6 @@
 #ifndef CSV_HPP
 #define CSV_HPP
 
-#include <experimental/type_traits>
-
 #include <exception>
 #include <fstream>
 #include <map>
@@ -61,35 +59,41 @@ namespace csv
 
     namespace detail
     {
+        template <typename T, typename = void>
+        struct has_std_to_string: std::false_type{};
         template <typename T>
-        using std_to_string_expr = decltype(std::to_string(std::declval<T>()));
+        struct has_std_to_string<T, std::void_t<decltype(std::to_string(std::declval<T>()))>> : std::true_type{};
         template <typename T>
-        constexpr bool has_std_to_string = std::experimental::is_detected_v<std_to_string_expr, T>;
+        inline constexpr bool has_std_to_string_v = has_std_to_string<T>::value;
 
+        template <typename T, typename = void>
+        struct has_to_string: std::false_type{};
         template <typename T>
-        using to_string_expr = decltype(to_string(std::declval<T>()));
+        struct has_to_string<T, std::void_t<decltype(to_string(std::declval<T>()))>> : std::true_type{};
         template <typename T>
-        constexpr bool has_to_string = std::experimental::is_detected_v<to_string_expr, T>;
+        inline constexpr bool has_to_string_v = has_to_string<T>::value;
 
+        template <typename T, typename = void>
+        struct has_ostr: std::false_type{};
         template <typename T>
-        using ostr_expr = decltype(std::declval<std::ostringstream&>() << std::declval<T>());
+        struct has_ostr<T, std::void_t<decltype(std::declval<std::ostringstream&>() << std::declval<T>())>> : std::true_type{};
         template <typename T>
-        constexpr bool has_ostr = std::experimental::is_detected_v<ostr_expr, T>;
+        inline constexpr bool has_ostr_v = has_ostr<T>::value;
     };
 
-    template <typename T, typename std::enable_if<detail::has_std_to_string<T>, int>::type = 0>
+    template <typename T, typename std::enable_if<detail::has_std_to_string_v<T>, int>::type = 0>
     std::string str(const T & t)
     {
         return std::to_string(t);
     }
 
-    template <typename T, typename std::enable_if<!detail::has_std_to_string<T> && detail::has_to_string<T>, int>::type = 0>
+    template <typename T, typename std::enable_if<!detail::has_std_to_string_v<T> && detail::has_to_string_v<T>, int>::type = 0>
     std::string str(const T & t)
     {
         return to_string(t);
     }
 
-    template <typename T, typename std::enable_if<!detail::has_std_to_string<T> && !detail::has_to_string<T> && detail::has_ostr<T>, int>::type = 0>
+    template <typename T, typename std::enable_if<!detail::has_std_to_string_v<T> && !detail::has_to_string_v<T> && detail::has_ostr_v<T>, int>::type = 0>
     std::string str(const T & t)
     {
         std::ostringstream os;
