@@ -320,9 +320,18 @@ namespace csv
             _input_stream(input_stream)
         {}
 
-        explicit Reader(const std::string & input_data):
-            _input_string(input_data),
-            _input_stream(_input_string)
+        explicit Reader(const std::string & filename):
+            _internal_input_stream(std::make_unique<std::ifstream>(filename)),
+            _input_stream(*_internal_input_stream)
+        {}
+
+        // disambiguation tag
+        struct input_string_t{};
+        static inline constexpr input_string_t input_string{};
+
+        Reader(input_string_t, const std::string & input_data):
+            _internal_input_stream(std::make_unique<std::istringstream>(input_data)),
+            _input_stream(*_internal_input_stream)
         {}
 
         ~Reader() = default;
@@ -624,7 +633,7 @@ namespace csv
             return field;
         }
 
-        std::istringstream _input_string;
+        std::unique_ptr<std::istream> _internal_input_stream;
         std::istream & _input_stream;
 
         bool _start_of_row = true;
@@ -689,8 +698,16 @@ namespace csv
         {
             ++(*this);
         }
-        Map_reader_iter(const std::string & input_data, const std::string & default_val = {}, const std::vector<std::string> & headers = {}):
-            reader(std::make_unique<Reader>(input_data)),
+        Map_reader_iter(const std::string & filename, const std::string & default_val = {}, const std::vector<std::string> & headers = {}):
+            reader(std::make_unique<Reader>(filename)),
+            default_val(default_val),
+            headers(get_header_row(headers))
+        {
+            ++(*this);
+        }
+
+        Map_reader_iter(Reader::input_string_t, const std::string & input_data, const std::string & default_val = {}, const std::vector<std::string> & headers = {}):
+            reader(std::make_unique<Reader>(Reader::input_string, input_data)),
             default_val(default_val),
             headers(get_header_row(headers))
         {
@@ -789,6 +806,10 @@ namespace csv
 
         explicit Writer(std::ostream & output_stream):
             _output_stream(output_stream)
+        {}
+        explicit Writer(const std::string& filename):
+            _internal_output_stream(std::make_unique<std::ofstream>(filename, std::ios::binary)),
+            _output_stream(*_internal_output_stream)
         {}
         ~Writer()
         {
@@ -905,6 +926,7 @@ namespace csv
 
         friend Writer &end_row(Writer & w);
 
+        std::unique_ptr<std::ostream> _internal_output_stream;
         std::ostream & _output_stream;
         bool _start_of_row = true;
     };
@@ -925,9 +947,14 @@ namespace csv
     public:
         Map_writer_iter(std::ostream & output_stream, const std::vector<std::string> & headers, const std::string default_val = {}):
             writer(std::make_unique<Writer>(output_stream)), headers(headers), default_val(default_val)
-            {
-                writer->write_row(headers);
-            }
+        {
+            writer->write_row(headers);
+        }
+        Map_writer_iter(const std::string& filename, const std::vector<std::string> & headers, const std::string default_val = {}):
+            writer(std::make_unique<Writer>(filename)), headers(headers), default_val(default_val)
+        {
+            writer->write_row(headers);
+        }
 
         using value_type        = void;
         using difference_type   = void;

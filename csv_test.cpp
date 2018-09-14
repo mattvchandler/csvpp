@@ -247,7 +247,7 @@ bool test_read_mine_cpp_read_all(const std::string & csv_text, const CSV_data & 
 {
     try
     {
-        return csv::Reader(csv_text).read_all() == expected_data;
+        return csv::Reader(csv::Reader::input_string, csv_text).read_all() == expected_data;
     }
     catch(const csv::Parse_error & e)
     {
@@ -260,7 +260,7 @@ bool test_read_mine_cpp_read_rows(const std::string & csv_text, const CSV_data &
 {
     try
     {
-        csv::Reader w(csv_text);
+        csv::Reader w(csv::Reader::input_string, csv_text);
 
         CSV_data data;
         while(true)
@@ -283,7 +283,7 @@ bool test_read_mine_cpp_read_row_vec(const std::string & csv_text, const CSV_dat
 {
     try
     {
-        csv::Reader w(csv_text);
+        csv::Reader w(csv::Reader::input_string, csv_text);
 
         CSV_data data;
         while(true)
@@ -332,7 +332,7 @@ bool test_read_mine_cpp_read_all_as_int(const std::string & csv_text, const CSV_
                 }
             }
         }
-        return csv::Reader(csv_text).read_all<int>() == expected_ints;
+        return csv::Reader(csv::Reader::input_string, csv_text).read_all<int>() == expected_ints;
     }
     catch(const csv::Parse_error & e)
     {
@@ -345,7 +345,7 @@ bool test_read_mine_cpp_stream(const std::string & csv_text, const CSV_data & ex
 {
     try
     {
-        csv::Reader w(csv_text);
+        csv::Reader w(csv::Reader::input_string, csv_text);
 
         for(auto & expected_row: expected_data)
         {
@@ -380,7 +380,7 @@ bool test_read_mine_cpp_fields(const std::string & csv_text, const CSV_data & ex
 {
     try
     {
-        csv::Reader w(csv_text);
+        csv::Reader w(csv::Reader::input_string, csv_text);
 
         for(auto & expected_row: expected_data)
         {
@@ -415,7 +415,7 @@ bool test_read_mine_cpp_iters(const std::string & csv_text, const CSV_data & exp
 {
     try
     {
-        csv::Reader w(csv_text);
+        csv::Reader w(csv::Reader::input_string, csv_text);
         CSV_data data;
 
         for(auto & r: w)
@@ -437,7 +437,7 @@ bool test_read_mine_cpp_range(const std::string & csv_text, const CSV_data & exp
 {
     try
     {
-        csv::Reader w(csv_text);
+        csv::Reader w(csv::Reader::input_string, csv_text);
         CSV_data data;
 
         for(auto & r: w)
@@ -462,7 +462,7 @@ bool test_read_mine_cpp_row_fields(const std::string & csv_text, const CSV_data 
 {
     try
     {
-        csv::Reader w(csv_text);
+        csv::Reader w(csv::Reader::input_string, csv_text);
 
         for(auto & expected_row: expected_data)
         {
@@ -504,7 +504,7 @@ bool test_read_mine_cpp_row_stream(const std::string & csv_text, const CSV_data 
 {
     try
     {
-        csv::Reader w(csv_text);
+        csv::Reader w(csv::Reader::input_string, csv_text);
 
         for(auto & expected_row: expected_data)
         {
@@ -549,7 +549,7 @@ bool test_read_mine_cpp_row_range(const std::string & csv_text, const CSV_data &
 {
     try
     {
-        csv::Reader w(csv_text);
+        csv::Reader w(csv::Reader::input_string, csv_text);
 
         for(auto & expected_row: expected_data)
         {
@@ -588,7 +588,7 @@ bool test_read_mine_cpp_row_row_vec(const std::string & csv_text, const CSV_data
 {
     try
     {
-        csv::Reader w(csv_text);
+        csv::Reader w(csv::Reader::input_string, csv_text);
 
         for(auto & expected_row: expected_data)
         {
@@ -613,7 +613,7 @@ bool test_read_mine_cpp_map(const std::string & csv_text, const CSV_data & expec
 {
     try
     {
-        csv::Map_reader_iter w(csv_text);
+        csv::Map_reader_iter w(csv::Reader::input_string, csv_text);
 
         if(w.get_headers() != expected_data.at(0))
             return false;
@@ -658,7 +658,7 @@ bool test_read_mine_cpp_variadic(const std::string & csv_text, const CSV_data & 
 {
     try
     {
-        csv::Reader w(csv_text);
+        csv::Reader w(csv::Reader::input_string, csv_text);
 
         CSV_data data;
         for(auto & expected_row: expected_data)
@@ -717,7 +717,7 @@ bool test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & exp
 {
     try
     {
-        csv::Reader w(csv_text);
+        csv::Reader w(csv::Reader::input_string, csv_text);
 
         CSV_data data;
         for(auto & expected_row: expected_data)
@@ -796,7 +796,7 @@ bool test_read_mine_cpp_row_variadic(const std::string & csv_text, const CSV_dat
 {
     try
     {
-        csv::Reader w(csv_text);
+        csv::Reader w(csv::Reader::input_string, csv_text);
 
         for(auto & expected_row: expected_data)
         {
@@ -853,7 +853,7 @@ bool test_read_mine_cpp_row_tuple(const std::string & csv_text, const CSV_data &
 {
     try
     {
-        csv::Reader w(csv_text);
+        csv::Reader w(csv::Reader::input_string, csv_text);
 
         for(auto & expected_row: expected_data)
         {
