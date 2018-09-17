@@ -81,25 +81,25 @@ namespace csv
         inline constexpr bool has_ostr_v = has_ostr<T>::value;
     };
 
-    template <typename T, typename std::enable_if<std::is_convertible_v<T, std::string>, int>::type = 0>
+    template <typename T, typename std::enable_if_t<std::is_convertible_v<T, std::string>, int> = 0>
     std::string str(const T & t)
     {
         return t;
     }
 
-    template <typename T, typename std::enable_if<!std::is_convertible_v<T, std::string> && detail::has_std_to_string_v<T>, int>::type = 0>
+    template <typename T, typename std::enable_if_t<!std::is_convertible_v<T, std::string> && detail::has_std_to_string_v<T>, int> = 0>
     std::string str(const T & t)
     {
         return std::to_string(t);
     }
 
-    template <typename T, typename std::enable_if<!std::is_convertible_v<T, std::string> && !detail::has_std_to_string_v<T> && detail::has_to_string_v<T>, int>::type = 0>
+    template <typename T, typename std::enable_if_t<!std::is_convertible_v<T, std::string> && !detail::has_std_to_string_v<T> && detail::has_to_string_v<T>, int> = 0>
     std::string str(const T & t)
     {
         return to_string(t);
     }
 
-    template <typename T, typename std::enable_if<!std::is_convertible_v<T, std::string> && !detail::has_std_to_string_v<T> && !detail::has_to_string_v<T> && detail::has_ostr_v<T>, int>::type = 0>
+    template <typename T, typename std::enable_if_t<!std::is_convertible_v<T, std::string> && !detail::has_std_to_string_v<T> && !detail::has_to_string_v<T> && detail::has_ostr_v<T>, int> = 0>
     std::string str(const T & t)
     {
         std::ostringstream os;
@@ -935,20 +935,21 @@ namespace csv
         return w;
     }
 
+    template <typename Header, typename Default_value = std::string>
     class Map_writer_iter
     {
     private:
         std::unique_ptr<Writer> writer;
-        std::vector<std::string> headers;
-        std::string default_val;
+        std::vector<Header> headers;
+        Default_value default_val;
 
     public:
-        Map_writer_iter(std::ostream & output_stream, const std::vector<std::string> & headers, const std::string default_val = {}):
+        Map_writer_iter(std::ostream & output_stream, const std::vector<Header> & headers, const Default_value & default_val = {}):
             writer(std::make_unique<Writer>(output_stream)), headers(headers), default_val(default_val)
         {
             writer->write_row(headers);
         }
-        Map_writer_iter(const std::string& filename, const std::vector<std::string> & headers, const std::string default_val = {}):
+        Map_writer_iter(const std::string& filename, const std::vector<Header> & headers, const Default_value & default_val = {}):
             writer(std::make_unique<Writer>(filename)), headers(headers), default_val(default_val)
         {
             writer->write_row(headers);
@@ -964,8 +965,8 @@ namespace csv
         Map_writer_iter & operator++() { return *this; }
         Map_writer_iter & operator++(int) { return *this; }
 
-        template <typename T>
-        Map_writer_iter & operator=(const std::map<std::string, T> & row)
+        template <typename K, typename T, typename std::enable_if_t<std::is_convertible_v<Header, K>, int> = 0>
+        Map_writer_iter & operator=(const std::map<K, T> & row)
         {
             for(auto & h: headers)
             {
