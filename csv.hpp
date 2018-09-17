@@ -81,19 +81,25 @@ namespace csv
         inline constexpr bool has_ostr_v = has_ostr<T>::value;
     };
 
-    template <typename T, typename std::enable_if<detail::has_std_to_string_v<T>, int>::type = 0>
+    template <typename T, typename std::enable_if<std::is_convertible_v<T, std::string>, int>::type = 0>
+    std::string str(const T & t)
+    {
+        return t;
+    }
+
+    template <typename T, typename std::enable_if<!std::is_convertible_v<T, std::string> && detail::has_std_to_string_v<T>, int>::type = 0>
     std::string str(const T & t)
     {
         return std::to_string(t);
     }
 
-    template <typename T, typename std::enable_if<!detail::has_std_to_string_v<T> && detail::has_to_string_v<T>, int>::type = 0>
+    template <typename T, typename std::enable_if<!std::is_convertible_v<T, std::string> && !detail::has_std_to_string_v<T> && detail::has_to_string_v<T>, int>::type = 0>
     std::string str(const T & t)
     {
         return to_string(t);
     }
 
-    template <typename T, typename std::enable_if<!detail::has_std_to_string_v<T> && !detail::has_to_string_v<T> && detail::has_ostr_v<T>, int>::type = 0>
+    template <typename T, typename std::enable_if<!std::is_convertible_v<T, std::string> && !detail::has_std_to_string_v<T> && !detail::has_to_string_v<T> && detail::has_ostr_v<T>, int>::type = 0>
     std::string str(const T & t)
     {
         std::ostringstream os;
@@ -410,7 +416,7 @@ namespace csv
                 throw Out_of_range_error("Read past end-of-file");
 
             // no conversion needed for strings
-            if constexpr(std::is_same<std::string, T>::value)
+            if constexpr(std::is_convertible_v<std::string, T>)
             {
                 return field;
             }
@@ -905,16 +911,7 @@ namespace csv
         template<typename T>
         std::string quote(const T & field)
         {
-            std::string field_str;
-
-            if constexpr(std::is_convertible_v<T, std::string>)
-            {
-                field_str = field;
-            }
-            else
-            {
-                field_str = str(field);
-            }
+            std::string field_str = str(field);
 
             auto escaped_chars = {'"', '\r', '\n', ','};
             if(std::find_first_of(field_str.begin(), field_str.end(), escaped_chars.begin(), escaped_chars.end()) == field_str.end())
