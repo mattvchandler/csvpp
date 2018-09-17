@@ -941,7 +941,6 @@ namespace csv
         std::unique_ptr<Writer> writer;
         std::vector<std::string> headers;
         std::string default_val;
-        std::map<std::string, std::string> obj;
 
     public:
         Map_writer_iter(std::ostream & output_stream, const std::vector<std::string> & headers, const std::string default_val = {}):
@@ -962,13 +961,17 @@ namespace csv
         using iterator_category = std::output_iterator_tag;
 
         Map_writer_iter & operator*() { return *this; }
-        Map_writer_iter & operator++()
+        Map_writer_iter & operator++() { return *this; }
+        Map_writer_iter & operator++(int) { return *this; }
+
+        template <typename T>
+        Map_writer_iter & operator=(const std::map<std::string, T> & row)
         {
             for(auto & h: headers)
             {
                 try
                 {
-                    (*writer)<<obj.at(h);
+                    (*writer)<<row.at(h);
                 }
                 catch(std::out_of_range&)
                 {
@@ -980,18 +983,6 @@ namespace csv
             return *this;
         }
 
-        Map_writer_iter & operator++(int) { ++(*this); return *this; }
-
-        template <typename T>
-        Map_writer_iter & operator=(const std::map<std::string, T> & row)
-        {
-            obj.clear();
-            for(auto &[header, val]: row)
-            {
-                obj[header] = str(val);
-            }
-            return *this;
-        }
     };
 };
 
