@@ -674,30 +674,34 @@ namespace csv
         return !lhs.equals(rhs);
     }
 
+    template <typename Header = std::string, typename Value = std::string>
     class Map_reader_iter
     {
     private:
 
         std::unique_ptr<Reader> reader;
-        std::string default_val;
-        std::vector<std::string> headers;
-        std::map<std::string, std::string> obj;
+        Value default_val;
+        std::vector<Header> headers;
+        std::map<Header, Value> obj;
 
-        auto get_header_row(const std::vector<std::string> & headers)
+        auto get_header_row(const std::vector<Header> & headers)
         {
             if(!std::empty(headers))
                 return headers;
 
-            auto header_row = reader->read_row_vec();
+            auto header_row = reader->read_row_vec<Header>();
             if(header_row)
                 return *header_row;
             else
                 throw Parse_error("Can't get header row", 0, 0);
         }
 
+        template <typename Header2, typename Value2>
+        friend class Map_reader_iter;
+
     public:
         Map_reader_iter() {}
-        Map_reader_iter(std::istream & input_stream, const std::string & default_val = {}, const std::vector<std::string> & headers = {}):
+        explicit Map_reader_iter(std::istream & input_stream, const Value & default_val = {}, const std::vector<Header> & headers = {}):
             reader(std::make_unique<Reader>(input_stream)),
             default_val(default_val),
             headers(get_header_row(headers))
@@ -705,7 +709,7 @@ namespace csv
             ++(*this);
         }
 
-        Map_reader_iter(const std::string & filename, const std::string & default_val = {}, const std::vector<std::string> & headers = {}):
+        explicit Map_reader_iter(const std::string & filename, const Value & default_val = {}, const std::vector<Header> & headers = {}):
             reader(std::make_unique<Reader>(filename)),
             default_val(default_val),
             headers(get_header_row(headers))
@@ -713,7 +717,7 @@ namespace csv
             ++(*this);
         }
 
-        Map_reader_iter(Reader::input_string_t, const std::string & input_data, const std::string & default_val = {}, const std::vector<std::string> & headers = {}):
+        Map_reader_iter(Reader::input_string_t, const std::string & input_data, const Value & default_val = {}, const std::vector<Header> & headers = {}):
             reader(std::make_unique<Reader>(Reader::input_string, input_data)),
             default_val(default_val),
             headers(get_header_row(headers))
@@ -733,12 +737,12 @@ namespace csv
         value_type & operator*() { return obj; }
         value_type * operator->() { return &obj; }
 
-        value_type::mapped_type & operator[](const value_type::key_type & key) { return obj.at(key); }
-        const value_type::mapped_type & operator[](const value_type::key_type & key) const { return obj.at(key); }
+        typename value_type::mapped_type & operator[](const typename value_type::key_type & key) { return obj.at(key); }
+        const typename value_type::mapped_type & operator[](const typename value_type::key_type & key) const { return obj.at(key); }
 
         Map_reader_iter & operator++()
         {
-            auto row = reader->read_row_vec();
+            auto row = reader->read_row_vec<Value>();
             if(!row)
                 reader.reset();
             else
@@ -760,7 +764,8 @@ namespace csv
             return ++*this;
         }
 
-        bool equals(const Map_reader_iter & rhs) const
+        template <typename Header2, typename Value2>
+        bool equals(const Map_reader_iter<Header2, Value2> & rhs) const
         {
             return reader == rhs.reader;
         }
@@ -771,12 +776,14 @@ namespace csv
         }
     };
 
-    inline bool operator==(const Map_reader_iter & lhs, const Map_reader_iter & rhs)
+    template <typename Header1, typename Value1, typename Header2, typename Value2>
+    inline bool operator==(const Map_reader_iter<Header1, Value1> & lhs, const Map_reader_iter<Header2, Value2> & rhs)
     {
         return lhs.equals(rhs);
     }
 
-    inline bool operator!=(const Map_reader_iter & lhs, const Map_reader_iter & rhs)
+    template <typename Header1, typename Value1, typename Header2, typename Value2>
+    inline bool operator!=(const Map_reader_iter<Header1, Value1> & lhs, const Map_reader_iter<Header2, Value2> & rhs)
     {
         return !lhs.equals(rhs);
     }

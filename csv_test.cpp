@@ -304,34 +304,34 @@ bool test_read_mine_cpp_read_row_vec(const std::string & csv_text, const CSV_dat
 
 bool test_read_mine_cpp_read_all_as_int(const std::string & csv_text, const CSV_data & expected_data)
 {
-    try
+    std::vector<std::vector<int>> expected_ints;
+    for(auto & row: expected_data)
     {
-        std::vector<std::vector<int>> expected_ints;
-        for(auto & row: expected_data)
+        expected_ints.emplace_back();
+        for(auto & col: row)
         {
-            expected_ints.emplace_back();
-            for(auto & col: row)
+            auto skip = [](const std::exception & e)
             {
-                auto skip = [](const std::exception & e)
-                {
-                    using namespace std::string_literals;
-                    if(e.what() == "stoi"s)
-                        throw test::Skip_test();
-                };
+                using namespace std::string_literals;
+                if(e.what() == "stoi"s)
+                    throw test::Skip_test();
+            };
 
-                try { expected_ints.back().push_back(std::stoi(col)); }
-                catch(const std::invalid_argument & e)
-                {
-                    skip(e);
-                    return false;
-                }
-                catch(const std::out_of_range & e)
-                {
-                    skip(e);
-                    return false;
-                }
+            try { expected_ints.back().push_back(std::stoi(col)); }
+            catch(const std::invalid_argument & e)
+            {
+                skip(e);
+                return false;
+            }
+            catch(const std::out_of_range & e)
+            {
+                skip(e);
+                return false;
             }
         }
+    }
+    try
+    {
         return csv::Reader(csv::Reader::input_string, csv_text).read_all<int>() == expected_ints;
     }
     catch(const csv::Parse_error & e)
@@ -619,7 +619,7 @@ bool test_read_mine_cpp_map(const std::string & csv_text, const CSV_data & expec
             return false;
 
         std::size_t i = 1;
-        for(; w != csv::Map_reader_iter() && i < std::size(expected_data); ++w, ++i)
+        for(; w != csv::Map_reader_iter{} && i < std::size(expected_data); ++w, ++i)
         {
             if(std::size(expected_data[i]) != std::size(w.get_headers()))
                 throw test::Skip_test{};
@@ -631,7 +631,79 @@ bool test_read_mine_cpp_map(const std::string & csv_text, const CSV_data & expec
             if(row != expected_data[i])
                 return false;
         }
-        if(i != std::size(expected_data) || w != csv::Map_reader_iter())
+        if(i != std::size(expected_data) || w != csv::Map_reader_iter{})
+            return false;
+
+        return true;
+    }
+    catch(const csv::Parse_error & e)
+    {
+        if(e.what() == std::string{"Error parsing CSV at line: 0, col: 0: Can't get header row"} && std::size(expected_data) == 0)
+            return true;
+        else
+        {
+            std::cerr<<e.what()<<"\n";
+            return false;
+        }
+    }
+    catch(const csv::Out_of_range_error &e)
+    {
+        if(e.what() == std::string{"Too many columns"})
+            throw test::Skip_test{};
+        else
+            throw;
+    }
+}
+bool test_read_mine_cpp_map_as_int(const std::string & csv_text, const CSV_data & expected_data)
+{
+    std::vector<std::vector<int>> expected_ints;
+    for(auto & row: expected_data)
+    {
+        expected_ints.emplace_back();
+        for(auto & col: row)
+        {
+            auto skip = [](const std::exception & e)
+            {
+                using namespace std::string_literals;
+                if(e.what() == "stoi"s)
+                    throw test::Skip_test();
+            };
+
+            try { expected_ints.back().push_back(std::stoi(col)); }
+            catch(const std::invalid_argument & e)
+            {
+                skip(e);
+                return false;
+            }
+            catch(const std::out_of_range & e)
+            {
+                skip(e);
+                return false;
+            }
+        }
+    }
+
+    try
+    {
+        csv::Map_reader_iter<int, int> w(csv::Reader::input_string, csv_text);
+
+        if(w.get_headers() != expected_ints.at(0))
+            return false;
+
+        std::size_t i = 1;
+        for(; w != csv::Map_reader_iter{} && i < std::size(expected_ints); ++w, ++i)
+        {
+            if(std::size(expected_ints[i]) != std::size(w.get_headers()))
+                throw test::Skip_test{};
+
+            std::vector<int> row;
+            for(auto & col: *w)
+                row.push_back(col.second);
+
+            if(row != expected_ints[i])
+                return false;
+        }
+        if(i != std::size(expected_ints) || w != csv::Map_reader_iter{})
             return false;
 
         return true;
@@ -1217,6 +1289,7 @@ int main(int, char *[])
         test_read_mine_cpp_row_range,
         test_read_mine_cpp_row_row_vec,
         test_read_mine_cpp_map,
+        test_read_mine_cpp_map_as_int,
         test_read_mine_cpp_variadic,
         test_read_mine_cpp_tuple,
         test_read_mine_cpp_row_variadic,
