@@ -1084,7 +1084,7 @@ bool test_write_mine_cpp_map(const CSV_data data, const std::string & expected_t
             for(std::size_t i = 0; i < std::size(headers); ++i)
                 out_row[headers[i]] = (*row)[i];
 
-            w = out_row;
+            *w = out_row;
         }
     }
     return str.str() == expected_text;

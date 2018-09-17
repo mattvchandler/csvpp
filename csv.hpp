@@ -698,6 +698,7 @@ namespace csv
         {
             ++(*this);
         }
+
         Map_reader_iter(const std::string & filename, const std::string & default_val = {}, const std::vector<std::string> & headers = {}):
             reader(std::make_unique<Reader>(filename)),
             default_val(default_val),
@@ -943,6 +944,7 @@ namespace csv
         std::unique_ptr<Writer> writer;
         std::vector<std::string> headers;
         std::string default_val;
+        std::map<std::string, std::string> obj;
 
     public:
         Map_writer_iter(std::ostream & output_stream, const std::vector<std::string> & headers, const std::string default_val = {}):
@@ -963,17 +965,13 @@ namespace csv
         using iterator_category = std::output_iterator_tag;
 
         Map_writer_iter & operator*() { return *this; }
-        Map_writer_iter & operator++() { return *this; }
-        Map_writer_iter & operator++(int) { return *this; }
-
-        template <typename T>
-        Map_writer_iter & operator=(const std::map<std::string, T> & row)
+        Map_writer_iter & operator++()
         {
             for(auto & h: headers)
             {
                 try
                 {
-                    (*writer)<<row.at(h);
+                    (*writer)<<obj.at(h);
                 }
                 catch(std::out_of_range&)
                 {
@@ -982,6 +980,19 @@ namespace csv
             }
 
             writer->end_row();
+            return *this;
+        }
+
+        Map_writer_iter & operator++(int) { ++(*this); return *this; }
+
+        template <typename T>
+        Map_writer_iter & operator=(const std::map<std::string, T> & row)
+        {
+            obj.clear();
+            for(auto &[header, val]: row)
+            {
+                obj[header] = str(val);
+            }
             return *this;
         }
     };
