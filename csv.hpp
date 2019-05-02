@@ -586,7 +586,7 @@ namespace csv
                     }
                     else
                     {
-                        if(field.empty() && c == '"')
+                        if(field.empty())
                         {
                             _start_of_row = false;
                             quoted = true;
