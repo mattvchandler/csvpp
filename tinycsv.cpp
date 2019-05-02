@@ -1,10 +1,10 @@
-#include<string>
-#include<vector>
-#include<cstdio>
-#define B emplace_back();
-#define E feof(f)
-#define G c=getc(f);
-#define Z size()
+#include<string>//Tiny CSV pretty-print
+#include<vector>//Matthew Chandler
+#include<cstdio>//mattvchandler@gmail
+#define B emplace_back();//.com
+#define E feof(f)//©2019 by MIT license
+#define G c=getc(f);//build w/ c++17
+#define Z size()//./tinycsv foo.csv
 using namespace std;using I=int;using S=
 string;pair<S,I>p(FILE*f){if(E)return{{}
 ,0};I q=0,e=0,c;S w;while(1){G if(c==EOF
