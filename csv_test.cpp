@@ -33,6 +33,8 @@
 
 #include "test.hpp"
 
+#include "tinycsv_test.hpp"
+
 template<typename Tuple, std::size_t N>
 constexpr void print_tuple(std::ostream &o, const Tuple & t)
 {
@@ -241,6 +243,112 @@ bool test_read_mine_simple_c(const std::string & csv_text, const CSV_data & expe
 
     free(csv);
     return true;
+}
+
+bool test_read_tinycsv(const std::string & csv_text, const CSV_data & expected_data)
+{
+    // tinycsv can't distinguish between empty data and 1 empty field
+    if(std::empty(expected_data))
+        throw test::Skip_test();
+
+    std::ofstream out("test.csv", std::ifstream::binary);
+    if(!out)
+        return false;
+
+    out.write(csv_text.data(), csv_text.size());
+    out.close();
+
+    FILE * r_test = std::fopen("test.csv", "rb");
+
+    if(!r_test)
+        return false;
+
+    CSV_data data(1);
+
+    while(true)
+    {
+        try
+        {
+            const auto & [field, end_of_row] = tinycsv_parse(r_test);
+
+            if(std::ferror(r_test))
+                goto error;
+
+            data.back().push_back(field);
+
+            if(std::feof(r_test))
+                break;
+
+            if(end_of_row)
+                data.emplace_back();
+        }
+        catch(int)
+        {
+            std::cerr<<"Tinycsv error\n";
+            goto error;
+        }
+
+    }
+    std::fclose(r_test);
+
+    return data == expected_data;
+
+error:
+    std::fclose(r_test);
+    return false;
+}
+
+bool test_read_tinycsv_expanded(const std::string & csv_text, const CSV_data & expected_data)
+{
+    // tinycsv can't distinguish between empty data and 1 empty field
+    if(std::empty(expected_data))
+        throw test::Skip_test();
+
+    std::ofstream out("test.csv", std::ifstream::binary);
+    if(!out)
+        return false;
+
+    out.write(csv_text.data(), csv_text.size());
+    out.close();
+
+    FILE * r_test = std::fopen("test.csv", "rb");
+
+    if(!r_test)
+        return false;
+
+    CSV_data data(1);
+
+    while(true)
+    {
+        try
+        {
+            const auto & [field, end_of_row] = tinycsv_expanded_parse(r_test);
+
+            if(std::ferror(r_test))
+                goto error;
+
+            data.back().push_back(field);
+
+            if(std::feof(r_test))
+                break;
+
+            if(end_of_row)
+                data.emplace_back();
+        }
+        catch(const char * what)
+        {
+            std::cerr<<"Tinycsv_expanded error: "<<what<<"\n";
+            goto error;
+        }
+
+    }
+    std::fclose(r_test);
+
+    return data == expected_data;
+
+error:
+    std::fclose(r_test);
+    return false;
 }
 
 bool test_read_mine_cpp_read_all(const std::string & csv_text, const CSV_data & expected_data)
@@ -1278,6 +1386,8 @@ int main(int, char *[])
     test::Test<const std::string&, const CSV_data&> test_read({
         test_read_mine_c,
         test_read_mine_simple_c,
+        test_read_tinycsv,
+        test_read_tinycsv_expanded,
         test_read_mine_cpp_read_all,
         test_read_mine_cpp_read_rows,
         test_read_mine_cpp_read_row_vec,

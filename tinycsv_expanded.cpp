@@ -118,4 +118,5 @@ int main(int argc, char * argv[])
     {
         puts(what); return 1;
     }
+    return 0;
 }
