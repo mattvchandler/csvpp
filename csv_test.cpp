@@ -785,6 +785,7 @@ bool test_read_mine_cpp_variadic(const std::string & csv_text, const CSV_data & 
         return false;
     }
 }
+
 bool test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & expected_data)
 {
     try
@@ -921,6 +922,7 @@ bool test_read_mine_cpp_row_variadic(const std::string & csv_text, const CSV_dat
         return false;
     }
 }
+
 bool test_read_mine_cpp_row_tuple(const std::string & csv_text, const CSV_data & expected_data)
 {
     try
@@ -1321,6 +1323,9 @@ int main(int, char *[])
 
     test_read.test_pass("Read test: 1 quoted field",
             "\"1\"\r\n", {{"1"}});
+
+    test_read.test_pass("Read test: 1 empty quoted field",
+            "\"\"\r\n", {{""}});
 
     test_read.test_pass("Read test: 1 row",
             "1,2,3,4\r\n", {{"1", "2", "3", "4"}});
