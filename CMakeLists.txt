@@ -55,3 +55,13 @@ target_link_libraries(csv_test
 
 add_executable(tinycsv tinycsv.cpp)
 add_executable(tinycsv_expanded tinycsv_expanded.cpp)
+
+find_program(qrencode qrencode)
+if(qrencode)
+    add_custom_command(
+        COMMAND ${qrencode} -r ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.cpp -o ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.png
+        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.png
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.cpp
+        COMMENT "Generating tinycsv QR code")
+    add_custom_target(tinycsv_qr ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.png)
+endif()
