@@ -322,22 +322,31 @@ namespace csv
             value_type obj;
         };
 
-        explicit Reader(std::istream & input_stream):
-            _input_stream(input_stream)
+        explicit Reader(std::istream & input_stream,
+                const char delimiter = ',', const char quote = '"'):
+            _input_stream(input_stream),
+            _delimiter(delimiter),
+            _quote(quote)
         {}
 
-        explicit Reader(const std::string & filename):
+        explicit Reader(const std::string & filename,
+                const char delimiter = ',', const char quote = '"'):
             _internal_input_stream(std::make_unique<std::ifstream>(filename)),
-            _input_stream(*_internal_input_stream)
+            _input_stream(*_internal_input_stream),
+            _delimiter(delimiter),
+            _quote(quote)
         {}
 
         // disambiguation tag
         struct input_string_t{};
         static inline constexpr input_string_t input_string{};
 
-        Reader(input_string_t, const std::string & input_data):
+        Reader(input_string_t, const std::string & input_data,
+                const char delimiter = ',', const char quote = '"'):
             _internal_input_stream(std::make_unique<std::istringstream>(input_data)),
-            _input_stream(*_internal_input_stream)
+            _input_stream(*_internal_input_stream),
+            _delimiter(delimiter),
+            _quote(quote)
         {}
 
         ~Reader() = default;
@@ -563,7 +572,7 @@ namespace csv
                     throw Parse_error("Error reading from stream", _line_no, _col_no);
 
                 // we need special handling for quotes
-                if(c == '"')
+                if(c == _quote)
                 {
                     if(quoted)
                     {
@@ -578,11 +587,11 @@ namespace csv
                             ++_col_no;
 
                         // end of the field?
-                        if(c == ',' || c == '\n' || c == '\r' || _input_stream.eof())
+                        if(c == _delimiter || c == '\n' || c == '\r' || _input_stream.eof())
                             quoted = false;
                         // if it's not an escaped quote, then it's an error
-                        else if(c != '"')
-                            throw Parse_error("Unecaped double-quote", _line_no, _col_no - 1);
+                        else if(c != _quote)
+                            throw Parse_error("Unescaped double-quote", _line_no, _col_no - 1);
                     }
                     else
                     {
@@ -604,7 +613,7 @@ namespace csv
                 {
                     throw Parse_error("Unterminated quoted field - reached end-of-file", _line_no, _col_no);
                 }
-                else if(!quoted && c == ',')
+                else if(!quoted && c == _delimiter)
                 {
                     break;
                 }
@@ -642,14 +651,17 @@ namespace csv
         std::unique_ptr<std::istream> _internal_input_stream;
         std::istream & _input_stream;
 
+        char _delimiter {','};
+        char _quote {'"'};
+        std::optional<std::string> _line_terminator {};
+
+        std::optional<std::string> _conversion_retry;
         bool _start_of_row = true;
         bool _end_of_row = false;
         bool _eof = false;
 
         int _line_no = 1;
         int _col_no = 0;
-
-        std::optional<std::string> _conversion_retry;
     };
 
     inline bool operator==(const Reader::Iterator & lhs, const Reader::Iterator & rhs)
@@ -701,24 +713,27 @@ namespace csv
 
     public:
         Map_reader_iter() {}
-        explicit Map_reader_iter(std::istream & input_stream, const Value & default_val = {}, const std::vector<Header> & headers = {}):
-            reader(std::make_unique<Reader>(input_stream)),
+        explicit Map_reader_iter(std::istream & input_stream, const Value & default_val = {}, const std::vector<Header> & headers = {},
+                const char delimiter = ',', const char quote = '"'):
+            reader(std::make_unique<Reader>(input_stream, delimiter, quote)),
             default_val(default_val),
             headers(get_header_row(headers))
         {
             ++(*this);
         }
 
-        explicit Map_reader_iter(const std::string & filename, const Value & default_val = {}, const std::vector<Header> & headers = {}):
-            reader(std::make_unique<Reader>(filename)),
+        explicit Map_reader_iter(const std::string & filename, const Value & default_val = {}, const std::vector<Header> & headers = {},
+                const char delimiter = ',', const char quote = '"'):
+            reader(std::make_unique<Reader>(filename, delimiter, quote)),
             default_val(default_val),
             headers(get_header_row(headers))
         {
             ++(*this);
         }
 
-        Map_reader_iter(Reader::input_string_t, const std::string & input_data, const Value & default_val = {}, const std::vector<Header> & headers = {}):
-            reader(std::make_unique<Reader>(Reader::input_string, input_data)),
+        Map_reader_iter(Reader::input_string_t, const std::string & input_data, const Value & default_val = {}, const std::vector<Header> & headers = {},
+                const char delimiter = ',', const char quote = '"'):
+            reader(std::make_unique<Reader>(Reader::input_string, input_data, delimiter, quote)),
             default_val(default_val),
             headers(get_header_row(headers))
         {
@@ -818,12 +833,18 @@ namespace csv
             Writer * writer;
         };
 
-        explicit Writer(std::ostream & output_stream):
-            _output_stream(output_stream)
+        explicit Writer(std::ostream & output_stream,
+                const char delimiter = ',', const char quote = '"'):
+            _output_stream(output_stream),
+            _delimiter(delimiter),
+            _quote(quote)
         {}
-        explicit Writer(const std::string& filename):
+        explicit Writer(const std::string& filename,
+                const char delimiter = ',', const char quote = '"'):
             _internal_output_stream(std::make_unique<std::ofstream>(filename, std::ios::binary)),
-            _output_stream(*_internal_output_stream)
+            _output_stream(*_internal_output_stream),
+            _delimiter(delimiter),
+            _quote(quote)
         {}
         ~Writer()
         {
@@ -847,14 +868,16 @@ namespace csv
             if(!_start_of_row)
                 end_row();
 
-            auto no_comma = "";
-            auto comma = ",";
-            auto & sep = no_comma;
+            bool first_item = true;
 
             for(; first != last; ++ first)
             {
-                _output_stream<<sep<<quote(*first);
-                sep = comma;
+                if(!first_item)
+                    _output_stream<<_delimiter;
+
+                _output_stream<<quote(*first);
+
+                first_item = false;
             }
             end_row();
         }
@@ -888,7 +911,7 @@ namespace csv
         void write_field(const T & field)
         {
             if(!_start_of_row)
-                _output_stream<<",";
+                _output_stream<<_delimiter;
 
             _output_stream<<quote(field);
 
@@ -920,12 +943,12 @@ namespace csv
         {
             std::string field_str = str(field);
 
-            auto escaped_chars = {'"', '\r', '\n', ','};
+            auto escaped_chars = {_delimiter, _quote, '\r', '\n'};
             if(std::find_first_of(field_str.begin(), field_str.end(), escaped_chars.begin(), escaped_chars.end()) == field_str.end())
                 return field_str;
 
-            auto ret = std::regex_replace(field_str, std::regex("\""), "\"\"");
-            ret = "\"" + ret + "\"";
+            auto ret = std::regex_replace(field_str, std::regex(std::string{_quote}), std::string{_quote} + std::string{_quote});
+            ret = _quote + ret + _quote;
             return ret;
         }
 
@@ -934,6 +957,9 @@ namespace csv
         std::unique_ptr<std::ostream> _internal_output_stream;
         std::ostream & _output_stream;
         bool _start_of_row = true;
+
+        char _delimiter {','};
+        char _quote {'"'};
     };
 
     inline Writer & end_row(Writer & w)
@@ -951,13 +977,15 @@ namespace csv
         Default_value default_val;
 
     public:
-        Map_writer_iter(std::ostream & output_stream, const std::vector<Header> & headers, const Default_value & default_val = {}):
-            writer(std::make_unique<Writer>(output_stream)), headers(headers), default_val(default_val)
+        Map_writer_iter(std::ostream & output_stream, const std::vector<Header> & headers, const Default_value & default_val = {},
+                const char delimiter = ',', const char quote = '"'):
+            writer(std::make_unique<Writer>(output_stream, delimiter, quote)), headers(headers), default_val(default_val)
         {
             writer->write_row(headers);
         }
-        Map_writer_iter(const std::string& filename, const std::vector<Header> & headers, const Default_value & default_val = {}):
-            writer(std::make_unique<Writer>(filename)), headers(headers), default_val(default_val)
+        Map_writer_iter(const std::string& filename, const std::vector<Header> & headers, const Default_value & default_val = {},
+                const char delimiter = ',', const char quote = '"'):
+            writer(std::make_unique<Writer>(filename, delimiter, quote)), headers(headers), default_val(default_val)
         {
             writer->write_row(headers);
         }
