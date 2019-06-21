@@ -35,7 +35,9 @@
 
 #include "test.hpp"
 
+#ifdef CSV_ENABLE_TINYCSV
 #include "tinycsv_test.hpp"
+#endif
 
 template<typename Tuple, std::size_t N>
 constexpr void print_tuple(std::ostream &o, const Tuple & t)
@@ -250,6 +252,7 @@ bool test_read_mine_simple_c(const std::string & csv_text, const CSV_data & expe
     return true;
 }
 
+#ifdef CSV_ENABLE_TINYCSV
 bool test_read_tinycsv(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     if(delimiter != ',' || quote != '"')
@@ -361,6 +364,7 @@ error:
     std::fclose(r_test);
     return false;
 }
+#endif
 
 bool test_read_mine_cpp_read_all(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
@@ -1442,8 +1446,10 @@ int main(int, char *[])
     test::Test<const std::string&, const CSV_data&, const char, const char> test_read{{
         test_read_mine_c,
         test_read_mine_simple_c,
+        #ifdef CSV_ENABLE_TINYCSV
         test_read_tinycsv,
         test_read_tinycsv_expanded,
+        #endif
         test_read_mine_cpp_read_all,
         test_read_mine_cpp_read_rows,
         test_read_mine_cpp_read_row_vec,

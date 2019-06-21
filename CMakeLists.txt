@@ -18,50 +18,59 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 
-file(GENERATE OUTPUT ${PROJECT_BINARY_DIR}/tinycsv_test.cmake CONTENT
-    "set(CMAKE_CURRENT_SOURCE_DIR \"${CMAKE_CURRENT_SOURCE_DIR}\")
-    set(PROJECT_BINARY_DIR \"${PROJECT_BINARY_DIR}\")
-    file(READ \${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.cpp tinycsv_cpp)
-    string(REGEX REPLACE \"p\\\\(\" \"tinycsv_parse(\" tinycsv_cpp \"\${tinycsv_cpp}\")
-    string(REGEX REPLACE \"main\" \"tinycsv_disabled_main\" tinycsv_cpp \"\${tinycsv_cpp}\")
-    file(WRITE \${PROJECT_BINARY_DIR}/tinycsv_parse.cpp \"\${tinycsv_cpp}\")\n")
-add_custom_command(
-    COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/tinycsv_test.cmake
-    OUTPUT ${PROJECT_BINARY_DIR}/tinycsv_parse.cpp
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.cpp
-    COMMENT "Extacting parse fun from tinycsv.cpp")
+option(CSV_ENABLE_TINYCSV "Enable generation and testing of tinycsv" OFF)
 
-file(GENERATE OUTPUT ${PROJECT_BINARY_DIR}/tinycsv_expanded_test.cmake CONTENT
-    "set(CMAKE_CURRENT_SOURCE_DIR \"${CMAKE_CURRENT_SOURCE_DIR}\")
-    set(PROJECT_BINARY_DIR \"${PROJECT_BINARY_DIR}\")
-    file(READ \${CMAKE_CURRENT_SOURCE_DIR}/tinycsv_expanded.cpp tinycsv_expanded_cpp)
-    string(REGEX REPLACE \"parse\\\\(\" \"tinycsv_expanded_parse(\" tinycsv_expanded_cpp \"\${tinycsv_expanded_cpp}\")
-    string(REGEX REPLACE \"main\" \"tinycsv_expanded_disabled_main\" tinycsv_expanded_cpp \"\${tinycsv_expanded_cpp}\")
-    file(WRITE \${PROJECT_BINARY_DIR}/tinycsv_expanded_parse.cpp \"\${tinycsv_expanded_cpp}\")\n")
-add_custom_command(
-    COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/tinycsv_expanded_test.cmake
-    OUTPUT ${PROJECT_BINARY_DIR}/tinycsv_expanded_parse.cpp
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv_expanded.cpp
-    COMMENT "Extacting parse fun from tinycsv_expanded.cpp")
-
-add_executable(csv_test
-    csv_test.cpp
-    csv.c
-    ${PROJECT_BINARY_DIR}/tinycsv_parse.cpp
-    ${PROJECT_BINARY_DIR}/tinycsv_expanded_parse.cpp
+add_executable(csv_test)
+target_sources(csv_test PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/csv.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/csv_test.cpp
     )
-target_link_libraries(csv_test
-    csv)
+target_link_libraries(csv_test csv)
 
-add_executable(tinycsv tinycsv.cpp)
-add_executable(tinycsv_expanded tinycsv_expanded.cpp)
-
-find_program(qrencode qrencode)
-if(qrencode)
+if(CSV_ENABLE_TINYCSV)
+    file(GENERATE OUTPUT ${PROJECT_BINARY_DIR}/tinycsv_test.cmake CONTENT
+        "set(CMAKE_CURRENT_SOURCE_DIR \"${CMAKE_CURRENT_SOURCE_DIR}\")
+        set(PROJECT_BINARY_DIR \"${PROJECT_BINARY_DIR}\")
+        file(READ \${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.cpp tinycsv_cpp)
+        string(REGEX REPLACE \"p\\\\(\" \"tinycsv_parse(\" tinycsv_cpp \"\${tinycsv_cpp}\")
+        string(REGEX REPLACE \"main\" \"tinycsv_disabled_main\" tinycsv_cpp \"\${tinycsv_cpp}\")
+        file(WRITE \${PROJECT_BINARY_DIR}/tinycsv_parse.cpp \"\${tinycsv_cpp}\")\n")
     add_custom_command(
-        COMMAND ${qrencode} -r ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.cpp -o ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.png
-        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.png
+        COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/tinycsv_test.cmake
+        OUTPUT ${PROJECT_BINARY_DIR}/tinycsv_parse.cpp
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.cpp
-        COMMENT "Generating tinycsv QR code")
-    add_custom_target(tinycsv_qr ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.png)
+        COMMENT "Extacting parse fun from tinycsv.cpp")
+
+    file(GENERATE OUTPUT ${PROJECT_BINARY_DIR}/tinycsv_expanded_test.cmake CONTENT
+        "set(CMAKE_CURRENT_SOURCE_DIR \"${CMAKE_CURRENT_SOURCE_DIR}\")
+        set(PROJECT_BINARY_DIR \"${PROJECT_BINARY_DIR}\")
+        file(READ \${CMAKE_CURRENT_SOURCE_DIR}/tinycsv_expanded.cpp tinycsv_expanded_cpp)
+        string(REGEX REPLACE \"parse\\\\(\" \"tinycsv_expanded_parse(\" tinycsv_expanded_cpp \"\${tinycsv_expanded_cpp}\")
+        string(REGEX REPLACE \"main\" \"tinycsv_expanded_disabled_main\" tinycsv_expanded_cpp \"\${tinycsv_expanded_cpp}\")
+        file(WRITE \${PROJECT_BINARY_DIR}/tinycsv_expanded_parse.cpp \"\${tinycsv_expanded_cpp}\")\n")
+    add_custom_command(
+        COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/tinycsv_expanded_test.cmake
+        OUTPUT ${PROJECT_BINARY_DIR}/tinycsv_expanded_parse.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv_expanded.cpp
+        COMMENT "Extacting parse fun from tinycsv_expanded.cpp")
+
+    add_executable(tinycsv tinycsv.cpp)
+    add_executable(tinycsv_expanded tinycsv_expanded.cpp)
+
+    find_program(qrencode qrencode)
+    if(qrencode)
+        add_custom_command(
+            COMMAND ${qrencode} -r ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.cpp -o ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.png
+            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.png
+            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.cpp
+            COMMENT "Generating tinycsv QR code")
+        add_custom_target(tinycsv_qr ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tinycsv.png)
+    endif()
+
+    target_sources(csv_test PUBLIC
+        ${PROJECT_BINARY_DIR}/tinycsv_parse.cpp
+        ${PROJECT_BINARY_DIR}/tinycsv_expanded_parse.cpp
+        )
+
+    target_compile_definitions(csv_test PUBLIC "-DCSV_ENABLE_TINYCSV")
 endif()
