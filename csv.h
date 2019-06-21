@@ -49,6 +49,12 @@ CSV_reader * CSV_reader_init_from_filename(const char * filename);
 // delete a CSV reader object
 void CSV_reader_free(CSV_reader * reader);
 
+// set delimiter character
+void CSV_reader_set_delimiter(CSV_reader * reader, const char delimiter);
+
+// set quote character
+void CSV_reader_set_quote(CSV_reader * reader, const char quote);
+
 // read the current record from the CSV file and advance to the next
 // fields_out is owned by CSV_reader and must not be freed or modified by the caller
 CSV_status CSV_reader_read_record(CSV_reader * reader, char *** fields_out, size_t * num_fields_out);
@@ -58,6 +64,12 @@ CSV_writer * CSV_writer_init_from_filename(const char * filename);
 
 // delete a CSV writer object
 void CSV_writer_free(CSV_writer * writer);
+
+// set delimiter character
+void CSV_writer_set_delimiter(CSV_writer * writer, const char delimiter);
+
+// set quote character
+void CSV_writer_set_quote(CSV_writer * writer, const char quote);
 
 // write a record
 CSV_status CSV_writer_write_record(CSV_writer * writer, const char *const * fields, const size_t num_fields);

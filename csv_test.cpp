@@ -78,9 +78,6 @@ using CSV_data = std::vector<std::vector<std::string>>;
 
 bool test_read_mine_c(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
-    if(delimiter != ',' || quote != '"')
-        throw test::Skip_test{};
-
     std::ofstream out("test.csv", std::ifstream::binary);
     if(!out)
         return false;
@@ -92,6 +89,9 @@ bool test_read_mine_c(const std::string & csv_text, const CSV_data & expected_da
 
     if(!r_test)
         return false;
+
+    CSV_reader_set_delimiter(r_test, delimiter);
+    CSV_reader_set_quote(r_test, quote);
 
     size_t row = 0;
     while(1)
@@ -1200,12 +1200,12 @@ bool test_read_libcsv(const std::string & csv_text, const CSV_data & expected_da
 
 bool test_write_mine_c(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
-    if(delimiter != ',' || quote != '"')
-        throw test::Skip_test{};
-
     CSV_writer * w_test = CSV_writer_init_from_filename("test.csv");
     if(!w_test)
         return false;
+
+    CSV_writer_set_delimiter(w_test, delimiter);
+    CSV_writer_set_quote(w_test, quote);
 
     for(const auto & row: data)
     {

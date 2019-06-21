@@ -32,12 +32,16 @@ typedef struct _CSV_reader_private
     size_t _fields_alloc;
     size_t _num_fields;
     CSV_status _status;
+    char delimiter;
+    char quote;
 } CSV_reader_private;
 
 // CSV writer object
 typedef struct _CSV_writer_private
 {
     FILE * _file;
+    char delimiter;
+    char quote;
 } CSV_writer_private;
 
 char * CSV_strdup(const char * src)
@@ -63,6 +67,8 @@ CSV_reader * CSV_reader_init_from_filename(const char * filename)
     reader->_col_no = 0;
     reader->_num_fields = 0;
     reader->_status = CSV_OK;
+    reader->delimiter = ',';
+    reader->quote = '"';
 
     // init field storage
     reader->_fields_alloc = 10;
@@ -87,6 +93,18 @@ void CSV_reader_free(CSV_reader * reader)
     }
 
     free(reader_p);
+}
+
+// set delimiter character
+void CSV_reader_set_delimiter(CSV_reader * reader, const char delimiter)
+{
+    ((CSV_reader_private*)reader)->delimiter = delimiter;
+}
+
+// set quote character
+void CSV_reader_set_quote(CSV_reader * reader, const char quote)
+{
+    ((CSV_reader_private*)reader)->quote = quote;
 }
 
 typedef enum {PARSE_CSV_FIELD, PARSE_CSV_RECORD, PARSE_CSV_EOF, PARSE_CSV_IO_ERROR, PARSE_CSV_PARSE_ERROR} Parse_csv_ret_t;
@@ -119,12 +137,12 @@ char * parse_csv(CSV_reader_private * reader, Parse_csv_ret_t * ret_type, int * 
             break;
         }
 
-        if(!quoted && strlen(field) == 0 && c == '"')
+        if(!quoted && strlen(field) == 0 && c == reader->quote)
         {
             *empty_row = 0;
             quoted = 1;
         }
-        else if(!quoted && c == ',')
+        else if(!quoted && c == reader->delimiter)
         {
             *empty_row = 0;
             *ret_type = PARSE_CSV_FIELD;
@@ -163,15 +181,15 @@ char * parse_csv(CSV_reader_private * reader, Parse_csv_ret_t * ret_type, int * 
             }
             break;
         }
-        else if(!quoted && c == '"')
+        else if(!quoted && c == reader->quote)
         {
             *ret_type = PARSE_CSV_PARSE_ERROR;
             break;
         }
-        else if(quoted && c == '"')
+        else if(quoted && c == reader->quote)
         {
             int next_c = fgetc(reader->_file);
-            if(next_c == '"')
+            if(next_c == reader->quote)
             {
                 if(strlen(field) == field_alloc - 1)
                 {
@@ -179,11 +197,11 @@ char * parse_csv(CSV_reader_private * reader, Parse_csv_ret_t * ret_type, int * 
                     field = (char *)realloc(field, sizeof(char) * field_alloc);
                     field_ptr = field + strlen(field);
                 }
-                *field_ptr = '"';
+                *field_ptr = reader->quote;
                 *(++field_ptr) = '\0';
                 ++reader->_col_no;
             }
-            else if(next_c == ',' || next_c == '\n' || next_c == '\r' || next_c == EOF)
+            else if(next_c == reader->delimiter || next_c == '\n' || next_c == '\r' || next_c == EOF)
             {
                 quoted = 0;
                 ungetc(next_c, reader->_file);
@@ -335,6 +353,10 @@ CSV_writer * CSV_writer_init_from_filename(const char * filename)
     CSV_writer_private * writer = (CSV_writer_private *)malloc(sizeof(CSV_writer_private));
     writer->_file = fopen(filename, "wb");
 
+
+    writer->delimiter = ',';
+    writer->quote = '"';
+
     if(!writer->_file)
     {
         free(writer);
@@ -352,6 +374,18 @@ void CSV_writer_free(CSV_writer * writer)
     free(writer_p);
 }
 
+// set delimiter character
+void CSV_writer_set_delimiter(CSV_writer * writer, const char delimiter)
+{
+    ((CSV_writer_private*)writer)->delimiter = delimiter;
+}
+
+// set quote character
+void CSV_writer_set_quote(CSV_writer * writer, const char quote)
+{
+    ((CSV_writer_private*)writer)->quote = quote;
+}
+
 // write a single record
 CSV_status CSV_writer_write_record(CSV_writer * writer, char const *const * fields, const size_t num_fields)
 {
@@ -367,7 +401,7 @@ CSV_status CSV_writer_write_record(CSV_writer * writer, char const *const * fiel
             const char * i = NULL;
             for(i = field; *i; ++i)
             {
-                if(*i == '"'  || *i == ',' || *i == '\n' || *i == '\r')
+                if(*i == writer_p->quote || *i == writer_p->delimiter || *i == '\n' || *i == '\r')
                 {
                     quoted = 1;
                     break;
@@ -376,7 +410,7 @@ CSV_status CSV_writer_write_record(CSV_writer * writer, char const *const * fiel
 
             if(quoted)
             {
-                fputc('"', writer_p->_file);
+                fputc(writer_p->quote, writer_p->_file);
                 if(ferror(writer_p->_file))
                     return CSV_IO_ERROR;
             }
@@ -387,9 +421,9 @@ CSV_status CSV_writer_write_record(CSV_writer * writer, char const *const * fiel
                 if(ferror(writer_p->_file))
                     return CSV_IO_ERROR;
 
-                if(*i == '"')
+                if(*i == writer_p->quote)
                 {
-                    fputc('"', writer_p->_file);
+                    fputc(writer_p->quote, writer_p->_file);
                     if(ferror(writer_p->_file))
                         return CSV_IO_ERROR;
                 }
@@ -397,7 +431,7 @@ CSV_status CSV_writer_write_record(CSV_writer * writer, char const *const * fiel
 
             if(quoted)
             {
-                fputc('"', writer_p->_file);
+                fputc(writer_p->quote, writer_p->_file);
                 if(ferror(writer_p->_file))
                     return CSV_IO_ERROR;
             }
@@ -405,7 +439,7 @@ CSV_status CSV_writer_write_record(CSV_writer * writer, char const *const * fiel
 
         if(field_i < num_fields - 1)
         {
-            fputc(',', writer_p->_file);
+            fputc(writer_p->delimiter, writer_p->_file);
             if(ferror(writer_p->_file))
                 return CSV_IO_ERROR;
         }
