@@ -136,7 +136,7 @@ namespace csv
                 {
                     assert(row);
 
-                    if(_end_of_row)
+                    if(end_of_row_)
                     {
                         row = nullptr;
                     }
@@ -145,7 +145,7 @@ namespace csv
                         obj = row->read_field<T>();
 
                         if(row->end_of_row())
-                            _end_of_row = true;
+                            end_of_row_ = true;
                     }
 
                     return *this;
@@ -163,7 +163,7 @@ namespace csv
             private:
                 Reader::Row * row;
                 T obj{};
-                bool _end_of_row = false;
+                bool end_of_row_ = false;
             };
 
             template<typename T = std::string>
@@ -211,7 +211,7 @@ namespace csv
                     throw Out_of_range_error("Read past end of row");
 
                 data = reader->read_field<T>();
-                _end_of_row = reader->end_of_row();
+                end_of_row_ = reader->end_of_row();
                 return * this;
             }
 
@@ -223,7 +223,7 @@ namespace csv
                     throw Out_of_range_error("Read past end of row");
 
                 auto field = reader->read_field<T>();
-                _end_of_row = reader->end_of_row();
+                end_of_row_ = reader->end_of_row();
                 return field;
             }
 
@@ -249,7 +249,7 @@ namespace csv
                 (void)(*this >> ... >> data);
             }
 
-            bool end_of_row() const { return _end_of_row; }
+            bool end_of_row() const { return end_of_row_; }
 
             operator bool() { return reader && !end_of_row(); }
 
@@ -266,7 +266,7 @@ namespace csv
             explicit Row(Reader & reader): reader(&reader) {}
 
             Reader * reader;
-            bool _end_of_row = false;
+            bool end_of_row_ = false;
         };
 
         class Iterator
@@ -324,17 +324,17 @@ namespace csv
 
         explicit Reader(std::istream & input_stream,
                 const char delimiter = ',', const char quote = '"'):
-            _input_stream(input_stream),
-            _delimiter(delimiter),
-            _quote(quote)
+            input_stream_(input_stream),
+            delimiter_(delimiter),
+            quote_(quote)
         {}
 
         explicit Reader(const std::string & filename,
                 const char delimiter = ',', const char quote = '"'):
-            _internal_input_stream(std::make_unique<std::ifstream>(filename)),
-            _input_stream(*_internal_input_stream),
-            _delimiter(delimiter),
-            _quote(quote)
+            internal_input_stream_(std::make_unique<std::ifstream>(filename)),
+            input_stream_(*internal_input_stream_),
+            delimiter_(delimiter),
+            quote_(quote)
         {}
 
         // disambiguation tag
@@ -343,10 +343,10 @@ namespace csv
 
         Reader(input_string_t, const std::string & input_data,
                 const char delimiter = ',', const char quote = '"'):
-            _internal_input_stream(std::make_unique<std::istringstream>(input_data)),
-            _input_stream(*_internal_input_stream),
-            _delimiter(delimiter),
-            _quote(quote)
+            internal_input_stream_(std::make_unique<std::istringstream>(input_data)),
+            input_stream_(*internal_input_stream_),
+            delimiter_(delimiter),
+            quote_(quote)
         {}
 
         ~Reader() = default;
@@ -356,19 +356,19 @@ namespace csv
         Reader & operator=(const Reader &) = delete;
         Reader & operator=(Reader &&) = default;
 
-        bool end_of_row() const { return _end_of_row || _eof; }
+        bool end_of_row() const { return end_of_row_ || eof_; }
         bool eof()
         {
-            if(_eof)
+            if(eof_)
                 return true;
 
             // consume empty rows
             while(true)
             {
-                auto c = _input_stream.peek();
-                if(!_eof && c == std::istream::traits_type::eof())
+                auto c = input_stream_.peek();
+                if(!eof_ && c == std::istream::traits_type::eof())
                 {
-                    _eof = true;
+                    eof_ = true;
                     return true;
                 }
                 else if(c == '\r' || c == '\n')
@@ -377,7 +377,7 @@ namespace csv
                 }
                 else
                 {
-                    return _eof;
+                    return eof_;
                 }
             }
         }
@@ -404,24 +404,24 @@ namespace csv
         template<typename T = std::string>
         T read_field()
         {
-            if(_end_of_row)
+            if(end_of_row_)
             {
-                _start_of_row = true;
-                _end_of_row = false;
+                start_of_row_ = true;
+                end_of_row_ = false;
             }
 
             std::string field;
-            if(_conversion_retry)
+            if(conversion_retry_)
             {
-                field = *_conversion_retry;
-                _conversion_retry.reset();
+                field = *conversion_retry_;
+                conversion_retry_.reset();
             }
             else
             {
                 field = parse();
             }
 
-            if(_eof)
+            if(eof_)
                 throw Out_of_range_error("Read past end-of-file");
 
             // no conversion needed for strings
@@ -436,7 +436,7 @@ namespace csv
                 convert>>field_val;
                 if(!convert || convert.peek() != std::istream::traits_type::eof())
                 {
-                    _conversion_retry = field;
+                    conversion_retry_ = field;
                     throw Type_conversion_error(field);
                 }
 
@@ -454,7 +454,7 @@ namespace csv
 
                 if(end_of_row())
                     break;
-                else if(_eof)
+                else if(eof_)
                     return false;
             }
             return true;
@@ -490,8 +490,8 @@ namespace csv
 
             if(end_of_row())
             {
-                _start_of_row = true;
-                _end_of_row = false;
+                start_of_row_ = true;
+                end_of_row_ = false;
             }
 
             return ret;
@@ -503,8 +503,8 @@ namespace csv
             (read_row_variadic_helper(data), ...);
             if(end_of_row())
             {
-                _start_of_row = true;
-                _end_of_row = false;
+                start_of_row_ = true;
+                end_of_row_ = false;
             }
         }
 
@@ -530,8 +530,8 @@ namespace csv
         {
             if(end_of_row())
             {
-                _start_of_row = true;
-                _end_of_row = false;
+                start_of_row_ = true;
+                end_of_row_ = false;
                 throw Out_of_range_error("Read past end of row");
             }
 
@@ -546,10 +546,10 @@ namespace csv
 
         std::string parse()
         {
-            if(_input_stream.eof())
+            if(input_stream_.eof())
             {
-                _end_of_row = true;
-                _eof = true;
+                end_of_row_ = true;
+                eof_ = true;
                 return {};
             }
 
@@ -559,109 +559,109 @@ namespace csv
             while(true)
             {
                 char c = '\0';
-                _input_stream.get(c);
+                input_stream_.get(c);
                 if(c == '\n')
                 {
-                    ++_line_no;
-                    _col_no = 0;
+                    ++line_no_;
+                    col_no_ = 0;
                 }
                 else
-                    ++_col_no;
+                    ++col_no_;
 
-                if(!_input_stream && !_input_stream.eof())
-                    throw Parse_error("Error reading from stream", _line_no, _col_no);
+                if(!input_stream_ && !input_stream_.eof())
+                    throw Parse_error("Error reading from stream", line_no_, col_no_);
 
                 // we need special handling for quotes
-                if(c == _quote)
+                if(c == quote_)
                 {
                     if(quoted)
                     {
-                        _start_of_row = false;
-                        _input_stream.get(c);
+                        start_of_row_ = false;
+                        input_stream_.get(c);
                         if(c == '\n')
                         {
-                            ++_line_no;
-                            _col_no = 0;
+                            ++line_no_;
+                            col_no_ = 0;
                         }
                         else
-                            ++_col_no;
+                            ++col_no_;
 
                         // end of the field?
-                        if(c == _delimiter || c == '\n' || c == '\r' || _input_stream.eof())
+                        if(c == delimiter_ || c == '\n' || c == '\r' || input_stream_.eof())
                             quoted = false;
                         // if it's not an escaped quote, then it's an error
-                        else if(c != _quote)
-                            throw Parse_error("Unescaped double-quote", _line_no, _col_no - 1);
+                        else if(c != quote_)
+                            throw Parse_error("Unescaped double-quote", line_no_, col_no_ - 1);
                     }
                     else
                     {
                         if(field.empty())
                         {
-                            _start_of_row = false;
+                            start_of_row_ = false;
                             quoted = true;
                             continue;
                         }
                         else
                         {
                             // quotes are not allowed inside of an unquoted field
-                            throw Parse_error("Double-quote found in unquoted field", _line_no, _col_no);
+                            throw Parse_error("Double-quote found in unquoted field", line_no_, col_no_);
                         }
                     }
                 }
 
-                if(_input_stream.eof() && quoted)
+                if(input_stream_.eof() && quoted)
                 {
-                    throw Parse_error("Unterminated quoted field - reached end-of-file", _line_no, _col_no);
+                    throw Parse_error("Unterminated quoted field - reached end-of-file", line_no_, col_no_);
                 }
-                else if(!quoted && c == _delimiter)
+                else if(!quoted && c == delimiter_)
                 {
                     break;
                 }
-                else if(!quoted && (c == '\n' || c == '\r' || _input_stream.eof()))
+                else if(!quoted && (c == '\n' || c == '\r' || input_stream_.eof()))
                 {
-                    _end_of_row = true;
+                    end_of_row_ = true;
                     // consume newlines
-                    while(_input_stream)
+                    while(input_stream_)
                     {
-                        _input_stream.get(c);
+                        input_stream_.get(c);
                         if(c != '\r' && c != '\n')
                         {
-                            if(_input_stream)
-                                _input_stream.unget();
+                            if(input_stream_)
+                                input_stream_.unget();
                             break;
                         }
                         if(c == '\n')
                         {
-                            ++_line_no;
-                            _col_no = 0;
+                            ++line_no_;
+                            col_no_ = 0;
                         }
                         else
-                            ++_col_no;
+                            ++col_no_;
                     }
                     break;
                 }
 
-                _start_of_row = false;
+                start_of_row_ = false;
                 field += c;
             }
 
             return field;
         }
 
-        std::unique_ptr<std::istream> _internal_input_stream;
-        std::istream & _input_stream;
+        std::unique_ptr<std::istream> internal_input_stream_;
+        std::istream & input_stream_;
 
-        char _delimiter {','};
-        char _quote {'"'};
-        std::optional<std::string> _line_terminator {};
+        char delimiter_ {','};
+        char quote_ {'"'};
+        std::optional<std::string> line_terminator_ {};
 
-        std::optional<std::string> _conversion_retry;
-        bool _start_of_row = true;
-        bool _end_of_row = false;
-        bool _eof = false;
+        std::optional<std::string> conversion_retry_;
+        bool start_of_row_ = true;
+        bool end_of_row_ = false;
+        bool eof_ = false;
 
-        int _line_no = 1;
-        int _col_no = 0;
+        int line_no_ = 1;
+        int col_no_ = 0;
     };
 
     inline bool operator==(const Reader::Iterator & lhs, const Reader::Iterator & rhs)
@@ -835,20 +835,20 @@ namespace csv
 
         explicit Writer(std::ostream & output_stream,
                 const char delimiter = ',', const char quote = '"'):
-            _output_stream(output_stream),
-            _delimiter(delimiter),
-            _quote(quote)
+            output_stream_(output_stream),
+            delimiter_(delimiter),
+            quote_(quote)
         {}
         explicit Writer(const std::string& filename,
                 const char delimiter = ',', const char quote = '"'):
-            _internal_output_stream(std::make_unique<std::ofstream>(filename, std::ios::binary)),
-            _output_stream(*_internal_output_stream),
-            _delimiter(delimiter),
-            _quote(quote)
+            internal_output_stream_(std::make_unique<std::ofstream>(filename, std::ios::binary)),
+            output_stream_(*internal_output_stream_),
+            delimiter_(delimiter),
+            quote_(quote)
         {}
         ~Writer()
         {
-            if(!_start_of_row)
+            if(!start_of_row_)
                 end_row();
         }
 
@@ -865,7 +865,7 @@ namespace csv
         template<typename Iter>
         void write_row(Iter first, Iter last)
         {
-            if(!_start_of_row)
+            if(!start_of_row_)
                 end_row();
 
             bool first_item = true;
@@ -873,9 +873,9 @@ namespace csv
             for(; first != last; ++ first)
             {
                 if(!first_item)
-                    _output_stream<<_delimiter;
+                    output_stream_<<delimiter_;
 
-                _output_stream<<quote(*first);
+                output_stream_<<quote(*first);
 
                 first_item = false;
             }
@@ -910,12 +910,12 @@ namespace csv
         template<typename T>
         void write_field(const T & field)
         {
-            if(!_start_of_row)
-                _output_stream<<_delimiter;
+            if(!start_of_row_)
+                output_stream_<<delimiter_;
 
-            _output_stream<<quote(field);
+            output_stream_<<quote(field);
 
-            _start_of_row = false;
+            start_of_row_ = false;
         }
 
         template<typename T>
@@ -933,8 +933,8 @@ namespace csv
 
         void end_row()
         {
-            _output_stream<<"\r\n";
-            _start_of_row = true;
+            output_stream_<<"\r\n";
+            start_of_row_ = true;
         }
     private:
 
@@ -943,23 +943,23 @@ namespace csv
         {
             std::string field_str = str(field);
 
-            auto escaped_chars = {_delimiter, _quote, '\r', '\n'};
+            auto escaped_chars = {delimiter_, quote_, '\r', '\n'};
             if(std::find_first_of(field_str.begin(), field_str.end(), escaped_chars.begin(), escaped_chars.end()) == field_str.end())
                 return field_str;
 
-            auto ret = std::regex_replace(field_str, std::regex(std::string{_quote}), std::string{_quote} + std::string{_quote});
-            ret = _quote + ret + _quote;
+            auto ret = std::regex_replace(field_str, std::regex(std::string{quote_}), std::string{quote_} + std::string{quote_});
+            ret = quote_ + ret + quote_;
             return ret;
         }
 
         friend Writer &end_row(Writer & w);
 
-        std::unique_ptr<std::ostream> _internal_output_stream;
-        std::ostream & _output_stream;
-        bool _start_of_row = true;
+        std::unique_ptr<std::ostream> internal_output_stream_;
+        std::ostream & output_stream_;
+        bool start_of_row_ = true;
 
-        char _delimiter {','};
-        char _quote {'"'};
+        char delimiter_ {','};
+        char quote_ {'"'};
     };
 
     inline Writer & end_row(Writer & w)
