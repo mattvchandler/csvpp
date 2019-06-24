@@ -335,7 +335,10 @@ namespace csv
             input_stream_(*internal_input_stream_),
             delimiter_(delimiter),
             quote_(quote)
-        {}
+        {
+            if(!(*internal_input_stream_))
+                throw std::ios_base::failure{"Could not open file: " + filename};
+        }
 
         // disambiguation tag
         struct input_string_t{};
@@ -845,7 +848,10 @@ namespace csv
             output_stream_(*internal_output_stream_),
             delimiter_(delimiter),
             quote_(quote)
-        {}
+        {
+            if(!(*internal_output_stream_))
+                throw std::ios_base::failure{"Could not open file: " + filename};
+        }
         ~Writer()
         {
             if(!start_of_row_)
