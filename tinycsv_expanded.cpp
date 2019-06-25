@@ -119,10 +119,9 @@ int main(int argc, char * argv[])
             if(ferror(in)) break;
             data.back().push_back(field);
 
-            if(col_size.size() < data.back().size())
-                col_size.emplace_back();
+            col_size.resize(max(col_size.size(), data.back().size()));
 
-            col_size[data.back().size() - 1] = max((int)col_size[data.back().size() - 1], (int)field.size());
+            col_size[data.back().size() - 1] = max(col_size[data.back().size() - 1], (int)field.size());
             if(feof(in)) break;
 
             if(end_of_row)
@@ -130,10 +129,10 @@ int main(int argc, char * argv[])
         }
         for(auto &row: data)
         {
-            for(int i = 0; i < (int)size(row); ++i)
+            for(int i = 0; i < size(row); ++i)
             {
                 if(i != 0) printf(" | ");
-                printf("%-*s", (int)col_size[i], row[i].c_str());
+                printf("%-*s", col_size[i], row[i].c_str());
             }
             putchar('\n');
         }

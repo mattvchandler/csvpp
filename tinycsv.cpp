@@ -1,7 +1,6 @@
 #include<string>//Tiny CSV pretty-print
 #include<vector>//Matthew Chandler
 #include<cstdio>//mattvchandler@gmail
-#define B emplace_back();//.com
 #define E feof(f)//©2019 by MIT license
 #define G c=getc(f);//build w/ c++17
 #define Z size()//./tinycsv foo.csv
@@ -19,10 +18,11 @@ break;}w+=c;}return{w,e};}I main(I c,
 char*v[]){if(c!=2)return 1;auto f=fopen(
 v[1],"r");try{if(!f)throw 0;vector<
 vector<S>>d(1);vector<I>z;while(1){const
-auto&[w,e]=p(f);d.back().push_back(w);if
-(z.Z<d.back().Z)z.B z[d.back().Z-1]=max(
-z[d.back().Z-1],(I)w.Z);if(E)break;if(e)
-d.B}for(auto&r:d){for(I i=0;i<(I)r.Z;++i
-){if(i!=0)printf(" | ");printf("%-*s",(I
-)z[i],r[i].c_str());}putchar('\n');}}
-catch(I){puts("error");return 1;}}
+auto&[w,e]=p(f);d.back().push_back(w);z.
+resize(max(z.Z,d.back().Z));z[d.back().Z
+-1]=max(z[d.back().Z-1],(I)w.Z);if(E)
+break;if(e)d.emplace_back();}for(auto&r:
+d){for(I i=0;i<r.Z;++i){if(i!=0)
+printf(" | ");printf("%-*s",z[i],r[i]
+.c_str());}putchar('\n');}}catch(I){puts
+("error");return 1;}}
