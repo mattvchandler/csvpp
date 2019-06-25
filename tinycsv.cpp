@@ -17,12 +17,11 @@ c=='\r'||E)){e=1;while(!E){G if(c!='\r'
 break;}w+=c;}return{w,e};}I main(I c,
 char*v[]){if(c!=2)return 1;auto f=fopen(
 v[1],"r");try{if(!f)throw 0;vector<
-vector<S>>d(1);vector<I>z;while(1){const
-auto&[w,e]=p(f);d.back().push_back(w);z.
-resize(max(z.Z,d.back().Z));z[d.back().Z
--1]=max(z[d.back().Z-1],(I)w.Z);if(E)
-break;if(e)d.emplace_back();}for(auto&r:
-d){for(I i=0;i<r.Z;++i){if(i!=0)
-printf(" | ");printf("%-*s",z[i],r[i]
-.c_str());}putchar('\n');}}catch(I){puts
-("error");return 1;}}
+vector<S>>d(1);vector<I>z;for(I i=0;;++i
+){const auto&[w,e]=p(f);d.back().
+push_back(w);z.resize(max(i,(I)w.Z));z[i
+]=max(z[i],(I)w.Z);if(E)break;if(e)d.
+push_back({});}for(auto&r:d){for(I i=0;i
+<r.Z;++i){if(i!=0)printf(" | ");printf(
+"%-*s",z[i],data(r[i]));}putchar('\n');}
+}catch(I){puts("error");return 1;}}
