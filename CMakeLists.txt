@@ -17,6 +17,7 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 
 option(CSV_ENABLE_TINYCSV "Enable generation and testing of tinycsv" OFF)
+option(CSV_ENABLE_PYTHON "Enable testing against python's csv libary" OFF)
 
 add_executable(csv_test)
 target_sources(csv_test PUBLIC
@@ -71,4 +72,12 @@ if(CSV_ENABLE_TINYCSV)
         )
 
     target_compile_definitions(csv_test PUBLIC "-DCSV_ENABLE_TINYCSV")
+endif()
+
+if(CSV_ENABLE_PYTHON)
+    find_package(pybind11 REQUIRED)
+    include_directories(pybind11test ${PYBIND11_INCLUDE_DIRS})
+
+    target_compile_definitions(csv_test PUBLIC "-DCSV_ENABLE_PYTHON")
+    target_link_libraries(csv_test pybind11::embed)
 endif()

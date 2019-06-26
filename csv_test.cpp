@@ -29,6 +29,13 @@
 
 #include <csv.h>
 
+#ifdef CSV_ENABLE_PYTHON
+#include <pybind11/pybind11.h>
+#include <pybind11/embed.h>
+#include <pybind11/eval.h>
+#include <pybind11/stl.h>
+#endif
+
 #include "csv.h"
 
 #include "csv.hpp"
@@ -1125,6 +1132,56 @@ bool test_read_mine_cpp_row_tuple(const std::string & csv_text, const CSV_data &
     }
 }
 
+#ifdef CSV_ENABLE_PYTHON
+const char * test_read_python_code = R"(
+def test_read_python(csv_text, expected_data, delimiter, quote):
+    infile = io.StringIO(csv_text, newline='')
+    r = csv.reader(infile, delimiter = delimiter, quotechar = quote, strict=True)
+
+    data = []
+    try:
+        for row in r:
+            if row:
+                data.append(row)
+    except csv.Error as e:
+        raise Parse_error(r.line_num, e)
+
+    return data == expected_data
+
+def test_read_python_map(csv_text, expected_data, delimiter, quote):
+    infile = io.StringIO(csv_text, newline='')
+    try:
+        r = csv.DictReader(infile, delimiter = delimiter, quotechar = quote, strict=True)
+
+        if not r.fieldnames and not expected_data:
+            return True
+
+        headers = expected_data[0]
+        if r.fieldnames != headers:
+            return False
+
+        i = 1
+        for row in r:
+            if i >= len(expected_data):
+                return False
+
+            if len(expected_data[i]) != len(headers):
+                raise Skip_test
+
+            if row != collections.OrderedDict((headers[j], expected_data[i][j]) for j in range(len(headers))):
+                return False
+            i+=1
+
+        if i != len(expected_data) or next(r, None) is not None:
+            return False
+
+    except csv.Error as e:
+        raise Parse_error(r.line_num, e)
+
+    return True
+)";
+#endif
+
 struct libcsv_read_status
 {
     CSV_data expected_data;
@@ -1366,6 +1423,32 @@ bool test_write_mine_cpp_tuple(const std::string & expected_text, const CSV_data
     return str.str() == expected_text;
 }
 
+#ifdef CSV_ENABLE_PYTHON
+const char * test_write_python_code = R"(
+def test_write_python(expected_text, data, delimiter, quote):
+    out = io.StringIO(newline='')
+    w = csv.writer(out, delimiter=delimiter, quotechar=quote)
+    for row in data:
+        w.writerow(row)
+    return out.getvalue() == expected_text
+
+def test_write_python_map(expected_text, data, delimiter, quote):
+    out = io.StringIO(newline='')
+    if data:
+        headers = data[0]
+
+        w = csv.DictWriter(out, headers, delimiter=delimiter, quotechar=quote)
+        w.writeheader()
+
+        for row in data[1:]:
+            if len(row) != len(headers):
+                raise Skip_test
+            w.writerow({ headers[i]: row[i] for i in range(len(row)) })
+
+    return out.getvalue() == expected_text
+)";
+#endif
+
 bool test_write_libcsv(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
     if(delimiter != ',' || quote != '"')
@@ -1446,6 +1529,146 @@ void test_quotes(Test test, const std::string & title, const std::string & csv_t
 
 int main(int, char *[])
 {
+    #ifdef CSV_ENABLE_PYTHON
+    pybind11::scoped_interpreter interp{};
+    pybind11::exec(R"(
+        import io, collections, csv
+        class Skip_test(Exception): pass
+        class Parse_error(Exception):
+            def __init__(self, line_num, msg):
+                super().__init__("Python CSV error on line {}: {}".format(line_num, msg))
+        )");
+
+    auto handle_parse_error = [](const char * what)
+    {
+        for(const char * c = what; *c && *c != '\n'; ++c)
+            std::cout<<*c;
+        std::cout<<'\n';
+    };
+
+    // python allows fields w/ unescaped quotes. We'll need to pre-parse to catch them
+    auto python_too_lenient = [](const std::string & csv, const char delimiter, const char quote)
+    {
+        bool empty = true;
+        bool quoted = false;
+        for(auto i = std::begin(csv);; ++i)
+        {
+            if(i != std::end(csv) && *i == quote)
+            {
+                if(quoted)
+                {
+                    ++i;
+                    if(i == std::end(csv) || *i == delimiter || *i == '\n' || *i == '\r')
+                        quoted = false;
+                    else if(*i != quote)
+                        return false;
+                }
+                else
+                {
+                    if(empty)
+                    {
+                        quoted = true;
+                        continue;
+                    }
+                    else
+                        return true;
+                }
+            }
+            if(i == std::end(csv) && quoted)
+            {
+                return false;
+            }
+            else if(!quoted && i != std::end(csv) && *i == delimiter)
+            {
+                empty = true;
+                continue;
+            }
+            else if(!quoted && (i == std::end(csv) || *i == '\n' || *i == '\r'))
+            {
+                empty = true;
+                for(;i != std::end(csv) && *i != '\r' && *i != '\n'; ++i);
+
+                if(i == std::end(csv))
+                    return false;
+
+                empty = true;
+                continue;
+            }
+            empty = false;
+        }
+    };
+
+    pybind11::exec(test_read_python_code);
+    auto test_read_python_fun = pybind11::globals()["test_read_python"];
+    auto test_read_python = [&test_read_python_fun, handle_parse_error, python_too_lenient](const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+    {
+        if(python_too_lenient(csv_text, delimiter, quote))
+            throw test::Skip_test{};
+
+        try
+        {
+            return test_read_python_fun(csv_text, expected_data, delimiter, quote).cast<bool>();
+        }
+        catch(pybind11::error_already_set & e)
+        {
+            if(e.matches(pybind11::globals()["Parse_error"]))
+            {
+                handle_parse_error(e.what());
+                return false;
+            }
+            else
+                throw;
+        }
+    };
+
+    auto test_read_python_map_fun = pybind11::globals()["test_read_python_map"];
+    auto test_read_python_map = [&test_read_python_map_fun, handle_parse_error, python_too_lenient](const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+    {
+        if(python_too_lenient(csv_text, delimiter, quote))
+            throw test::Skip_test{};
+
+        try
+        {
+            return test_read_python_map_fun(csv_text, expected_data, delimiter, quote).cast<bool>();
+        }
+        catch(pybind11::error_already_set & e)
+        {
+            if(e.matches(pybind11::globals()["Skip_test"]))
+                throw test::Skip_test{};
+            else if(e.matches(pybind11::globals()["Parse_error"]))
+            {
+                handle_parse_error(e.what());
+                return false;
+            }
+            else
+                throw;
+        }
+    };
+    pybind11::exec(test_write_python_code);
+
+    auto test_write_python_fun = pybind11::globals()["test_write_python"];
+    auto test_write_python = [&test_write_python_fun](const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+    {
+        return test_write_python_fun(expected_text, data, delimiter, quote).cast<bool>();
+    };
+
+    auto test_write_python_map_fun = pybind11::globals()["test_write_python_map"];
+    auto test_write_python_map = [&test_write_python_map_fun](const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+    {
+        try
+        {
+            return test_write_python_map_fun(expected_text, data, delimiter, quote).cast<bool>();
+        }
+        catch(pybind11::error_already_set & e)
+        {
+            if(e.matches(pybind11::globals()["Skip_test"]))
+                throw test::Skip_test{};
+            else
+                throw;
+        }
+    };
+    #endif
+
     test::Test<const std::string&, const CSV_data&, const char, const char> test_read{{
         test_read_mine_c,
         test_read_mine_simple_c,
@@ -1471,6 +1694,10 @@ int main(int, char *[])
         test_read_mine_cpp_tuple,
         test_read_mine_cpp_row_variadic,
         test_read_mine_cpp_row_tuple,
+        #ifdef CSV_ENABLE_PYTHON
+        test_read_python,
+        test_read_python_map,
+        #endif
         test_read_libcsv
     }};
 
@@ -1482,6 +1709,10 @@ int main(int, char *[])
         test_write_mine_cpp_map,
         test_write_mine_cpp_variadic,
         test_write_mine_cpp_tuple,
+        #ifdef CSV_ENABLE_PYTHON
+        test_write_python,
+        test_write_python_map,
+        #endif
         test_write_libcsv
     }};
 
