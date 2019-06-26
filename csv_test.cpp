@@ -27,7 +27,9 @@
 #include <string>
 #include <vector>
 
+#ifdef CSV_ENABLE_LIBCSV
 #include <csv.h>
+#endif
 
 #ifdef CSV_ENABLE_PYTHON
 #include <pybind11/pybind11.h>
@@ -36,15 +38,17 @@
 #include <pybind11/stl.h>
 #endif
 
+#ifdef CSV_ENABLE_C_CSV
 #include "csv.h"
-
-#include "csv.hpp"
-
-#include "test.hpp"
+#endif
 
 #ifdef CSV_ENABLE_TINYCSV
 #include "tinycsv_test.hpp"
 #endif
+
+#include "csv.hpp"
+
+#include "test.hpp"
 
 template<typename Tuple, std::size_t N>
 constexpr void print_tuple(std::ostream &o, const Tuple & t)
@@ -85,6 +89,7 @@ std::ostream & operator<<(std::ostream & o, const std::vector<T> & v)
 
 using CSV_data = std::vector<std::vector<std::string>>;
 
+#ifdef CSV_ENABLE_C_CSV
 bool test_read_mine_c(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     std::ofstream out("test.csv", std::ifstream::binary);
@@ -139,7 +144,9 @@ error:
     CSV_reader_free(r_test);
     return false;
 }
+#endif
 
+#ifdef CSV_ENABLE_SIMPLE
 bool test_read_mine_simple_c(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     char * csv = (char *)malloc(sizeof(char) * (csv_text.size() + 1));
@@ -258,6 +265,7 @@ bool test_read_mine_simple_c(const std::string & csv_text, const CSV_data & expe
     free(csv);
     return true;
 }
+#endif
 
 #ifdef CSV_ENABLE_TINYCSV
 bool test_read_tinycsv(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
@@ -370,6 +378,138 @@ bool test_read_tinycsv_expanded(const std::string & csv_text, const CSV_data & e
 error:
     std::fclose(r_test);
     return false;
+}
+#endif
+
+#ifdef CSV_ENABLE_PYTHON
+const char * test_read_python_code = R"(
+def test_read_python(csv_text, expected_data, delimiter, quote):
+    infile = io.StringIO(csv_text, newline='')
+    r = csv.reader(infile, delimiter = delimiter, quotechar = quote, strict=True)
+
+    data = []
+    try:
+        for row in r:
+            if row:
+                data.append(row)
+    except csv.Error as e:
+        raise Parse_error(r.line_num, e)
+
+    return data == expected_data
+
+def test_read_python_map(csv_text, expected_data, delimiter, quote):
+    infile = io.StringIO(csv_text, newline='')
+    try:
+        r = csv.DictReader(infile, delimiter = delimiter, quotechar = quote, strict=True)
+
+        if not r.fieldnames and not expected_data:
+            return True
+
+        headers = expected_data[0]
+        if r.fieldnames != headers:
+            return False
+
+        i = 1
+        for row in r:
+            if i >= len(expected_data):
+                return False
+
+            if len(expected_data[i]) != len(headers):
+                raise Skip_test
+
+            if row != collections.OrderedDict((headers[j], expected_data[i][j]) for j in range(len(headers))):
+                return False
+            i+=1
+
+        if i != len(expected_data) or next(r, None) is not None:
+            return False
+
+    except csv.Error as e:
+        raise Parse_error(r.line_num, e)
+
+    return True
+)";
+#endif
+
+#ifdef CSV_ENABLE_LIBCSV
+struct libcsv_read_status
+{
+    CSV_data expected_data;
+    size_t row, col;
+    bool result;
+};
+
+void libcsv_read_cb1(void * field, size_t, void * data)
+{
+    struct libcsv_read_status * stat = (libcsv_read_status*)data;
+
+    if(stat->result)
+    {
+        if(stat->row >= stat->expected_data.size() || stat->col >= stat->expected_data[stat->row].size())
+        {
+            stat->result = false;
+            return;
+        }
+
+        if(std::string((const char *)field) != stat->expected_data[stat->row][stat->col])
+            stat->result = false;
+
+        ++stat->col;
+    }
+}
+
+void libcsv_read_cb2(int, void * data)
+{
+    struct libcsv_read_status * stat = (libcsv_read_status*)data;
+    if(stat->result)
+    {
+        if(stat->col < stat->expected_data[stat->row].size())
+            stat->result = false;
+
+        stat->col = 0;
+
+        if(++stat->row > stat->expected_data.size())
+            stat->result = false;
+    }
+}
+
+bool test_read_libcsv(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+{
+    csv_parser parse;
+    if(csv_init(&parse, CSV_APPEND_NULL | CSV_STRICT | CSV_STRICT_FINI) != 0)
+        return false;
+
+    csv_set_delim(&parse, delimiter);
+    csv_set_quote(&parse, quote);
+
+    libcsv_read_status stat = {expected_data, 0, 0, true};
+
+    auto error = [&parse]()
+    {
+        std::cerr<<csv_strerror(csv_error(&parse))<<"\n";
+        csv_free(&parse);
+    };
+
+    if(csv_parse(&parse, csv_text.c_str(), csv_text.size(), libcsv_read_cb1, libcsv_read_cb2, &stat) < csv_text.size())
+    {
+        error();
+        return false;
+    }
+    csv_fini(&parse, libcsv_read_cb1, libcsv_read_cb2, &stat);
+
+    int err_code = csv_error(&parse);
+    if(err_code != CSV_SUCCESS)
+    {
+        error();
+        return false;
+    }
+
+    csv_free(&parse);
+
+    if(stat.row < expected_data.size())
+        return false;
+
+    return stat.result;
 }
 #endif
 
@@ -1132,136 +1272,7 @@ bool test_read_mine_cpp_row_tuple(const std::string & csv_text, const CSV_data &
     }
 }
 
-#ifdef CSV_ENABLE_PYTHON
-const char * test_read_python_code = R"(
-def test_read_python(csv_text, expected_data, delimiter, quote):
-    infile = io.StringIO(csv_text, newline='')
-    r = csv.reader(infile, delimiter = delimiter, quotechar = quote, strict=True)
-
-    data = []
-    try:
-        for row in r:
-            if row:
-                data.append(row)
-    except csv.Error as e:
-        raise Parse_error(r.line_num, e)
-
-    return data == expected_data
-
-def test_read_python_map(csv_text, expected_data, delimiter, quote):
-    infile = io.StringIO(csv_text, newline='')
-    try:
-        r = csv.DictReader(infile, delimiter = delimiter, quotechar = quote, strict=True)
-
-        if not r.fieldnames and not expected_data:
-            return True
-
-        headers = expected_data[0]
-        if r.fieldnames != headers:
-            return False
-
-        i = 1
-        for row in r:
-            if i >= len(expected_data):
-                return False
-
-            if len(expected_data[i]) != len(headers):
-                raise Skip_test
-
-            if row != collections.OrderedDict((headers[j], expected_data[i][j]) for j in range(len(headers))):
-                return False
-            i+=1
-
-        if i != len(expected_data) or next(r, None) is not None:
-            return False
-
-    except csv.Error as e:
-        raise Parse_error(r.line_num, e)
-
-    return True
-)";
-#endif
-
-struct libcsv_read_status
-{
-    CSV_data expected_data;
-    size_t row, col;
-    bool result;
-};
-
-void libcsv_read_cb1(void * field, size_t, void * data)
-{
-    struct libcsv_read_status * stat = (libcsv_read_status*)data;
-
-    if(stat->result)
-    {
-        if(stat->row >= stat->expected_data.size() || stat->col >= stat->expected_data[stat->row].size())
-        {
-            stat->result = false;
-            return;
-        }
-
-        if(std::string((const char *)field) != stat->expected_data[stat->row][stat->col])
-            stat->result = false;
-
-        ++stat->col;
-    }
-}
-
-void libcsv_read_cb2(int, void * data)
-{
-    struct libcsv_read_status * stat = (libcsv_read_status*)data;
-    if(stat->result)
-    {
-        if(stat->col < stat->expected_data[stat->row].size())
-            stat->result = false;
-
-        stat->col = 0;
-
-        if(++stat->row > stat->expected_data.size())
-            stat->result = false;
-    }
-}
-
-bool test_read_libcsv(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
-{
-    csv_parser parse;
-    if(csv_init(&parse, CSV_APPEND_NULL | CSV_STRICT | CSV_STRICT_FINI) != 0)
-        return false;
-
-    csv_set_delim(&parse, delimiter);
-    csv_set_quote(&parse, quote);
-
-    libcsv_read_status stat = {expected_data, 0, 0, true};
-
-    auto error = [&parse]()
-    {
-        std::cerr<<csv_strerror(csv_error(&parse))<<"\n";
-        csv_free(&parse);
-    };
-
-    if(csv_parse(&parse, csv_text.c_str(), csv_text.size(), libcsv_read_cb1, libcsv_read_cb2, &stat) < csv_text.size())
-    {
-        error();
-        return false;
-    }
-    csv_fini(&parse, libcsv_read_cb1, libcsv_read_cb2, &stat);
-
-    int err_code = csv_error(&parse);
-    if(err_code != CSV_SUCCESS)
-    {
-        error();
-        return false;
-    }
-
-    csv_free(&parse);
-
-    if(stat.row < expected_data.size())
-        return false;
-
-    return stat.result;
-}
-
+#ifdef CSV_ENABLE_C_CSV
 bool test_write_mine_c(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
     CSV_writer * w_test = CSV_writer_init_from_filename("test.csv");
@@ -1289,6 +1300,79 @@ bool test_write_mine_c(const std::string & expected_text, const CSV_data data, c
     std::ifstream out_file("test.csv", std::ifstream::binary);
     return expected_text == static_cast<std::stringstream const &>(std::stringstream() << out_file.rdbuf()).str();
 }
+#endif
+
+#ifdef CSV_ENABLE_PYTHON
+const char * test_write_python_code = R"(
+def test_write_python(expected_text, data, delimiter, quote):
+    out = io.StringIO(newline='')
+    w = csv.writer(out, delimiter=delimiter, quotechar=quote)
+    for row in data:
+        w.writerow(row)
+    return out.getvalue() == expected_text
+
+def test_write_python_map(expected_text, data, delimiter, quote):
+    out = io.StringIO(newline='')
+    if data:
+        headers = data[0]
+
+        w = csv.DictWriter(out, headers, delimiter=delimiter, quotechar=quote)
+        w.writeheader()
+
+        for row in data[1:]:
+            if len(row) != len(headers):
+                raise Skip_test
+            w.writerow({ headers[i]: row[i] for i in range(len(row)) })
+
+    return out.getvalue() == expected_text
+)";
+#endif
+
+#ifdef CSV_ENABLE_LIBCSV
+bool test_write_libcsv(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+{
+    if(delimiter != ',' || quote != '"')
+        throw test::Skip_test{};
+
+    std::string output = "";
+
+    for(const auto & row: data)
+    {
+        for(std::size_t col_num = 0; col_num < row.size(); ++col_num)
+        {
+            if(col_num > 0)
+                output += ',';
+
+            auto & col = row[col_num];
+
+            bool unquote = true;
+            for(const auto & c: col)
+            {
+                if(c == ',' || c == '"' || c == '\n' || c == '\r')
+                {
+                    unquote = false;
+                    break;
+                }
+            }
+
+            const std::size_t DEST_BUFF_SIZE=1024;
+            char dest_buff[DEST_BUFF_SIZE] = {0};
+
+            csv_write(dest_buff, DEST_BUFF_SIZE, col.c_str(), col.size());
+            std::string dest(dest_buff);
+            if(unquote)
+            {
+                dest = dest.substr(1, dest.size() - 2);
+            }
+
+            output += dest;
+        }
+        output += "\r\n";
+    }
+
+    return output == expected_text;
+}
+#endif
 
 bool test_write_mine_cpp_stream(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
@@ -1423,75 +1507,6 @@ bool test_write_mine_cpp_tuple(const std::string & expected_text, const CSV_data
     return str.str() == expected_text;
 }
 
-#ifdef CSV_ENABLE_PYTHON
-const char * test_write_python_code = R"(
-def test_write_python(expected_text, data, delimiter, quote):
-    out = io.StringIO(newline='')
-    w = csv.writer(out, delimiter=delimiter, quotechar=quote)
-    for row in data:
-        w.writerow(row)
-    return out.getvalue() == expected_text
-
-def test_write_python_map(expected_text, data, delimiter, quote):
-    out = io.StringIO(newline='')
-    if data:
-        headers = data[0]
-
-        w = csv.DictWriter(out, headers, delimiter=delimiter, quotechar=quote)
-        w.writeheader()
-
-        for row in data[1:]:
-            if len(row) != len(headers):
-                raise Skip_test
-            w.writerow({ headers[i]: row[i] for i in range(len(row)) })
-
-    return out.getvalue() == expected_text
-)";
-#endif
-
-bool test_write_libcsv(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
-{
-    if(delimiter != ',' || quote != '"')
-        throw test::Skip_test{};
-
-    std::string output = "";
-
-    for(const auto & row: data)
-    {
-        for(std::size_t col_num = 0; col_num < row.size(); ++col_num)
-        {
-            if(col_num > 0)
-                output += ',';
-
-            auto & col = row[col_num];
-
-            bool unquote = true;
-            for(const auto & c: col)
-            {
-                if(c == ',' || c == '"' || c == '\n' || c == '\r')
-                {
-                    unquote = false;
-                    break;
-                }
-            }
-
-            const std::size_t DEST_BUFF_SIZE=1024;
-            char dest_buff[DEST_BUFF_SIZE] = {0};
-
-            csv_write(dest_buff, DEST_BUFF_SIZE, col.c_str(), col.size());
-            std::string dest(dest_buff);
-            if(unquote)
-            {
-                dest = dest.substr(1, dest.size() - 2);
-            }
-
-            output += dest;
-        }
-        output += "\r\n";
-    }
-
-    return output == expected_text;
-}
 
 template<typename Test>
 void test_quotes(Test test, const std::string & title, const std::string & csv_text, const CSV_data& data)
@@ -1670,11 +1685,22 @@ int main(int, char *[])
     #endif
 
     test::Test<const std::string&, const CSV_data&, const char, const char> test_read{{
+        #ifdef CSV_ENABLE_C_CSV
         test_read_mine_c,
+        #endif
+        #ifdef CSV_ENABLE_SIMPLE
         test_read_mine_simple_c,
+        #endif
         #ifdef CSV_ENABLE_TINYCSV
         test_read_tinycsv,
         test_read_tinycsv_expanded,
+        #endif
+        #ifdef CSV_ENABLE_PYTHON
+        test_read_python,
+        test_read_python_map,
+        #endif
+        #ifdef CSV_ENABLE_LIBCSV
+        test_read_libcsv,
         #endif
         test_read_mine_cpp_read_all,
         test_read_mine_cpp_read_rows,
@@ -1693,27 +1719,26 @@ int main(int, char *[])
         test_read_mine_cpp_variadic,
         test_read_mine_cpp_tuple,
         test_read_mine_cpp_row_variadic,
-        test_read_mine_cpp_row_tuple,
-        #ifdef CSV_ENABLE_PYTHON
-        test_read_python,
-        test_read_python_map,
-        #endif
-        test_read_libcsv
+        test_read_mine_cpp_row_tuple
     }};
 
     test::Test<const std::string, const CSV_data&, const char, const char> test_write{{
+        #ifdef CSV_ENABLE_C_CSV
         test_write_mine_c,
+        #endif
+        #ifdef CSV_ENABLE_PYTHON
+        test_write_python,
+        test_write_python_map,
+        #endif
+        #ifdef CSV_ENABLE_LIBCSV
+        test_write_libcsv,
+        #endif
         test_write_mine_cpp_stream,
         test_write_mine_cpp_row,
         test_write_mine_cpp_iter,
         test_write_mine_cpp_map,
         test_write_mine_cpp_variadic,
-        test_write_mine_cpp_tuple,
-        #ifdef CSV_ENABLE_PYTHON
-        test_write_python,
-        test_write_python_map,
-        #endif
-        test_write_libcsv
+        test_write_mine_cpp_tuple
     }};
 
     std::cout<<"Reader Tests:\n";
