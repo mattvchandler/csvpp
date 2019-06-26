@@ -17,7 +17,6 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 
 option(CSV_ENABLE_C_CSV "Enable generation and testing of c csv_library" OFF)
-option(CSV_ENABLE_SIMPLE "Enable standalone testing of C " OFF)
 option(CSV_ENABLE_TINYCSV "Enable generation and testing of tinycsv" OFF)
 option(CSV_ENABLE_LIBCSV "Enable testing against libcsv" OFF)
 option(CSV_ENABLE_PYTHON "Enable testing against python's csv libary" OFF)
@@ -32,10 +31,6 @@ if(CSV_ENABLE_C_CSV)
         ${CMAKE_CURRENT_SOURCE_DIR}/csv.c
         )
     target_compile_definitions(csv_test PUBLIC "-DCSV_ENABLE_C_CSV")
-endif()
-
-if(CSV_ENABLE_SIMPLE)
-    target_compile_definitions(csv_test PUBLIC "-DCSV_ENABLE_SIMPLE")
 endif()
 
 if(CSV_ENABLE_TINYCSV)

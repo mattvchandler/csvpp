@@ -146,127 +146,6 @@ error:
 }
 #endif
 
-#ifdef CSV_ENABLE_SIMPLE
-bool test_read_mine_simple_c(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
-{
-    char * csv = (char *)malloc(sizeof(char) * (csv_text.size() + 1));
-    strcpy(csv, csv_text.c_str());
-
-    std::size_t row_num = 0, field_num = 0;
-    char * start = csv, * end = csv;
-    while(true)
-    {
-        field_num = 0;
-        bool start_row = true;
-        while(true)
-        {
-            bool quoted = false;
-            if(*start == quote)
-            {
-                quoted = true;
-                ++start; ++end;
-            }
-
-            // find end of current field
-            while(*end && (quoted || (*end != delimiter && *end != '\n' && *end != '\r')))
-            {
-                start_row = false;
-                // we need special handling for quotes
-                if(*end == quote)
-                {
-                    // look at next char
-                    ++end;
-                    if(quoted)
-                    {
-                        // is it an end-quote? (if so, we are at the end of the record)
-                        if(!*end || *end == delimiter || *end == '\n' || *end == '\r')
-                        {
-                            break;
-                        }
-                        // is it an escaped quote?
-                        if(*end == quote)
-                        {
-                            // remove the 2nd quote by shifting everything past it left by one
-                            char * shift_char;
-                            for(shift_char = end; *shift_char; ++shift_char)
-                                *shift_char = *(shift_char + 1);
-                        }
-                        // it's an error
-                        else
-                        {
-                            printf("[ERROR] row %d, field %d: unescaped double-quote inside quoted field\n", (int)row_num + 1, (int)field_num + 1);
-                            free(csv);
-                            return false;
-                        }
-                    }
-                    // quotes are not allowed inside of an unquoted field
-                    else
-                    {
-                        printf("[ERROR] row %d, field %d: double-quote in unquoted field\n", (int)row_num + 1, (int)field_num + 1);
-                        free(csv);
-                        return false;
-                    }
-                }
-                else
-                    ++end;
-            }
-            if(*end == delimiter)
-                start_row = false;
-
-            if(!*end && quoted)
-            {
-                printf("[ERROR] row %d, field %d: Unterminated quoted field\n", (int)row_num + 1, (int)field_num + 1);
-                free(csv);
-                return false;
-            }
-
-            std::string field(start, end);
-            if(quoted)
-                field.pop_back();
-
-            while((*end == '\r' || *end == '\n') && (!*(end + 1) || *(end + 1) == '\n' || *(end + 1) == '\r'))
-                ++end;
-
-            if(row_num < expected_data.size() && field_num < expected_data[row_num].size() && field != expected_data[row_num][field_num])
-            {
-                free(csv);
-                return false;
-            }
-
-            ++field_num;
-
-            if(*end == '\r' || *end == '\n' || !*end)
-                break;
-
-            start = ++end;
-        }
-
-        if(!start_row && row_num < expected_data.size() && field_num != expected_data[row_num].size())
-        {
-            free(csv);
-            return false;
-        }
-
-        if(!start_row)
-            ++row_num;
-
-        if(!*end)
-            break;
-
-        start = ++end;
-    }
-
-    if(row_num != expected_data.size())
-    {
-        free(csv);
-        return false;
-    }
-
-    free(csv);
-    return true;
-}
-#endif
-
 #ifdef CSV_ENABLE_TINYCSV
 bool test_read_tinycsv(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
@@ -1687,9 +1566,6 @@ int main(int, char *[])
     test::Test<const std::string&, const CSV_data&, const char, const char> test_read{{
         #ifdef CSV_ENABLE_C_CSV
         test_read_mine_c,
-        #endif
-        #ifdef CSV_ENABLE_SIMPLE
-        test_read_mine_simple_c,
         #endif
         #ifdef CSV_ENABLE_TINYCSV
         test_read_tinycsv,
