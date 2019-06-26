@@ -738,20 +738,21 @@ bool test_read_mine_cpp_map(const std::string & csv_text, const CSV_data & expec
     {
         csv::Map_reader_iter r(csv::Reader::input_string, csv_text, {}, {}, delimiter, quote);
 
-        if(r.get_headers() != expected_data.at(0))
+        auto & headers = expected_data.at(0);
+        if(r.get_headers() != headers)
             return false;
 
         std::size_t i = 1;
         for(; r != csv::Map_reader_iter{} && i < std::size(expected_data); ++r, ++i)
         {
-            if(std::size(expected_data[i]) != std::size(r.get_headers()))
+            if(std::size(expected_data[i]) != std::size(headers))
                 throw test::Skip_test{};
 
-            std::vector<std::string> row;
-            for(auto & col: *r)
-                row.push_back(col.second);
+            std::remove_reference_t<decltype(*r)> expected_row;
+            for(std::size_t j = 0; j < std::size(headers); ++j)
+                expected_row.emplace(headers[j], expected_data[i][j]);
 
-            if(row != expected_data[i])
+            if(*r != expected_row)
                 return false;
         }
         if(i != std::size(expected_data) || r != csv::Map_reader_iter{})
@@ -810,20 +811,21 @@ bool test_read_mine_cpp_map_as_int(const std::string & csv_text, const CSV_data 
     {
         csv::Map_reader_iter<int, int> r(csv::Reader::input_string, csv_text, {}, {}, delimiter, quote);
 
-        if(r.get_headers() != expected_ints.at(0))
+        auto headers = expected_ints.at(0);
+        if(r.get_headers() != headers)
             return false;
 
         std::size_t i = 1;
         for(; r != csv::Map_reader_iter{} && i < std::size(expected_ints); ++r, ++i)
         {
-            if(std::size(expected_ints[i]) != std::size(r.get_headers()))
+            if(std::size(expected_ints[i]) != std::size(headers))
                 throw test::Skip_test{};
 
-            std::vector<int> row;
-            for(auto & col: *r)
-                row.push_back(col.second);
+            std::remove_reference_t<decltype(*r)> expected_row;
+            for(std::size_t j = 0; j < std::size(headers); ++j)
+                expected_row.emplace(headers[j], expected_ints[i][j]);
 
-            if(row != expected_ints[i])
+            if(*r != expected_row)
                 return false;
         }
         if(i != std::size(expected_ints) || r != csv::Map_reader_iter{})
@@ -989,6 +991,7 @@ bool test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & exp
         return false;
     }
 }
+
 bool test_read_mine_cpp_row_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
@@ -1551,8 +1554,14 @@ int main(int, char *[])
     test_quotes(test_read_pass, "Read test: 2 CRLFs at EOF",
             "1,2,3\r\n\r\n", {{"1", "2", "3"}});
 
+    test_quotes(test_read_pass, "Read test: multirow",
+            "1,2,3\r\n4,5,6\r\n", {{"1", "2", "3"}, {"4", "5", "6"}});
+
     test_quotes(test_read_pass, "Read test: CR w/o LF",
             "1,2,3\r4,5,6\r", {{"1", "2", "3"}, {"4", "5", "6"}});
+
+    test_quotes(test_read_pass, "Read test: LF w/o CR",
+            "1,2,3\n4,5,6\n", {{"1", "2", "3"}, {"4", "5", "6"}});
 
     test_quotes(test_read_pass, "Read test: empty line in middle",
             "1,2,3\r\n\r\n4,5,6\r\n", {{"1", "2", "3"}, {"4", "5", "6"}});
@@ -1586,6 +1595,9 @@ int main(int, char *[])
 
     test_quotes(test_read_pass, "Read test: more than header",
             "1,2,3,4\r\n5,6,7,8,9\r\n", {{"1", "2", "3", "4"}, {"5", "6", "7", "8", "9"}});
+
+    test_quotes(test_read_pass, "Read test: header not sorted",
+            "3,1,5\r\n6,2,4\r\n", {{"3", "1", "5"}, {"6", "2", "4"}});
 
     test_quotes(test_read_pass, "Read test: field reallocation",
             "1,123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412342,3,4",
