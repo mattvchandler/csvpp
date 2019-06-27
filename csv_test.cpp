@@ -50,43 +50,6 @@
 
 #include "test.hpp"
 
-template<typename Tuple, std::size_t N>
-constexpr void print_tuple(std::ostream &o, const Tuple & t)
-{
-    if constexpr(N == 1)
-    {
-        o<<std::get<0>(t);
-    }
-    else
-    {
-        print_tuple<decltype(t), N - 1>(o, t);
-        o<<','<<std::get<N - 1>(t);
-    }
-}
-template<typename ... Packed>
-std::ostream & operator<<(std::ostream & o, const std::tuple<Packed...> & t)
-{
-    o<<'(';
-    print_tuple<decltype(t), sizeof...(Packed)> (o, t);
-    return o<<')';
-}
-
-template <typename T>
-std::ostream & operator<<(std::ostream & o, const std::vector<T> & v)
-{
-    o<<'[';
-    bool first = true;
-    for(auto & i: v)
-    {
-        if(!first)
-            o<<',';
-        o<<i;
-        first = false;
-    }
-    o<<']';
-    return o;
-}
-
 using CSV_data = std::vector<std::vector<std::string>>;
 
 #ifdef CSV_ENABLE_C_CSV
@@ -261,6 +224,58 @@ error:
 #endif
 
 #ifdef CSV_ENABLE_PYTHON
+// python allows fields w/ unescaped quotes. use this to pre-parse and filter those inputs out (this is essentially a stripped down csv::Reader::parse)
+bool python_too_lenient(const std::string & csv, const char delimiter, const char quote)
+{
+    bool empty = true;
+    bool quoted = false;
+    for(auto i = std::begin(csv);; ++i)
+    {
+        if(i != std::end(csv) && *i == quote)
+        {
+            if(quoted)
+            {
+                ++i;
+                if(i == std::end(csv) || *i == delimiter || *i == '\n' || *i == '\r')
+                    quoted = false;
+                else if(*i != quote)
+                    return false;
+            }
+            else
+            {
+                if(empty)
+                {
+                    quoted = true;
+                    continue;
+                }
+                else
+                    return true;
+            }
+        }
+        if(i == std::end(csv) && quoted)
+        {
+            return false;
+        }
+        else if(!quoted && i != std::end(csv) && *i == delimiter)
+        {
+            empty = true;
+            continue;
+        }
+        else if(!quoted && (i == std::end(csv) || *i == '\n' || *i == '\r'))
+        {
+            empty = true;
+            for(;i != std::end(csv) && *i != '\r' && *i != '\n'; ++i);
+
+            if(i == std::end(csv))
+                return false;
+
+            empty = true;
+            continue;
+        }
+        empty = false;
+    }
+}
+
 const char * test_read_python_code = R"(
 def test_read_python(csv_text, expected_data, delimiter, quote):
     infile = io.StringIO(csv_text, newline='')
@@ -1387,6 +1402,7 @@ bool test_write_mine_cpp_tuple(const std::string & expected_text, const CSV_data
 }
 
 
+// helper to run a test for each combination of delimiter and quote char
 template<typename Test>
 void test_quotes(Test test, const std::string & title, const std::string & csv_text, const CSV_data& data)
 {
@@ -1424,6 +1440,7 @@ void test_quotes(Test test, const std::string & title, const std::string & csv_t
 int main(int, char *[])
 {
     #ifdef CSV_ENABLE_PYTHON
+    // initialize python interpreter
     pybind11::scoped_interpreter interp{};
     pybind11::exec(R"(
         import io, collections, csv
@@ -1440,62 +1457,19 @@ int main(int, char *[])
         std::cout<<'\n';
     };
 
-    // python allows fields w/ unescaped quotes. We'll need to pre-parse to catch them
-    auto python_too_lenient = [](const std::string & csv, const char delimiter, const char quote)
-    {
-        bool empty = true;
-        bool quoted = false;
-        for(auto i = std::begin(csv);; ++i)
-        {
-            if(i != std::end(csv) && *i == quote)
-            {
-                if(quoted)
-                {
-                    ++i;
-                    if(i == std::end(csv) || *i == delimiter || *i == '\n' || *i == '\r')
-                        quoted = false;
-                    else if(*i != quote)
-                        return false;
-                }
-                else
-                {
-                    if(empty)
-                    {
-                        quoted = true;
-                        continue;
-                    }
-                    else
-                        return true;
-                }
-            }
-            if(i == std::end(csv) && quoted)
-            {
-                return false;
-            }
-            else if(!quoted && i != std::end(csv) && *i == delimiter)
-            {
-                empty = true;
-                continue;
-            }
-            else if(!quoted && (i == std::end(csv) || *i == '\n' || *i == '\r'))
-            {
-                empty = true;
-                for(;i != std::end(csv) && *i != '\r' && *i != '\n'; ++i);
-
-                if(i == std::end(csv))
-                    return false;
-
-                empty = true;
-                continue;
-            }
-            empty = false;
-        }
-    };
-
+    // execute python read test code - creates 2 read & 2 write functions within the interpreter, then extract those functions
     pybind11::exec(test_read_python_code);
+    pybind11::exec(test_write_python_code);
+
     auto test_read_python_fun = pybind11::globals()["test_read_python"];
-    auto test_read_python = [&test_read_python_fun, handle_parse_error, python_too_lenient](const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+    auto test_read_python_map_fun = pybind11::globals()["test_read_python_map"];
+    auto test_write_python_fun = pybind11::globals()["test_write_python"];
+    auto test_write_python_map_fun = pybind11::globals()["test_write_python_map"];
+
+    // bind python funs, and handle exceptions
+    auto test_read_python = [&test_read_python_fun, handle_parse_error](const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
     {
+        // pre-parse and skip inputs that python is too lenient on
         if(python_too_lenient(csv_text, delimiter, quote))
             throw test::Skip_test{};
 
@@ -1515,9 +1489,9 @@ int main(int, char *[])
         }
     };
 
-    auto test_read_python_map_fun = pybind11::globals()["test_read_python_map"];
-    auto test_read_python_map = [&test_read_python_map_fun, handle_parse_error, python_too_lenient](const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+    auto test_read_python_map = [&test_read_python_map_fun, handle_parse_error](const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
     {
+        // pre-parse and skip inputs that python is too lenient on
         if(python_too_lenient(csv_text, delimiter, quote))
             throw test::Skip_test{};
 
@@ -1538,15 +1512,12 @@ int main(int, char *[])
                 throw;
         }
     };
-    pybind11::exec(test_write_python_code);
 
-    auto test_write_python_fun = pybind11::globals()["test_write_python"];
     auto test_write_python = [&test_write_python_fun](const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
     {
         return test_write_python_fun(expected_text, data, delimiter, quote).cast<bool>();
     };
 
-    auto test_write_python_map_fun = pybind11::globals()["test_write_python_map"];
     auto test_write_python_map = [&test_write_python_map_fun](const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
     {
         try
@@ -1617,13 +1588,13 @@ int main(int, char *[])
         test_write_mine_cpp_tuple
     }};
 
-    std::cout<<"Reader Tests:\n";
-
+    // create a bound function obj for test_read & test_write's pass & fail methods
     using namespace std::placeholders;
     auto test_read_pass = std::bind(&decltype(test_read)::test_pass, &test_read, _1, _2, _3, _4, _5);
     auto test_read_fail = std::bind(&decltype(test_read)::test_fail, &test_read, _1, _2, _3, _4, _5);
-
     auto test_write_pass = std::bind(&decltype(test_write)::test_pass, &test_write, _1, _2, _3, _4, _5);
+
+    std::cout<<"Reader Tests:\n";
 
     test_quotes(test_read_pass, "Read test: empty file",
             "", {});
