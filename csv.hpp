@@ -324,7 +324,7 @@ namespace csv
 
         explicit Reader(std::istream & input_stream,
                 const char delimiter = ',', const char quote = '"'):
-            input_stream_(input_stream),
+            input_stream_(&input_stream),
             delimiter_(delimiter),
             quote_(quote)
         {}
@@ -332,7 +332,7 @@ namespace csv
         explicit Reader(const std::string & filename,
                 const char delimiter = ',', const char quote = '"'):
             internal_input_stream_(std::make_unique<std::ifstream>(filename)),
-            input_stream_(*internal_input_stream_),
+            input_stream_(internal_input_stream_.get()),
             delimiter_(delimiter),
             quote_(quote)
         {
@@ -347,7 +347,7 @@ namespace csv
         Reader(input_string_t, const std::string & input_data,
                 const char delimiter = ',', const char quote = '"'):
             internal_input_stream_(std::make_unique<std::istringstream>(input_data)),
-            input_stream_(*internal_input_stream_),
+            input_stream_(internal_input_stream_.get()),
             delimiter_(delimiter),
             quote_(quote)
         {}
@@ -368,7 +368,7 @@ namespace csv
             // consume empty rows
             while(true)
             {
-                auto c = input_stream_.peek();
+                auto c = input_stream_->peek();
                 if(!eof_ && c == std::istream::traits_type::eof())
                 {
                     eof_ = true;
@@ -549,7 +549,7 @@ namespace csv
 
         std::string parse()
         {
-            if(input_stream_.eof())
+            if(input_stream_->eof())
             {
                 end_of_row_ = true;
                 eof_ = true;
@@ -562,7 +562,7 @@ namespace csv
             while(true)
             {
                 char c = '\0';
-                input_stream_.get(c);
+                input_stream_->get(c);
                 if(c == '\n')
                 {
                     ++line_no_;
@@ -571,7 +571,7 @@ namespace csv
                 else
                     ++col_no_;
 
-                if(!input_stream_ && !input_stream_.eof())
+                if(input_stream_->bad() && !input_stream_->eof())
                     throw Parse_error("Error reading from stream", line_no_, col_no_);
 
                 // we need special handling for quotes
@@ -580,7 +580,7 @@ namespace csv
                     if(quoted)
                     {
                         start_of_row_ = false;
-                        input_stream_.get(c);
+                        input_stream_->get(c);
                         if(c == '\n')
                         {
                             ++line_no_;
@@ -590,7 +590,7 @@ namespace csv
                             ++col_no_;
 
                         // end of the field?
-                        if(c == delimiter_ || c == '\n' || c == '\r' || input_stream_.eof())
+                        if(c == delimiter_ || c == '\n' || c == '\r' || input_stream_->eof())
                             quoted = false;
                         // if it's not an escaped quote, then it's an error
                         else if(c != quote_)
@@ -612,7 +612,7 @@ namespace csv
                     }
                 }
 
-                if(input_stream_.eof() && quoted)
+                if(input_stream_->eof() && quoted)
                 {
                     throw Parse_error("Unterminated quoted field - reached end-of-file", line_no_, col_no_);
                 }
@@ -620,17 +620,17 @@ namespace csv
                 {
                     break;
                 }
-                else if(!quoted && (c == '\n' || c == '\r' || input_stream_.eof()))
+                else if(!quoted && (c == '\n' || c == '\r' || input_stream_->eof()))
                 {
                     end_of_row_ = true;
                     // consume newlines
-                    while(input_stream_)
+                    while(input_stream_->good())
                     {
-                        input_stream_.get(c);
+                        input_stream_->get(c);
                         if(c != '\r' && c != '\n')
                         {
-                            if(input_stream_)
-                                input_stream_.unget();
+                            if(input_stream_->good())
+                                input_stream_->unget();
                             break;
                         }
                         if(c == '\n')
@@ -652,7 +652,7 @@ namespace csv
         }
 
         std::unique_ptr<std::istream> internal_input_stream_;
-        std::istream & input_stream_;
+        std::istream * input_stream_;
 
         char delimiter_ {','};
         char quote_ {'"'};
@@ -838,14 +838,14 @@ namespace csv
 
         explicit Writer(std::ostream & output_stream,
                 const char delimiter = ',', const char quote = '"'):
-            output_stream_(output_stream),
+            output_stream_(&output_stream),
             delimiter_(delimiter),
             quote_(quote)
         {}
         explicit Writer(const std::string& filename,
                 const char delimiter = ',', const char quote = '"'):
             internal_output_stream_(std::make_unique<std::ofstream>(filename, std::ios::binary)),
-            output_stream_(*internal_output_stream_),
+            output_stream_(internal_output_stream_.get()),
             delimiter_(delimiter),
             quote_(quote)
         {
@@ -859,8 +859,8 @@ namespace csv
         }
 
         Writer(const Writer &) = delete;
-        Writer(Writer &&) = delete;
-        Writer & operator=(const Writer &) = default;
+        Writer(Writer &&) = default;
+        Writer & operator=(const Writer &) = delete;
         Writer & operator=(Writer &&) = default;
 
         Iterator iterator()
@@ -879,9 +879,9 @@ namespace csv
             for(; first != last; ++ first)
             {
                 if(!first_item)
-                    output_stream_<<delimiter_;
+                    (*output_stream_)<<delimiter_;
 
-                output_stream_<<quote(*first);
+                (*output_stream_)<<quote(*first);
 
                 first_item = false;
             }
@@ -917,9 +917,9 @@ namespace csv
         void write_field(const T & field)
         {
             if(!start_of_row_)
-                output_stream_<<delimiter_;
+                (*output_stream_)<<delimiter_;
 
-            output_stream_<<quote(field);
+            (*output_stream_)<<quote(field);
 
             start_of_row_ = false;
         }
@@ -939,7 +939,7 @@ namespace csv
 
         void end_row()
         {
-            output_stream_<<"\r\n";
+            (*output_stream_)<<"\r\n";
             start_of_row_ = true;
         }
     private:
@@ -961,7 +961,7 @@ namespace csv
         friend Writer &end_row(Writer & w);
 
         std::unique_ptr<std::ostream> internal_output_stream_;
-        std::ostream & output_stream_;
+        std::ostream * output_stream_;
         bool start_of_row_ = true;
 
         char delimiter_ {','};
