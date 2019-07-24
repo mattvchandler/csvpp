@@ -53,11 +53,11 @@
 using CSV_data = std::vector<std::vector<std::string>>;
 
 #ifdef CSV_ENABLE_C_CSV
-bool test_read_mine_c(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_c(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     std::ofstream out("test.csv", std::ifstream::binary);
     if(!out)
-        return false;
+        throw std::runtime_error("could not open test.csv");
 
     out.write(csv_text.data(), csv_text.size());
     out.close();
@@ -65,7 +65,7 @@ bool test_read_mine_c(const std::string & csv_text, const CSV_data & expected_da
     CSV_reader * r_test = CSV_reader_init_from_filename("test.csv");
 
     if(!r_test)
-        return false;
+        throw std::runtime_error("could not init CSV_reader");
 
     CSV_reader_set_delimiter(r_test, delimiter);
     CSV_reader_set_quote(r_test, quote);
@@ -85,43 +85,47 @@ bool test_read_mine_c(const std::string & csv_text, const CSV_data & expected_da
             continue;
 
         if(row >= expected_data.size() || num_fields != expected_data[row].size())
-            goto error;
+            goto fail;
 
         if(fields)
         {
             for(size_t col = 0; col < num_fields; ++col)
             {
                 if(col > expected_data[row].size() || std::string(fields[col]) != expected_data[row][col])
-                    goto error;
+                    goto fail;
             }
         }
         ++row;
     }
     if(row != expected_data.size())
-        goto error;
+        goto fail;
 
     CSV_reader_free(r_test);
-    return true;
+    return test::Result::pass;
 
 error:
     CSV_reader_free(r_test);
-    return false;
+    return test::Result::error;
+
+fail:
+    CSV_reader_free(r_test);
+    return test::Result::fail;
 }
 #endif
 
 #ifdef CSV_ENABLE_TINYCSV
-bool test_read_tinycsv(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_tinycsv(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     if(delimiter != ',' || quote != '"')
-        throw test::Skip_test{};
+        return test::Result::skip;
 
     // tinycsv can't distinguish between empty data and 1 empty field
     if(std::empty(expected_data))
-        throw test::Skip_test();
+        return test::Result::skip;
 
     std::ofstream out("test.csv", std::ifstream::binary);
     if(!out)
-        return false;
+        throw std::runtime_error("could not open test.csv");
 
     out.write(csv_text.data(), csv_text.size());
     out.close();
@@ -129,7 +133,7 @@ bool test_read_tinycsv(const std::string & csv_text, const CSV_data & expected_d
     FILE * r_test = std::fopen("test.csv", "rb");
 
     if(!r_test)
-        return false;
+        throw std::runtime_error("could not open test.csv");
 
     CSV_data data(1);
 
@@ -140,7 +144,10 @@ bool test_read_tinycsv(const std::string & csv_text, const CSV_data & expected_d
             const auto & [field, end_of_row] = tinycsv_parse(r_test);
 
             if(std::ferror(r_test))
-                goto error;
+            {
+                std::fclose(r_test);
+                throw std::runtime_error("Error reading test.csv");
+            }
 
             data.back().push_back(field);
 
@@ -153,31 +160,28 @@ bool test_read_tinycsv(const std::string & csv_text, const CSV_data & expected_d
         catch(int)
         {
             std::cerr<<"Tinycsv error\n";
-            goto error;
+            std::fclose(r_test);
+            return test::Result::error;
         }
 
     }
     std::fclose(r_test);
 
-    return data == expected_data;
-
-error:
-    std::fclose(r_test);
-    return false;
+    return data == expected_data ? test::Result::pass : test::Result::fail;
 }
 
-bool test_read_tinycsv_expanded(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_tinycsv_expanded(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     if(delimiter != ',' || quote != '"')
-        throw test::Skip_test{};
+        return test::Result::skip;
 
     // tinycsv can't distinguish between empty data and 1 empty field
     if(std::empty(expected_data))
-        throw test::Skip_test();
+        return test::Result::skip;
 
     std::ofstream out("test.csv", std::ifstream::binary);
     if(!out)
-        return false;
+        throw std::runtime_error("could not open test.csv");
 
     out.write(csv_text.data(), csv_text.size());
     out.close();
@@ -185,7 +189,7 @@ bool test_read_tinycsv_expanded(const std::string & csv_text, const CSV_data & e
     FILE * r_test = std::fopen("test.csv", "rb");
 
     if(!r_test)
-        return false;
+        throw std::runtime_error("could not open test.csv");
 
     CSV_data data(1);
 
@@ -196,7 +200,10 @@ bool test_read_tinycsv_expanded(const std::string & csv_text, const CSV_data & e
             const auto & [field, end_of_row] = tinycsv_expanded_parse(r_test);
 
             if(std::ferror(r_test))
-                goto error;
+            {
+                std::fclose(r_test);
+                throw std::runtime_error("Error reading test.csv");
+            }
 
             data.back().push_back(field);
 
@@ -209,17 +216,14 @@ bool test_read_tinycsv_expanded(const std::string & csv_text, const CSV_data & e
         catch(const char * what)
         {
             std::cerr<<"Tinycsv_expanded error: "<<what<<"\n";
-            goto error;
+            std::fclose(r_test);
+            return test::Result::error;
         }
 
     }
     std::fclose(r_test);
 
-    return data == expected_data;
-
-error:
-    std::fclose(r_test);
-    return false;
+    return data == expected_data ? test::Result::pass : test::Result::fail;
 }
 #endif
 
@@ -289,7 +293,7 @@ def test_read_python(csv_text, expected_data, delimiter, quote):
     except csv.Error as e:
         raise Parse_error(r.line_num, e)
 
-    return data == expected_data
+    return Result.PASS if data == expected_data else Result.FAIL
 
 def test_read_python_map(csv_text, expected_data, delimiter, quote):
     infile = io.StringIO(csv_text, newline='')
@@ -297,31 +301,31 @@ def test_read_python_map(csv_text, expected_data, delimiter, quote):
         r = csv.DictReader(infile, delimiter = delimiter, quotechar = quote, strict=True)
 
         if not r.fieldnames and not expected_data:
-            return True
+            return Result.PASS
 
         headers = expected_data[0]
         if r.fieldnames != headers:
-            return False
+            return Result.FAIL
 
         i = 1
         for row in r:
             if i >= len(expected_data):
-                return False
+                return Result.FAIL
 
             if len(expected_data[i]) != len(headers):
-                raise Skip_test
+                return Result.SKIP
 
             if row != collections.OrderedDict((headers[j], expected_data[i][j]) for j in range(len(headers))):
-                return False
+                return Result.FAIL
             i+=1
 
         if i != len(expected_data) or next(r, None) is not None:
-            return False
+            return Result.FAIL
 
     except csv.Error as e:
         raise Parse_error(r.line_num, e)
 
-    return True
+    return Result.PASS
 )";
 #endif
 
@@ -367,11 +371,11 @@ void libcsv_read_cb2(int, void * data)
     }
 }
 
-bool test_read_libcsv(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_libcsv(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     csv_parser parse;
     if(csv_init(&parse, CSV_APPEND_NULL | CSV_STRICT | CSV_STRICT_FINI) != 0)
-        return false;
+        throw std::runtime_error("Could not init libcsv");
 
     csv_set_delim(&parse, delimiter);
     csv_set_quote(&parse, quote);
@@ -387,7 +391,7 @@ bool test_read_libcsv(const std::string & csv_text, const CSV_data & expected_da
     if(csv_parse(&parse, csv_text.c_str(), csv_text.size(), libcsv_read_cb1, libcsv_read_cb2, &stat) < csv_text.size())
     {
         error();
-        return false;
+        return test::Result::error;
     }
     csv_fini(&parse, libcsv_read_cb1, libcsv_read_cb2, &stat);
 
@@ -395,32 +399,32 @@ bool test_read_libcsv(const std::string & csv_text, const CSV_data & expected_da
     if(err_code != CSV_SUCCESS)
     {
         error();
-        return false;
+        return test::Result::error;
     }
 
     csv_free(&parse);
 
     if(stat.row < expected_data.size())
-        return false;
+        return test::Result::fail;
 
-    return stat.result;
+    return stat.result ? test::Result::pass : test::Result::fail;
 }
 #endif
 
-bool test_read_mine_cpp_read_all(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_read_all(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
-        return csv::Reader(csv::Reader::input_string, csv_text, delimiter, quote).read_all() == expected_data;
+        return csv::Reader(csv::Reader::input_string, csv_text, delimiter, quote).read_all() == expected_data ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
-bool test_read_mine_cpp_read_rows(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_read_rows(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
@@ -434,16 +438,16 @@ bool test_read_mine_cpp_read_rows(const std::string & csv_text, const CSV_data &
                 break;
             data.push_back(row.read_vec());
         }
-        return data == expected_data;
+        return data == expected_data ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
-bool test_read_mine_cpp_read_row_vec(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_read_row_vec(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
@@ -457,16 +461,16 @@ bool test_read_mine_cpp_read_row_vec(const std::string & csv_text, const CSV_dat
                 break;
             data.push_back(*row);
         }
-        return data == expected_data;
+        return data == expected_data ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
-bool test_read_mine_cpp_read_all_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_read_all_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     std::vector<std::vector<int>> expected_ints;
     for(auto & row: expected_data)
@@ -474,38 +478,34 @@ bool test_read_mine_cpp_read_all_as_int(const std::string & csv_text, const CSV_
         expected_ints.emplace_back();
         for(auto & col: row)
         {
-            auto skip = [](const std::exception & e)
-            {
-                using namespace std::string_literals;
-                if(e.what() == "stoi"s)
-                    throw test::Skip_test();
-            };
-
+            using namespace std::string_literals;
             try { expected_ints.back().push_back(std::stoi(col)); }
             catch(const std::invalid_argument & e)
             {
-                skip(e);
-                return false;
+                if(e.what() == "stoi"s)
+                    return test::Result::skip;
+                throw;
             }
             catch(const std::out_of_range & e)
             {
-                skip(e);
-                return false;
+                if(e.what() == "stoi"s)
+                    return test::Result::skip;
+                throw;
             }
         }
     }
     try
     {
-        return csv::Reader(csv::Reader::input_string, csv_text, delimiter, quote).read_all<int>() == expected_ints;
+        return csv::Reader(csv::Reader::input_string, csv_text, delimiter, quote).read_all<int>() == expected_ints ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
-bool test_read_mine_cpp_stream(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_stream(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
@@ -522,25 +522,25 @@ bool test_read_mine_cpp_stream(const std::string & csv_text, const CSV_data & ex
                 }
                 catch(const csv::Out_of_range_error&)
                 {
-                    return false;
+                    return test::Result::fail;
                 }
                 if(field != expected_field)
-                    return false;
+                    return test::Result::fail;
             }
             if(!r.end_of_row())
-                return false;
+                return test::Result::fail;
         }
 
-        return r.eof();
+        return r.eof() ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
-bool test_read_mine_cpp_fields(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_fields(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
@@ -557,25 +557,25 @@ bool test_read_mine_cpp_fields(const std::string & csv_text, const CSV_data & ex
                 }
                 catch(const csv::Out_of_range_error&)
                 {
-                    return false;
+                    return test::Result::fail;
                 }
                 if(field != expected_field)
-                    return false;
+                    return test::Result::fail;
             }
             if(!r.end_of_row())
-                return false;
+                return test::Result::fail;
         }
 
-        return r.eof();
+        return r.eof() ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
-bool test_read_mine_cpp_iters(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_iters(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
@@ -588,16 +588,16 @@ bool test_read_mine_cpp_iters(const std::string & csv_text, const CSV_data & exp
             std::copy(r.begin(), r.end(), std::back_inserter(data.back()));
         }
 
-        return data == expected_data;
+        return data == expected_data ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
-bool test_read_mine_cpp_range(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_range(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
@@ -613,16 +613,16 @@ bool test_read_mine_cpp_range(const std::string & csv_text, const CSV_data & exp
             }
         }
 
-        return data == expected_data;
+        return data == expected_data ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
-bool test_read_mine_cpp_row_fields(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_row_fields(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
@@ -631,40 +631,40 @@ bool test_read_mine_cpp_row_fields(const std::string & csv_text, const CSV_data 
         for(auto & expected_row: expected_data)
         {
             if(r.eof())
-                return false;
+                return test::Result::fail;
 
             auto row = r.get_row();
             for(auto & expected_field: expected_row)
             {
                 if(row.end_of_row())
-                    return false;
+                    return test::Result::fail;
 
                 auto field = row.read_field();
                 if(field!= expected_field)
-                    return false;
+                    return test::Result::fail;
             }
 
             try
             {
                 row.read_field();
-                return false;
+                return test::Result::fail;
             }
             catch(const csv::Out_of_range_error&) {}
 
             if(!row.end_of_row())
-                return false;
+                return test::Result::fail;
         }
 
-        return r.eof();
+        return r.eof() ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
-bool test_read_mine_cpp_row_stream(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_row_stream(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
@@ -673,43 +673,43 @@ bool test_read_mine_cpp_row_stream(const std::string & csv_text, const CSV_data 
         for(auto & expected_row: expected_data)
         {
             if(r.eof())
-                return false;
+                return test::Result::fail;
 
             auto row = r.get_row();
             for(auto & expected_field: expected_row)
             {
                 if(row.end_of_row())
-                    return false;
+                    return test::Result::fail;
 
                 std::string field;
                 row>>field;
 
                 if(field != expected_field)
-                    return false;
+                    return test::Result::fail;
             }
 
             try
             {
                 std::string after_field;
                 row>>after_field;
-                return false;
+                return test::Result::fail;
             }
             catch(const csv::Out_of_range_error&) {}
 
             if(!row.end_of_row())
-                return false;
+                return test::Result::fail;
         }
 
-        return r.eof();
+        return r.eof() ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
-bool test_read_mine_cpp_row_range(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_row_range(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
@@ -718,7 +718,7 @@ bool test_read_mine_cpp_row_range(const std::string & csv_text, const CSV_data &
         for(auto & expected_row: expected_data)
         {
             if(r.eof())
-                return false;
+                return test::Result::fail;
 
             auto row = r.get_row();
 
@@ -726,29 +726,29 @@ bool test_read_mine_cpp_row_range(const std::string & csv_text, const CSV_data &
             for(auto & col: row.range())
             {
                 if(expected_col >= expected_row.size())
-                    return false;
+                    return test::Result::fail;
 
                 if(col != expected_row[expected_col])
-                    return false;
+                    return test::Result::fail;
                 ++expected_col;
             }
             if(expected_col != expected_row.size())
-                return false;
+                return test::Result::fail;
 
             if(!row.end_of_row())
-                return false;
+                return test::Result::fail;
         }
 
-        return r.eof();
+        return r.eof() ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
-bool test_read_mine_cpp_row_row_vec(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_row_row_vec(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
@@ -757,23 +757,23 @@ bool test_read_mine_cpp_row_row_vec(const std::string & csv_text, const CSV_data
         for(auto & expected_row: expected_data)
         {
             if(r.eof())
-                return false;
+                return test::Result::fail;
 
             auto row = r.get_row().read_vec();
             if(row != expected_row)
-                return false;
+                return test::Result::fail;
         }
 
-        return r.eof();
+        return r.eof() ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
-bool test_read_mine_cpp_map(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_map(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
@@ -781,45 +781,46 @@ bool test_read_mine_cpp_map(const std::string & csv_text, const CSV_data & expec
 
         auto & headers = expected_data.at(0);
         if(r.get_headers() != headers)
-            return false;
+            return test::Result::fail;
 
         std::size_t i = 1;
         for(; r != csv::Map_reader_iter{} && i < std::size(expected_data); ++r, ++i)
         {
             if(std::size(expected_data[i]) != std::size(headers))
-                throw test::Skip_test{};
+                return test::Result::skip;
 
             std::remove_reference_t<decltype(*r)> expected_row;
             for(std::size_t j = 0; j < std::size(headers); ++j)
                 expected_row.emplace(headers[j], expected_data[i][j]);
 
             if(*r != expected_row)
-                return false;
+                return test::Result::fail;
         }
         if(i != std::size(expected_data) || r != csv::Map_reader_iter{})
-            return false;
+            return test::Result::fail;
 
-        return true;
+        return test::Result::pass;
     }
     catch(const csv::Parse_error & e)
     {
         if(e.what() == std::string{"Error parsing CSV at line: 0, col: 0: Can't get header row"} && std::size(expected_data) == 0)
-            return true;
+            return test::Result::pass;
         else
         {
             std::cerr<<e.what()<<"\n";
-            return false;
+            return test::Result::error;
         }
     }
     catch(const csv::Out_of_range_error &e)
     {
         if(e.what() == std::string{"Too many columns"})
-            throw test::Skip_test{};
+            return test::Result::skip;
         else
             throw;
     }
 }
-bool test_read_mine_cpp_map_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+
+test::Result test_read_mine_cpp_map_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     std::vector<std::vector<int>> expected_ints;
     for(auto & row: expected_data)
@@ -827,23 +828,19 @@ bool test_read_mine_cpp_map_as_int(const std::string & csv_text, const CSV_data 
         expected_ints.emplace_back();
         for(auto & col: row)
         {
-            auto skip = [](const std::exception & e)
-            {
-                using namespace std::string_literals;
-                if(e.what() == "stoi"s)
-                    throw test::Skip_test();
-            };
-
+            using namespace std::string_literals;
             try { expected_ints.back().push_back(std::stoi(col)); }
             catch(const std::invalid_argument & e)
             {
-                skip(e);
-                return false;
+                if(e.what() == "stoi"s)
+                    return test::Result::skip;
+                throw;
             }
             catch(const std::out_of_range & e)
             {
-                skip(e);
-                return false;
+                if(e.what() == "stoi"s)
+                    return test::Result::skip;
+                throw;
             }
         }
     }
@@ -854,46 +851,46 @@ bool test_read_mine_cpp_map_as_int(const std::string & csv_text, const CSV_data 
 
         auto headers = expected_ints.at(0);
         if(r.get_headers() != headers)
-            return false;
+            return test::Result::fail;
 
         std::size_t i = 1;
         for(; r != csv::Map_reader_iter{} && i < std::size(expected_ints); ++r, ++i)
         {
             if(std::size(expected_ints[i]) != std::size(headers))
-                throw test::Skip_test{};
+                return test::Result::skip;
 
             std::remove_reference_t<decltype(*r)> expected_row;
             for(std::size_t j = 0; j < std::size(headers); ++j)
                 expected_row.emplace(headers[j], expected_ints[i][j]);
 
             if(*r != expected_row)
-                return false;
+                return test::Result::fail;
         }
         if(i != std::size(expected_ints) || r != csv::Map_reader_iter{})
-            return false;
+            return test::Result::fail;
 
-        return true;
+        return test::Result::pass;
     }
     catch(const csv::Parse_error & e)
     {
         if(e.what() == std::string{"Error parsing CSV at line: 0, col: 0: Can't get header row"} && std::size(expected_data) == 0)
-            return true;
+            return test::Result::pass;
         else
         {
             std::cerr<<e.what()<<"\n";
-            return false;
+            return test::Result::error;
         }
     }
     catch(const csv::Out_of_range_error &e)
     {
         if(e.what() == std::string{"Too many columns"})
-            throw test::Skip_test{};
+            return test::Result::skip;
         else
             throw;
     }
 }
 
-bool test_read_mine_cpp_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
@@ -906,7 +903,7 @@ bool test_read_mine_cpp_variadic(const std::string & csv_text, const CSV_data & 
                 break;
 
             if(std::size(expected_row) > 5)
-                throw test::Skip_test{};
+                return test::Result::skip;
 
             std::vector<std::string> row(std::size(expected_row));
             try
@@ -932,28 +929,28 @@ bool test_read_mine_cpp_variadic(const std::string & csv_text, const CSV_data & 
                     r.read_row_v(row[0], row[1], row[2], row[3], row[4]);
                     break;
                 default:
-                    throw test::Skip_test{};
+                    return test::Result::skip;
                 }
             }
             catch(const csv::Out_of_range_error& e)
             {
                 if(e.what() == std::string{"Read past end of row"})
-                    return false;
+                    return test::Result::fail;
                 throw;
             }
 
             data.push_back(row);
         }
-        return r.eof() && data == expected_data;
+        return r.eof() && data == expected_data ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
-bool test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
@@ -963,7 +960,7 @@ bool test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & exp
         for(auto & expected_row: expected_data)
         {
             if(std::size(expected_row) > 5)
-                throw test::Skip_test{};
+                return test::Result::skip;
 
             std::vector<std::string> row;
 
@@ -1008,13 +1005,13 @@ bool test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & exp
                 }
                     break;
                 default:
-                    throw test::Skip_test{};
+                    return test::Result::skip;
                 }
             }
             catch(const csv::Out_of_range_error & e)
             {
                 if(e.what() == std::string{"Read past end of row"})
-                    return false;
+                    return test::Result::fail;
                 throw;
             }
             catch(const std::bad_optional_access&)
@@ -1024,16 +1021,16 @@ bool test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & exp
 
             data.push_back(row);
         }
-        return r.eof() && data == expected_data;
+        return r.eof() && data == expected_data ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
-bool test_read_mine_cpp_row_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_row_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
@@ -1042,7 +1039,7 @@ bool test_read_mine_cpp_row_variadic(const std::string & csv_text, const CSV_dat
         for(auto & expected_row: expected_data)
         {
             if(r.eof())
-                return false;
+                return test::Result::fail;
 
             auto row_obj = r.get_row();
             std::vector<std::string> row(std::size(expected_row), "NOT SET");
@@ -1070,28 +1067,28 @@ bool test_read_mine_cpp_row_variadic(const std::string & csv_text, const CSV_dat
                     row_obj.read_v(row[0], row[1], row[2], row[3], row[4]);
                     break;
                 default:
-                    throw test::Skip_test{};
+                    return test::Result::skip;
                 }
             }
             catch(const csv::Out_of_range_error&)
             {
-                return false;
+                return test::Result::fail;
             }
 
             if(row != expected_row)
-                return false;
+                return test::Result::fail;
         }
 
-        return r.eof();
+        return r.eof() ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
-bool test_read_mine_cpp_row_tuple(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_row_tuple(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
     {
@@ -1100,7 +1097,7 @@ bool test_read_mine_cpp_row_tuple(const std::string & csv_text, const CSV_data &
         for(auto & expected_row: expected_data)
         {
             if(r.eof())
-                return false;
+                return test::Result::fail;
 
             auto row_obj = r.get_row();
             std::vector<std::string> row;
@@ -1145,33 +1142,33 @@ bool test_read_mine_cpp_row_tuple(const std::string & csv_text, const CSV_data &
                 }
                     break;
                 default:
-                    throw test::Skip_test{};
+                    return test::Result::skip;
                 }
             }
             catch(const csv::Out_of_range_error&)
             {
-                return false;
+                return test::Result::fail;
             }
 
             if(row != expected_row)
-                return false;
+                return test::Result::fail;
         }
 
-        return r.eof();
+        return r.eof() ? test::Result::pass : test::Result::fail;
     }
     catch(const csv::Parse_error & e)
     {
         std::cerr<<e.what()<<"\n";
-        return false;
+        return test::Result::error;
     }
 }
 
 #ifdef CSV_ENABLE_C_CSV
-bool test_write_mine_c(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_c(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
     CSV_writer * w_test = CSV_writer_init_from_filename("test.csv");
     if(!w_test)
-        return false;
+        throw std::runtime_error("Could not init CSV_writer");
 
     CSV_writer_set_delimiter(w_test, delimiter);
     CSV_writer_set_quote(w_test, quote);
@@ -1186,13 +1183,13 @@ bool test_write_mine_c(const std::string & expected_text, const CSV_data data, c
         if(CSV_writer_write_record(w_test, col_c_strs.data(), row.size()) != CSV_OK)
         {
             CSV_writer_free(w_test);
-            return false;
+            return test::Result::error;
         }
     }
     CSV_writer_free(w_test);
 
     std::ifstream out_file("test.csv", std::ifstream::binary);
-    return expected_text == static_cast<std::stringstream const &>(std::stringstream() << out_file.rdbuf()).str();
+    return expected_text == static_cast<std::stringstream const &>(std::stringstream() << out_file.rdbuf()).str() ? test::Result::pass : test::Result::fail;
 }
 #endif
 
@@ -1203,7 +1200,7 @@ def test_write_python(expected_text, data, delimiter, quote):
     w = csv.writer(out, delimiter=delimiter, quotechar=quote)
     for row in data:
         w.writerow(row)
-    return out.getvalue() == expected_text
+    return Result.PASS if out.getvalue() == expected_text else Result.FAIL
 
 def test_write_python_map(expected_text, data, delimiter, quote):
     out = io.StringIO(newline='')
@@ -1215,18 +1212,18 @@ def test_write_python_map(expected_text, data, delimiter, quote):
 
         for row in data[1:]:
             if len(row) != len(headers):
-                raise Skip_test
+                return Result.SKIP
             w.writerow({ headers[i]: row[i] for i in range(len(row)) })
 
-    return out.getvalue() == expected_text
+    return Result.PASS if out.getvalue() == expected_text else Result.FAIL
 )";
 #endif
 
 #ifdef CSV_ENABLE_LIBCSV
-bool test_write_libcsv(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_libcsv(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
     if(delimiter != ',' || quote != '"')
-        throw test::Skip_test{};
+        return test::Result::skip;
 
     std::string output = "";
 
@@ -1264,11 +1261,11 @@ bool test_write_libcsv(const std::string & expected_text, const CSV_data data, c
         output += "\r\n";
     }
 
-    return output == expected_text;
+    return output == expected_text ? test::Result::pass : test::Result::fail;
 }
 #endif
 
-bool test_write_mine_cpp_stream(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_cpp_stream(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -1280,10 +1277,10 @@ bool test_write_mine_cpp_stream(const std::string & expected_text, const CSV_dat
             w<<csv::end_row;
         }
     }
-    return str.str() == expected_text;
+    return str.str() == expected_text ? test::Result::pass : test::Result::fail;
 }
 
-bool test_write_mine_cpp_row(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_cpp_row(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -1293,10 +1290,10 @@ bool test_write_mine_cpp_row(const std::string & expected_text, const CSV_data d
             w.write_row(row);
         }
     }
-    return str.str() == expected_text;
+    return str.str() == expected_text ? test::Result::pass : test::Result::fail;
 }
 
-bool test_write_mine_cpp_iter(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_cpp_iter(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -1307,10 +1304,10 @@ bool test_write_mine_cpp_iter(const std::string & expected_text, const CSV_data 
             w.end_row();
         }
     }
-    return str.str() == expected_text;
+    return str.str() == expected_text ? test::Result::pass : test::Result::fail;
 }
 
-bool test_write_mine_cpp_map(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_cpp_map(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     if(!std::empty(data))
@@ -1320,7 +1317,7 @@ bool test_write_mine_cpp_map(const std::string & expected_text, const CSV_data d
         for(auto row = std::begin(data) + 1; row != std::end(data); ++row, ++w)
         {
             if(std::size(*row) != std::size(headers))
-                throw test::Skip_test{};
+                return test::Result::skip;
 
             std::map<std::string, std::string> out_row;
             for(std::size_t i = 0; i < std::size(headers); ++i)
@@ -1329,10 +1326,10 @@ bool test_write_mine_cpp_map(const std::string & expected_text, const CSV_data d
             *w = out_row;
         }
     }
-    return str.str() == expected_text;
+    return str.str() == expected_text ? test::Result::pass : test::Result::fail;
 }
 
-bool test_write_mine_cpp_variadic(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_cpp_variadic(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -1360,13 +1357,13 @@ bool test_write_mine_cpp_variadic(const std::string & expected_text, const CSV_d
                 w.write_row_v(row[0], row[1], row[2], row[3], row[4]);
                 break;
             default:
-                throw test::Skip_test{};
+                return test::Result::skip;
             }
         }
     }
-    return str.str() == expected_text;
+    return str.str() == expected_text ? test::Result::pass : test::Result::fail;
 }
-bool test_write_mine_cpp_tuple(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_cpp_tuple(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -1394,13 +1391,12 @@ bool test_write_mine_cpp_tuple(const std::string & expected_text, const CSV_data
                 w.write_row(std::tuple{row[0], row[1], row[2], row[3], row[4]});
                 break;
             default:
-                throw test::Skip_test{};
+                return test::Result::skip;
             }
         }
     }
-    return str.str() == expected_text;
+    return str.str() == expected_text ? test::Result::pass : test::Result::fail;
 }
-
 
 // helper to run a test for each combination of delimiter and quote char
 template<typename Test>
@@ -1443,12 +1439,29 @@ int main(int, char *[])
     // initialize python interpreter
     pybind11::scoped_interpreter interp{};
     pybind11::exec(R"(
-        import io, collections, csv
-        class Skip_test(Exception): pass
+        import io, collections, csv, enum
+
         class Parse_error(Exception):
             def __init__(self, line_num, msg):
                 super().__init__("Python CSV error on line {}: {}".format(line_num, msg))
+
+        class Result(enum.IntEnum):
+            FAIL  = 0
+            PASS  = 1
+            SKIP  = 2
         )");
+
+    auto convert_result = [](const pybind11::object & pyresult) -> test::Result
+    {
+        auto result = pyresult.cast<int>();
+        switch(result)
+        {
+        case 0: return test::Result::fail;
+        case 1: return test::Result::pass;
+        case 2: return test::Result::skip;
+        default: throw std::runtime_error("unknown python Result value: " + std::to_string(result));
+        }
+    };
 
     auto handle_parse_error = [](const char * what)
     {
@@ -1467,70 +1480,58 @@ int main(int, char *[])
     auto test_write_python_map_fun = pybind11::globals()["test_write_python_map"];
 
     // bind python funs, and handle exceptions
-    auto test_read_python = [&test_read_python_fun, handle_parse_error](const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+    auto test_read_python = [&test_read_python_fun, convert_result, handle_parse_error](const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
     {
         // pre-parse and skip inputs that python is too lenient on
         if(python_too_lenient(csv_text, delimiter, quote))
-            throw test::Skip_test{};
+            return test::Result::skip;
 
         try
         {
-            return test_read_python_fun(csv_text, expected_data, delimiter, quote).cast<bool>();
+            return convert_result(test_read_python_fun(csv_text, expected_data, delimiter, quote));
         }
         catch(pybind11::error_already_set & e)
         {
             if(e.matches(pybind11::globals()["Parse_error"]))
             {
                 handle_parse_error(e.what());
-                return false;
+                return test::Result::error;
             }
             else
                 throw;
         }
     };
 
-    auto test_read_python_map = [&test_read_python_map_fun, handle_parse_error](const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+    auto test_read_python_map = [&test_read_python_map_fun, convert_result, handle_parse_error](const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
     {
         // pre-parse and skip inputs that python is too lenient on
         if(python_too_lenient(csv_text, delimiter, quote))
-            throw test::Skip_test{};
+            return test::Result::skip;
 
         try
         {
-            return test_read_python_map_fun(csv_text, expected_data, delimiter, quote).cast<bool>();
+            return convert_result(test_read_python_map_fun(csv_text, expected_data, delimiter, quote));
         }
         catch(pybind11::error_already_set & e)
         {
-            if(e.matches(pybind11::globals()["Skip_test"]))
-                throw test::Skip_test{};
-            else if(e.matches(pybind11::globals()["Parse_error"]))
+            if(e.matches(pybind11::globals()["Parse_error"]))
             {
                 handle_parse_error(e.what());
-                return false;
+                return test::Result::error;
             }
             else
                 throw;
         }
     };
 
-    auto test_write_python = [&test_write_python_fun](const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+    auto test_write_python = [&test_write_python_fun, convert_result](const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
     {
-        return test_write_python_fun(expected_text, data, delimiter, quote).cast<bool>();
+        return convert_result(test_write_python_fun(expected_text, data, delimiter, quote));
     };
 
-    auto test_write_python_map = [&test_write_python_map_fun](const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+    auto test_write_python_map = [&test_write_python_map_fun, convert_result](const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
     {
-        try
-        {
-            return test_write_python_map_fun(expected_text, data, delimiter, quote).cast<bool>();
-        }
-        catch(pybind11::error_already_set & e)
-        {
-            if(e.matches(pybind11::globals()["Skip_test"]))
-                throw test::Skip_test{};
-            else
-                throw;
-        }
+        return convert_result(test_write_python_map_fun(expected_text, data, delimiter, quote));
     };
     #endif
 
@@ -1592,6 +1593,7 @@ int main(int, char *[])
     using namespace std::placeholders;
     auto test_read_pass = std::bind(&decltype(test_read)::test_pass, &test_read, _1, _2, _3, _4, _5);
     auto test_read_fail = std::bind(&decltype(test_read)::test_fail, &test_read, _1, _2, _3, _4, _5);
+    auto test_read_error = std::bind(&decltype(test_read)::test_error, &test_read, _1, _2, _3, _4, _5);
     auto test_write_pass = std::bind(&decltype(test_write)::test_pass, &test_write, _1, _2, _3, _4, _5);
 
     std::cout<<"Reader Tests:\n";
@@ -1624,19 +1626,19 @@ int main(int, char *[])
             "\"\"\"1\"\"\",\"\"\"2\"\"\",\"\"\"3\"\"\",\"\"\"4\"\"\"\r\n",
             {{"\"1\"", "\"2\"", "\"3\"", "\"4\""}});
 
-    test_quotes(test_read_fail, "Read test: unterminated quote",
+    test_quotes(test_read_error, "Read test: unterminated quote",
             "\"1\r\n", {{""}});
 
-    test_quotes(test_read_fail, "Read test: unescaped quote",
+    test_quotes(test_read_error, "Read test: unescaped quote",
             "12\"3\r\n", {{"12\"3"}});
 
-    test_quotes(test_read_fail, "Read test: unescaped quote at start of field",
+    test_quotes(test_read_error, "Read test: unescaped quote at start of field",
             "\"123,234\r\n", {{""}});
 
-    test_quotes(test_read_fail, "Read test: unescaped quote at end of field",
+    test_quotes(test_read_error, "Read test: unescaped quote at end of field",
             "123,234\"\r\n", {{"123", "234\""}});
 
-    test_quotes(test_read_fail, "Read test: unescaped quote inside quoted field",
+    test_quotes(test_read_error, "Read test: unescaped quote inside quoted field",
             "\"12\"3\"\r\n", {{"12\"3"}});
 
     test_quotes(test_read_pass, "Read test: empty quoted fields",
@@ -1675,7 +1677,7 @@ int main(int, char *[])
     test_quotes(test_read_pass, "Read test: mixed empty lines in middle",
             "1,2,3\r\n\n\r\n\r\r\n\r\n\r4,5,6\r\n", {{"1", "2", "3"}, {"4", "5", "6"}});
 
-    test_quotes(test_read_fail, "Read test: mixed empty lines in middle, then parse error",
+    test_quotes(test_read_error, "Read test: mixed empty lines in middle, then parse error",
             "1,2,3\r\n\n\r\n\r\r\n\r\n\r4,5,\"6\r\n", {{"1", "2", "3"}, {"4", "5", "6"}});
 
     test_quotes(test_read_fail, "Read test: Too many cols",

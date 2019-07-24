@@ -27,24 +27,30 @@
 
 namespace test
 {
-    class Skip_test: public std::exception { };
+    enum class Result {fail, pass, error, skip};
 
     template <typename... Args>
     class Test
     {
     public:
-        explicit Test(const std::initializer_list<std::function<bool(Args...)>> & cases): test_cases(cases)
+        explicit Test(const std::initializer_list<std::function<Result(Args...)>> & cases): test_cases(cases)
         {}
 
         bool test_pass(const std::string_view & title, Args ...args)
         {
-            return run_tests(true, title, args...);
+            return run_tests(Result::pass, title, args...);
         }
 
         bool test_fail(const std::string_view & title, Args ...args)
         {
-            return run_tests(false, title, args...);
+            return run_tests(Result::fail, title, args...);
         }
+
+        bool test_error(const std::string_view & title, Args ...args)
+        {
+            return run_tests(Result::error, title, args...);
+        }
+
         bool passed() const
         {
             return num_ran == num_passed;
@@ -54,7 +60,7 @@ namespace test
 
     private:
 
-        bool run_tests(bool test_for_pass, const std::string_view & title, Args ...args)
+        bool run_tests(Result expected_result, const std::string_view & title, Args ...args)
         {
             std::cout<<title<<"\n";
 
@@ -62,15 +68,12 @@ namespace test
             std::size_t count = 0;
             for(auto & f: test_cases)
             {
-                try
-                {
-                    if(f(args...) == test_for_pass)
-                        ++count;
-                }
-                catch(Skip_test&)
-                {
+                auto result = f(args...);
+                if(result == expected_result)
+                    ++count;
+
+                if(result == Result::skip)
                     --total;
-                }
             }
 
             auto passed = count == total;
@@ -91,7 +94,7 @@ namespace test
             return passed;
         }
 
-        std::vector<std::function<bool(Args...)>> test_cases;
+        std::vector<std::function<Result(Args...)>> test_cases;
         std::size_t num_passed = 0;
         std::size_t num_ran = 0;
     };
