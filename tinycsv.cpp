@@ -15,13 +15,14 @@ string;pair<S,I>p(FILE*f){if(E)return{{}
 c=='\r'||E)){e=1;while(!E){G if(c!='\r'
 &&c!='\n'){if(!E)ungetc(c,f);break;}}
 break;}w+=c;}return{w,e};}I main(I c,
-char*v[]){if(c!=2)return 1;auto f=fopen(
-v[1],"r");try{if(!f)throw 0;vector<
-vector<S>>d(1);vector<I>z;for(I i=0;;++i
-){const auto&[w,e]=p(f);d.back().
-push_back(w);z.resize(max(i,(I)w.Z));z[i
-]=max(z[i],(I)w.Z);if(E)break;if(e)d.
-push_back({});}for(auto&r:d){for(I i=0;i
-<r.Z;++i){if(i!=0)printf(" | ");printf(
-"%-*s",z[i],data(r[i]));}putchar('\n');}
-}catch(I){puts("error");return 1;}}
+char**v){if(c>2)return 1;FILE*f=0;if(c<2
+||v[1]==S("-"))f=stdin;else f=fopen(v[1]
+,"r");try{if(!f)throw 0;vector<vector<S>
+>d(1);vector<I>z;for(I i=0;;){auto[w,e]=
+p(f);if(E)break;d.back().push_back(w);z.
+resize(max(i+1,(I)z.Z));z[i]=max(z[i],(I
+)w.Z);if(e){i=0;d.push_back({});}else++i
+;}for(auto&r:d){for(I i=0;i<r.Z;++i){if(
+i!=0)printf(" | ");printf("%-*s",z[i],
+data(r[i]));}putchar('\n');}}catch(I){
+puts("error");return 1;}}

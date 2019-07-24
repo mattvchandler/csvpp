@@ -104,28 +104,42 @@ pair<string, int> parse(FILE * in)
 
 int main(int argc, char * argv[])
 {
-    if(argc != 2) return 1;
+    if(argc > 2)
+    {
+        fputs("limit 1 input file\n", stderr);
+        return 1;
+    }
 
-    auto in = fopen(argv[1], "r");
+    FILE * in = NULL;
+    if(argc < 2 || argv[1] == string{"-"})
+        in = stdin;
+    else
+        in = fopen(argv[1], "r");
+
     try
     {
         if(!in) throw "could not open file";
 
         vector<vector<string>> data(1);
         vector<int> col_size;
-        for(int i = 0;; ++i)
+        for(int i = 0;;)
         {
-            const auto & [field, end_of_row] = parse(in);
+            auto [field, end_of_row] = parse(in);
             if(ferror(in)) break;
             data.back().push_back(field);
 
-            col_size.resize(max(i, (int)field.size()));
+            col_size.resize(max(i + 1, (int)col_size.size()));
 
             col_size[i] = max(col_size[i], (int)field.size());
             if(feof(in)) break;
 
             if(end_of_row)
+            {
+                i = 0;
                 data.push_back({});
+            }
+            else
+                ++i;
         }
         for(auto &row: data)
         {
