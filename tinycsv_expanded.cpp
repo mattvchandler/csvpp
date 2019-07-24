@@ -54,7 +54,7 @@ pair<string, int> parse(FILE * in)
                     quoted = 0;
                 // if it's not an escaped quote, then it's an error
                 else if(c != '"')
-                    throw "Unecaped double-quote";
+                    throw "Unescaped double-quote";
             }
             else
             {
