@@ -33,7 +33,7 @@ pair<string, int> parse(FILE * in)
     if(feof(in))
         return {{}, 0};
 
-    int quoted = 0, end_of_row = 0, c;
+    int quoted = 0, c;
     string field;
 
     while(1)
@@ -81,7 +81,6 @@ pair<string, int> parse(FILE * in)
         }
         else if(!quoted && (c == '\n' || c == '\r' || feof(in)))
         {
-            end_of_row = 1;
             // consume newlines
             while(!feof(in))
             {
@@ -93,13 +92,13 @@ pair<string, int> parse(FILE * in)
                     break;
                 }
             }
-            break;
+            return {field, 1};
         }
 
         field += c;
     }
 
-    return {field, end_of_row};
+    return {field, 0};
 }
 
 int main(int argc, char * argv[])
