@@ -1183,7 +1183,7 @@ test::Result test_write_mine_c(const std::string & expected_text, const CSV_data
         if(CSV_writer_write_record(w_test, col_c_strs.data(), row.size()) != CSV_OK)
         {
             CSV_writer_free(w_test);
-            return test::Result::error;
+            throw std::runtime_error("error writing CSV");
         }
     }
     CSV_writer_free(w_test);
