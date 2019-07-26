@@ -88,7 +88,7 @@ namespace test
 
             std::cout<<"("<<count<<"/"<<total;
             if(total != test_cases.size())
-                std::cout<<" "<<test_cases.size() - total<<" - tests skipped";
+                std::cout<<" - "<<test_cases.size() - total<<" tests skipped";
             std::cout<<")\n";
 
             return passed;
