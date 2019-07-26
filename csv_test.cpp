@@ -42,6 +42,10 @@
 #include "csv.h"
 #endif
 
+#ifdef CSV_ENABLE_EMBCSV
+#include "embcsv.h"
+#endif
+
 #ifdef CSV_ENABLE_TINYCSV
 #include "tinycsv_test.hpp"
 #endif
@@ -53,6 +57,55 @@
 #include "test.hpp"
 
 using CSV_data = std::vector<std::vector<std::string>>;
+
+#ifdef CSV_ENABLE_EMBCSV
+test::Result test_read_embedded(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+{
+    if(delimiter != ',' || quote != '"')
+        return test::Result::skip;
+
+    // tinycsv can't distinguish between empty data and 1 empty field
+    if(std::empty(expected_data))
+        return test::Result::skip;
+
+    CSV_data data;
+
+    EMBCSV_reader * r = EMBCSV_reader_init();
+
+    bool new_row = true;
+    for(const char * c = csv_text.c_str();; ++c)
+    {
+        char * field = nullptr;
+        switch(EMBCSV_reader_parse_char(r, *c, &field))
+        {
+            case EMBCSV_INCOMPLETE:
+                break;
+            case EMBCSV_FIELD:
+                if(new_row)
+                    data.emplace_back();
+
+                data.back().emplace_back(field);
+                new_row = false;
+                break;
+            case EMBCSV_END_OF_ROW:
+                if(new_row)
+                    data.emplace_back();
+
+                data.back().emplace_back(field);
+                new_row = true;
+                break;
+            case EMBCSV_PARSE_ERROR:
+                EMBCSV_reader_free(r);
+                return test::Result::error;
+        }
+        if(!*c)
+            break;
+    }
+
+    EMBCSV_reader_free(r);
+    return data == expected_data ? test::Result::pass : test::Result::fail;
+}
+#endif
 
 #ifdef CSV_ENABLE_C_CSV
 test::Result test_read_mine_c(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
@@ -1560,6 +1613,9 @@ int main(int, char *[])
     #endif
 
     test::Test<const std::string&, const CSV_data&, const char, const char> test_read{{
+        #ifdef CSV_ENABLE_EMBCSV
+        test_read_embedded,
+        #endif
         #ifdef CSV_ENABLE_C_CSV
         test_read_mine_c,
         #endif
@@ -1775,9 +1831,6 @@ int main(int, char *[])
     test_quotes(test_write_pass, "Write test: field with quotes",
             "\"\"\"1\"\"\"\r\n", {{"\"1\""}});
 
-    test_quotes(test_write_pass, "Write test: field with commas & newlines",
-            "\",1\r\n\"\r\n", {{",1\r\n"}});
-
     test_quotes(test_write_pass, "Write test: 1 row",
             "1,2,3,4\r\n", {{"1","2","3","4"}});
 
@@ -1786,6 +1839,9 @@ int main(int, char *[])
 
     test_quotes(test_write_pass, "Write test: fields with newlines",
             "\"1\r2\n3\",\"4\r\n5\n\r6\"\r\n", {{"1\r2\n3", "4\r\n5\n\r6"}});
+
+    test_quotes(test_write_pass, "Write test: field with commas & newlines",
+            "\",1\r\n\"\r\n", {{",1\r\n"}});
 
     test_quotes(test_write_pass, "Write test: fields with commas & newlines & quotes",
             "\",1\r\n\"\"\"\r\n", {{",1\r\n\""}});
