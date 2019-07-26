@@ -409,7 +409,6 @@ namespace csv
         {
             if(end_of_row_)
             {
-                start_of_row_ = true;
                 end_of_row_ = false;
             }
 
@@ -493,7 +492,6 @@ namespace csv
 
             if(end_of_row())
             {
-                start_of_row_ = true;
                 end_of_row_ = false;
             }
 
@@ -506,7 +504,6 @@ namespace csv
             (read_row_variadic_helper(data), ...);
             if(end_of_row())
             {
-                start_of_row_ = true;
                 end_of_row_ = false;
             }
         }
@@ -533,7 +530,6 @@ namespace csv
         {
             if(end_of_row())
             {
-                start_of_row_ = true;
                 end_of_row_ = false;
                 throw Out_of_range_error("Read past end of row");
             }
@@ -579,7 +575,6 @@ namespace csv
                 {
                     if(quoted)
                     {
-                        start_of_row_ = false;
                         input_stream_->get(c);
                         if(c == '\n')
                         {
@@ -600,7 +595,6 @@ namespace csv
                     {
                         if(field.empty())
                         {
-                            start_of_row_ = false;
                             quoted = true;
                             continue;
                         }
@@ -644,7 +638,6 @@ namespace csv
                     break;
                 }
 
-                start_of_row_ = false;
                 field += c;
             }
 
@@ -659,7 +652,6 @@ namespace csv
         std::optional<std::string> line_terminator_ {};
 
         std::optional<std::string> conversion_retry_;
-        bool start_of_row_ = true;
         bool end_of_row_ = false;
         bool eof_ = false;
 
