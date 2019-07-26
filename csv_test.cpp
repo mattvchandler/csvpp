@@ -46,7 +46,9 @@
 #include "tinycsv_test.hpp"
 #endif
 
+#ifdef CSV_ENABLE_CPP_CSV
 #include "csv.hpp"
+#endif
 
 #include "test.hpp"
 
@@ -420,6 +422,7 @@ test::Result test_read_libcsv(const std::string & csv_text, const CSV_data & exp
 }
 #endif
 
+#ifdef CSV_ENABLE_CPP_CSV
 test::Result test_read_mine_cpp_read_all(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
     try
@@ -1181,6 +1184,7 @@ test::Result test_read_mine_cpp_row_tuple(const std::string & csv_text, const CS
         return test::Result::error;
     }
 }
+#endif
 
 #ifdef CSV_ENABLE_C_CSV
 test::Result test_write_mine_c(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
@@ -1283,6 +1287,7 @@ test::Result test_write_libcsv(const std::string & expected_text, const CSV_data
 }
 #endif
 
+#ifdef CSV_ENABLE_CPP_CSV
 test::Result test_write_mine_cpp_stream(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
     std::ostringstream str;
@@ -1415,6 +1420,7 @@ test::Result test_write_mine_cpp_tuple(const std::string & expected_text, const 
     }
     return str.str() == expected_text ? test::Result::pass : test::Result::fail;
 }
+#endif
 
 // helper to run a test for each combination of delimiter and quote char
 template<typename Test>
@@ -1568,6 +1574,7 @@ int main(int, char *[])
         #ifdef CSV_ENABLE_LIBCSV
         test_read_libcsv,
         #endif
+        #ifdef CSV_ENABLE_CPP_CSV
         test_read_mine_cpp_read_all,
         test_read_mine_cpp_read_rows,
         test_read_mine_cpp_read_row_vec,
@@ -1586,6 +1593,7 @@ int main(int, char *[])
         test_read_mine_cpp_tuple,
         test_read_mine_cpp_row_variadic,
         test_read_mine_cpp_row_tuple
+        #endif
     }};
 
     test::Test<const std::string, const CSV_data&, const char, const char> test_write{{
@@ -1599,12 +1607,14 @@ int main(int, char *[])
         #ifdef CSV_ENABLE_LIBCSV
         test_write_libcsv,
         #endif
+        #ifdef CSV_ENABLE_CPP_CSV
         test_write_mine_cpp_stream,
         test_write_mine_cpp_row,
         test_write_mine_cpp_iter,
         test_write_mine_cpp_map,
         test_write_mine_cpp_variadic,
         test_write_mine_cpp_tuple
+        #endif
     }};
 
     // create a bound function obj for test_read & test_write's pass & fail methods

@@ -16,20 +16,21 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 
+option(CSV_ENABLE_CPP_CSV "Enable testing of c++ csv library" ON)
 option(CSV_ENABLE_C_CSV "Enable generation and testing of c csv_library" OFF)
 option(CSV_ENABLE_TINYCSV "Enable generation and testing of tinycsv" OFF)
 option(CSV_ENABLE_LIBCSV "Enable testing against libcsv" OFF)
 option(CSV_ENABLE_PYTHON "Enable testing against python's csv libary" OFF)
 
 add_executable(csv_test)
-target_sources(csv_test PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/csv_test.cpp
-    )
+target_sources(csv_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/csv_test.cpp)
+
+if(CSV_ENABLE_CPP_CSV)
+    target_compile_definitions(csv_test PUBLIC "-DCSV_ENABLE_CPP_CSV")
+endif()
 
 if(CSV_ENABLE_C_CSV)
-    target_sources(csv_test PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/csv.c
-        )
+    target_sources(csv_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/csv.c)
     target_compile_definitions(csv_test PUBLIC "-DCSV_ENABLE_C_CSV")
 endif()
 
