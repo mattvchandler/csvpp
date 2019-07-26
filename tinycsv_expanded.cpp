@@ -52,6 +52,7 @@ pair<string, int> parse(FILE * in)
                 // end of the field?
                 if(c == ',' || c == '\n' || c == '\r' || feof(in))
                     quoted = 0;
+
                 // if it's not an escaped quote, then it's an error
                 else if(c != '"')
                     throw "Unescaped double-quote";
@@ -75,11 +76,11 @@ pair<string, int> parse(FILE * in)
         {
             throw "Unterminated quoted field - reached end-of-file";
         }
-        else if(!quoted && c == ',')
+        if(!quoted && c == ',')
         {
             break;
         }
-        else if(!quoted && (c == '\n' || c == '\r' || feof(in)))
+        if(!quoted && (c == '\n' || c == '\r' || feof(in)))
         {
             // consume newlines
             while(!feof(in))
