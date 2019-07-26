@@ -40,6 +40,7 @@
 
 #ifdef CSV_ENABLE_C_CSV
 #include "csv.h"
+#include "csv_wrapper.hpp"
 #endif
 
 #ifdef CSV_ENABLE_EMBCSV
@@ -110,9 +111,9 @@ test::Result test_read_embedded(const std::string & csv_text, const CSV_data & e
 #ifdef CSV_ENABLE_C_CSV
 test::Result test_read_mine_c(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
-    std::ofstream out("test.csv", std::ifstream::binary);
+    std::ofstream out{"test.csv", std::ifstream::binary};
     if(!out)
-        throw std::runtime_error("could not open test.csv");
+        throw std::runtime_error{"could not open test.csv"};
 
     out.write(csv_text.data(), csv_text.size());
     out.close();
@@ -165,6 +166,37 @@ error:
 fail:
     CSV_reader_free(r_test);
     return test::Result::fail;
+}
+
+test::Result test_read_mine_c_wrapper(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+{
+    std::ofstream out{"test.csv", std::ifstream::binary};
+    if(!out)
+        throw std::runtime_error{"could not open test.csv"};
+
+    out.write(csv_text.data(), csv_text.size());
+    out.close();
+
+    CSV_reader_wrapper csv_r{"test.csv"};
+    csv_r.set_delimiter(delimiter);
+    csv_r.set_quote(quote);
+    CSV_data data;
+
+    decltype(csv_r.read_record()) record;
+    try
+    {
+        while((record = csv_r.read_record()))
+        {
+            if(!std::empty(*record))
+                data.emplace_back(std::move(*record));
+        }
+    }
+    catch(CSV_wrapper_parse_error &)
+    {
+        return test::Result::error;
+    }
+
+    return data == expected_data ? test::Result::pass : test::Result::fail;
 }
 #endif
 
@@ -1266,6 +1298,21 @@ test::Result test_write_mine_c(const std::string & expected_text, const CSV_data
     std::ifstream out_file("test.csv", std::ifstream::binary);
     return expected_text == static_cast<std::stringstream const &>(std::stringstream() << out_file.rdbuf()).str() ? test::Result::pass : test::Result::fail;
 }
+
+test::Result test_write_mine_c_wrapper(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+{
+    { // scoped so file is closed at end
+        CSV_writer_wrapper csv_w{"test.csv"};
+        csv_w.set_delimiter(delimiter);
+        csv_w.set_quote(quote);
+
+        for(const auto & row: data)
+            csv_w.write_record(row);
+    }
+
+    std::ifstream out_file("test.csv", std::ifstream::binary);
+    return expected_text == static_cast<std::stringstream const &>(std::stringstream() << out_file.rdbuf()).str() ? test::Result::pass : test::Result::fail;
+}
 #endif
 
 #ifdef CSV_ENABLE_PYTHON
@@ -1612,12 +1659,14 @@ int main(int, char *[])
     };
     #endif
 
+    // TODO crashes if no tests enabled
     test::Test<const std::string&, const CSV_data&, const char, const char> test_read{{
         #ifdef CSV_ENABLE_EMBCSV
         test_read_embedded,
         #endif
         #ifdef CSV_ENABLE_C_CSV
         test_read_mine_c,
+        test_read_mine_c_wrapper,
         #endif
         #ifdef CSV_ENABLE_TINYCSV
         test_read_tinycsv,
@@ -1655,6 +1704,7 @@ int main(int, char *[])
     test::Test<const std::string, const CSV_data&, const char, const char> test_write{{
         #ifdef CSV_ENABLE_C_CSV
         test_write_mine_c,
+        test_write_mine_c_wrapper,
         #endif
         #ifdef CSV_ENABLE_PYTHON
         test_write_python,
