@@ -373,6 +373,15 @@ void libcsv_read_cb2(int, void * data)
 
 test::Result test_read_libcsv(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
+    for(auto & row: expected_data)
+    {
+        for(auto & col: row)
+        {
+            if(col.front() == ' ' || col.back() == ' ')
+                return test::Result::skip;
+        }
+    }
+
     csv_parser parse;
     if(csv_init(&parse, CSV_APPEND_NULL | CSV_STRICT | CSV_STRICT_FINI) != 0)
         throw std::runtime_error("Could not init libcsv");
@@ -479,7 +488,12 @@ test::Result test_read_mine_cpp_read_all_as_int(const std::string & csv_text, co
         for(auto & col: row)
         {
             using namespace std::string_literals;
-            try { expected_ints.back().push_back(std::stoi(col)); }
+            try
+            {
+                expected_ints.back().push_back(std::stoi(col));
+                if(std::to_string(expected_ints.back().back()) != col)
+                    return test::Result::skip;
+            }
             catch(const std::invalid_argument & e)
             {
                 if(e.what() == "stoi"s)
@@ -829,7 +843,12 @@ test::Result test_read_mine_cpp_map_as_int(const std::string & csv_text, const C
         for(auto & col: row)
         {
             using namespace std::string_literals;
-            try { expected_ints.back().push_back(std::stoi(col)); }
+            try
+            {
+                expected_ints.back().push_back(std::stoi(col));
+                if(std::to_string(expected_ints.back().back()) != col)
+                    return test::Result::skip;
+            }
             catch(const std::invalid_argument & e)
             {
                 if(e.what() == "stoi"s)
@@ -1177,9 +1196,8 @@ test::Result test_write_mine_c(const std::string & expected_text, const CSV_data
     {
         std::vector<const char *> col_c_strs;
         for(const auto & col: row)
-        {
             col_c_strs.push_back(col.c_str());
-        }
+
         if(CSV_writer_write_record(w_test, col_c_strs.data(), row.size()) != CSV_OK)
         {
             CSV_writer_free(w_test);
@@ -1616,6 +1634,15 @@ int main(int, char *[])
     test_quotes(test_read_pass, "Read test: 1 row",
             "1,2,3,4\r\n", {{"1", "2", "3", "4"}});
 
+    test_quotes(test_read_pass, "Read test: leading space",
+            " 1, 2, 3, 4\r\n", {{" 1", " 2", " 3", " 4"}});
+
+    test_quotes(test_read_pass, "Read test: trailing space",
+            "1 ,2 ,3 ,4 \r\n", {{"1 ", "2 ", "3 ", "4 "}});
+
+    test_quotes(test_read_pass, "Read test: leading & trailing space",
+            " 1 , 2 , 3 , 4 \r\n", {{" 1 ", " 2 ", " 3 ", " 4 "}});
+
     test_quotes(test_read_pass, "Read test: 1 quoted row",
             "\"1\",\"2\",\"3\",\"4\"\r\n", {{"1", "2", "3", "4"}});
 
@@ -1744,6 +1771,15 @@ int main(int, char *[])
     test_quotes(test_write_pass, "Write test: 1 row",
             "1,2,3,4\r\n", {{"1","2","3","4"}});
 
+    test_quotes(test_write_pass, "Write test: fields with commas",
+            "\"1,2,3\",\"4,5,6\"\r\n", {{"1,2,3", "4,5,6"}});
+
+    test_quotes(test_write_pass, "Write test: fields with newlines",
+            "\"1\r2\n3\",\"4\r\n5\n\r6\"\r\n", {{"1\r2\n3", "4\r\n5\n\r6"}});
+
+    test_quotes(test_write_pass, "Write test: fields with commas & newlines & quotes",
+            "\",1\r\n\"\"\"\r\n", {{",1\r\n\""}});
+
     test_quotes(test_write_pass, "Write test: multiple rows",
             "1,2,3,4\r\n5,6,7,8\r\n", {{"1", "2", "3", "4"}, {"5", "6", "7", "8"}});
 
@@ -1768,9 +1804,10 @@ int main(int, char *[])
     }
     else
     {
+        auto num_passed = test_read.get_num_passed() + test_write.get_num_passed();
         auto num_failed = test_read.get_num_ran() + test_write.get_num_ran()
-            - test_read.get_num_passed() - test_write.get_num_passed();
-        std::cout<<num_failed<<" tests FAILED.\n";
+            - num_passed;
+        std::cout<<num_passed<<" tests PASSED, "<<num_failed<<" tests FAILED.\n";
         return EXIT_FAILURE;
     }
 }
