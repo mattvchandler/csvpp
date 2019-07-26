@@ -1730,8 +1730,7 @@ int main(int, char *[])
     };
     #endif
 
-    // TODO crashes if no tests enabled
-    test::Test<const std::string&, const CSV_data&, const char, const char> test_read{{
+    test::Test<const std::string&, const CSV_data&, const char, const char> test_read{
         #ifdef CSV_ENABLE_EMBCSV
         test_read_embedded,
         #endif
@@ -1770,9 +1769,9 @@ int main(int, char *[])
         test_read_mine_cpp_row_variadic,
         test_read_mine_cpp_row_tuple
         #endif
-    }};
+    };
 
-    test::Test<const std::string, const CSV_data&, const char, const char> test_write{{
+    test::Test<const std::string, const CSV_data&, const char, const char> test_write{
         #ifdef CSV_ENABLE_C_CSV
         test_write_mine_c,
         test_write_mine_c_wrapper,
@@ -1792,7 +1791,7 @@ int main(int, char *[])
         test_write_mine_cpp_variadic,
         test_write_mine_cpp_tuple
         #endif
-    }};
+    };
 
     // create a bound function obj for test_read & test_write's pass & fail methods
     using namespace std::placeholders;
