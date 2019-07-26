@@ -23,32 +23,71 @@
 
 #include <iostream>
 #include <functional>
+#include <string>
 #include <vector>
 
 namespace test
 {
-    enum class Result {fail, pass, error, skip};
+    using FailureFun = std::function<void()>;
+    class Result
+    {
+    public:
+        void failed() { failure_fun(); };
+
+        friend Result pass(FailureFun);
+        friend Result pass();
+        friend Result fail(FailureFun);
+        friend Result fail();
+        friend Result pass_fail(bool, FailureFun);
+        friend Result pass_fail(bool);
+        friend Result error(FailureFun f);
+        friend Result error();
+        friend Result skip();
+
+        template <typename...> friend class Test;
+    private:
+        enum class Result_type {fail, pass, error, skip};
+
+        explicit Result(Result_type t, FailureFun f): type{t}, failure_fun{f} {}
+        Result(Result_type t): type{t} {}
+
+        Result_type type {Result_type::skip};
+        FailureFun failure_fun {[](){}};
+    };
+
+    inline Result pass(FailureFun f) { return Result{Result::Result_type::pass, f}; }
+    inline Result pass() { return Result{Result::Result_type::pass}; }
+
+    inline Result fail(FailureFun f) { return Result{Result::Result_type::fail, f}; }
+    inline Result fail() { return Result{Result::Result_type::fail}; }
+
+    inline Result pass_fail(bool passed, FailureFun f) { return passed ? Result{Result::Result_type::pass, f} : Result{Result::Result_type::fail, f}; }
+    inline Result pass_fail(bool passed) { return passed ? Result{Result::Result_type::pass} : Result{Result::Result_type::fail}; }
+
+    inline Result error(FailureFun f) { return Result{Result::Result_type::error, f}; }
+    inline Result error() { return Result{Result::Result_type::error}; }
+
+    inline Result skip() { return Result{Result::Result_type::skip}; }
 
     template <typename... Args>
     class Test
     {
     public:
-        explicit Test(const std::initializer_list<std::function<Result(Args...)>> & cases): test_cases(cases)
-        {}
+        explicit Test(const std::initializer_list<std::function<Result(Args...)>> & cases): test_cases{cases} {}
 
         bool test_pass(const std::string_view & title, Args ...args)
         {
-            return run_tests(Result::pass, title, args...);
+            return run_tests(Result::Result_type::pass, title, args...);
         }
 
         bool test_fail(const std::string_view & title, Args ...args)
         {
-            return run_tests(Result::fail, title, args...);
+            return run_tests(Result::Result_type::fail, title, args...);
         }
 
         bool test_error(const std::string_view & title, Args ...args)
         {
-            return run_tests(Result::error, title, args...);
+            return run_tests(Result::Result_type::error, title, args...);
         }
 
         bool passed() const
@@ -60,7 +99,7 @@ namespace test
 
     private:
 
-        bool run_tests(Result expected_result, const std::string_view & title, Args ...args)
+        bool run_tests(Result::Result_type expected_result, const std::string_view & title, Args ...args)
         {
             std::cout<<title<<"\n";
 
@@ -68,12 +107,13 @@ namespace test
             std::size_t count = 0;
             for(auto & f: test_cases)
             {
-                auto result = f(args...);
-                if(result == expected_result)
-                    ++count;
-
-                if(result == Result::skip)
+                Result result = f(args...);
+                if(result.type == Result::Result_type::skip)
                     --total;
+                else if(result.type == expected_result)
+                    ++count;
+                else
+                    result.failed();
             }
 
             auto passed = count == total;
