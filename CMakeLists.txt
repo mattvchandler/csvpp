@@ -22,6 +22,18 @@ option(CSV_ENABLE_EMBCSV "Enable generation and testing of embedded csv library"
 option(CSV_ENABLE_TINYCSV "Enable generation and testing of tinycsv" OFF)
 option(CSV_ENABLE_LIBCSV "Enable testing against libcsv" OFF)
 option(CSV_ENABLE_PYTHON "Enable testing against python's csv libary" OFF)
+option(CSV_ENABLE_ALL "Enable generation and testing of all of the above" OFF)
+
+if(CSV_ENABLE_ALL)
+    set(CSV_ENABLE_CPP_CSV ON)
+    set(CSV_ENABLE_C_CSV ON)
+    set(CSV_ENABLE_EMBCSV ON)
+    set(CSV_ENABLE_TINYCSV ON)
+    set(CSV_ENABLE_GUA2CSV ON)
+    set(CSV_ENABLE_CPP_CSV ON)
+    set(CSV_ENABLE_LIBCSV ON)
+    set(CSV_ENABLE_PYTHON ON)
+endif()
 
 add_executable(csv_test)
 target_sources(csv_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/csv_test.cpp)
