@@ -42,6 +42,7 @@ namespace test
         friend Result pass_fail(bool);
         friend Result error(FailureFun f);
         friend Result error();
+        friend Result skip(FailureFun f);
         friend Result skip();
 
         template <typename...> friend class Test;
@@ -67,6 +68,7 @@ namespace test
     inline Result error(FailureFun f) { return Result{Result::Result_type::error, f}; }
     inline Result error() { return Result{Result::Result_type::error}; }
 
+    inline Result skip(FailureFun f) { return Result{Result::Result_type::skip, f}; }
     inline Result skip() { return Result{Result::Result_type::skip}; }
 
     template <typename... Args>
