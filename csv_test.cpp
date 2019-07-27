@@ -1840,19 +1840,19 @@ int main(int, char *[])
             {{"\"1\"", "\"2\"", "\"3\"", "\"4\""}});
 
     test_quotes(test_read_error, "Read test: unterminated quote",
-            "\"1\r\n", {{""}});
+            "\"1\r\n", {{"<parse error>"}});
 
     test_quotes(test_read_error, "Read test: unescaped quote",
-            "12\"3\r\n", {{"12\"3"}});
+            "12\"3\r\n", {{"<parse error>"}});
 
     test_quotes(test_read_error, "Read test: unescaped quote at start of field",
-            "\"123,234\r\n", {{""}});
+            "\"123,234\r\n", {{"<parse error>"}});
 
     test_quotes(test_read_error, "Read test: unescaped quote at end of field",
-            "123,234\"\r\n", {{"123", "234\""}});
+            "123,234\"\r\n", {{"<parse error>"}});
 
     test_quotes(test_read_error, "Read test: unescaped quote inside quoted field",
-            "\"12\"3\"\r\n", {{"12\"3"}});
+            "\"12\"3\"\r\n", {{"<parse error>"}});
 
     test_quotes(test_read_pass, "Read test: empty quoted fields",
             "\"\",\"\",\"\",\"\"\r\n", {{"", "", "", ""}});
