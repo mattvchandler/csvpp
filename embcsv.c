@@ -25,7 +25,7 @@ EMBCSV_reader * EMBCSV_reader_init()
     r->field_size = 0;
 
     r->quoted = false;
-    r->state = EMBCSV_STATE_READY;
+    r->state = EMBCSV_STATE_CONSUME_NEWLINES;
 
     return r;
 }
@@ -123,7 +123,6 @@ EMBCSV_result EMBCSV_reader_parse_char(EMBCSV_reader * r, int c, char ** field_o
 
             EMBCSV_reader_pushc(r, c);
             return EMBCSV_INCOMPLETE;
-
         }
     }
     // we should never reach this state
