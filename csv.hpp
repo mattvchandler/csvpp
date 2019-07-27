@@ -359,31 +359,8 @@ namespace csv
         Reader & operator=(const Reader &) = delete;
         Reader & operator=(Reader &&) = default;
 
-        bool end_of_row() const { return end_of_row_ || eof_; }
-        bool eof()
-        {
-            if(eof_)
-                return true;
-
-            // consume empty rows
-            while(true)
-            {
-                auto c = input_stream_->peek();
-                if(!eof_ && c == std::istream::traits_type::eof())
-                {
-                    eof_ = true;
-                    return true;
-                }
-                else if(c == '\r' || c == '\n')
-                {
-                    parse();
-                }
-                else
-                {
-                    return eof_;
-                }
-            }
-        }
+        bool end_of_row() const { return end_of_row_ || eof(); }
+        bool eof() const { return state_ == State::eof; }
 
         operator bool() { return !eof(); }
 
@@ -407,6 +384,9 @@ namespace csv
         template<typename T = std::string>
         T read_field()
         {
+            if(eof())
+                throw Out_of_range_error("Read past end-of-file");
+
             if(end_of_row_)
             {
                 end_of_row_ = false;
@@ -422,9 +402,6 @@ namespace csv
             {
                 field = parse();
             }
-
-            if(eof_)
-                throw Out_of_range_error("Read past end-of-file");
 
             // no conversion needed for strings
             if constexpr(std::is_convertible_v<std::string, T>)
@@ -456,7 +433,7 @@ namespace csv
 
                 if(end_of_row())
                     break;
-                else if(eof_)
+                else if(eof())
                     return false;
             }
             return true;
@@ -543,104 +520,136 @@ namespace csv
             (read_row_variadic_helper(std::get<Is>(t)), ...);
         }
 
+        // TODO: lenient parsing
         std::string parse()
         {
             if(input_stream_->eof())
             {
-                end_of_row_ = true;
-                eof_ = true;
+                state_ = State::eof;
                 return {};
             }
 
             bool quoted = false;
             std::string field;
 
-            while(true)
+            bool field_done = false;
+            while(!field_done)
             {
-                char c = '\0';
-                input_stream_->get(c);
+                int c = input_stream_->get();
+                if(input_stream_->bad() && !input_stream_->eof())
+                    throw Parse_error("Error reading from stream", line_no_, col_no_);
+
                 if(c == '\n')
                 {
                     ++line_no_;
                     col_no_ = 0;
                 }
-                else
+                else if(c != std::istream::traits_type::eof())
                     ++col_no_;
 
-                if(input_stream_->bad() && !input_stream_->eof())
-                    throw Parse_error("Error reading from stream", line_no_, col_no_);
-
-                // we need special handling for quotes
-                if(c == quote_)
+                bool c_done = false;
+                while(!c_done)
                 {
-                    if(quoted)
+                    switch(state_)
                     {
-                        input_stream_->get(c);
-                        if(c == '\n')
+                    case State::consume_newlines:
+                        if(c != std::istream::traits_type::eof() && c != '\0' && c != '\r' && c != '\n')
                         {
-                            ++line_no_;
-                            col_no_ = 0;
-                        }
-                        else
-                            ++col_no_;
-
-                        // end of the field?
-                        if(c == delimiter_ || c == '\n' || c == '\r' || input_stream_->eof())
-                            quoted = false;
-                        // if it's not an escaped quote, then it's an error
-                        else if(c != quote_)
-                            throw Parse_error("Unescaped double-quote", line_no_, col_no_ - 1);
-                    }
-                    else
-                    {
-                        if(field.empty())
-                        {
-                            quoted = true;
-                            continue;
-                        }
-                        else
-                        {
-                            // quotes are not allowed inside of an unquoted field
-                            throw Parse_error("Double-quote found in unquoted field", line_no_, col_no_);
-                        }
-                    }
-                }
-
-                if(input_stream_->eof() && quoted)
-                {
-                    throw Parse_error("Unterminated quoted field - reached end-of-file", line_no_, col_no_);
-                }
-                else if(!quoted && c == delimiter_)
-                {
-                    break;
-                }
-                else if(!quoted && (c == '\n' || c == '\r' || input_stream_->eof()))
-                {
-                    end_of_row_ = true;
-                    // consume newlines
-                    while(input_stream_->good())
-                    {
-                        input_stream_->get(c);
-                        if(c != '\r' && c != '\n')
-                        {
-                            if(input_stream_->good())
-                                input_stream_->unget();
+                            state_ = State::read;
                             break;
                         }
-                        if(c == '\n')
+                        else
                         {
-                            ++line_no_;
-                            col_no_ = 0;
+                            c_done = true;
+                            if(c == std::istream::traits_type::eof())
+                            {
+                                field_done = true;
+                                state_ = State::eof;
+                            }
+                            break;
+                        }
+
+                    case State::double_quote:
+                        // end of the field?
+                        if(c == delimiter_ || c == '\n' || c == '\r' || c == std::istream::traits_type::eof())
+                        {
+                            quoted = false;
+                            state_ = State::read;
+                            break;
+                        }
+                        // if it's not an escaped quote, then it's an error
+                        else if(c == quote_)
+                        {
+                            field += c;
+                            state_ = State::read;
+                            c_done = true;
+                            break;
                         }
                         else
-                            ++col_no_;
+                        {
+                            // TODO lenient
+                            // if(lenient_)
+                            // {
+                            //     field += quote_;
+                            //     field += c;
+                            //     c_done = true;
+                            //     state_ = State::read;
+                            //     break;
+                            // }
+                            // else
+                                throw Parse_error("Unescaped double-quote", line_no_, col_no_ - 1);
+                        }
+
+                    case State::read:
+                        // we need special handling for quotes
+                        if(c == quote_)
+                        {
+                            if(quoted)
+                            {
+                                state_ = State::double_quote;
+                                c_done = true;
+                                break;
+                            }
+                            else
+                            {
+                                if(field.empty())
+                                {
+                                    quoted = true;
+                                    c_done = true;
+                                    break;
+                                }
+                                else // if(!lenient_)
+                                {
+                                    // quotes are not allowed inside of an unquoted field
+                                    throw Parse_error("Double-quote found in unquoted field", line_no_, col_no_);
+                                }
+                            }
+                        }
+
+                        if(c == std::istream::traits_type::eof() && quoted/* && !lenient_ */)
+                        {
+                            throw Parse_error("Unterminated quoted field - reached end-of-file", line_no_, col_no_);
+                        }
+                        else if(!quoted && c == delimiter_)
+                        {
+                            field_done = c_done = true;
+                            break;
+                        }
+                        else if(!quoted && (c == '\n' || c == '\r' || c == std::istream::traits_type::eof()))
+                        {
+                            end_of_row_ = field_done = c_done = true;
+                            state_ = State::consume_newlines;
+                            break;
+                        }
+
+                        field += c;
+                        c_done = true;
+                        break;
+                    case State::eof:
+                        throw std::runtime_error{"Illegal state"};
                     }
-                    break;
                 }
-
-                field += c;
             }
-
             return field;
         }
 
@@ -653,7 +662,9 @@ namespace csv
 
         std::optional<std::string> conversion_retry_;
         bool end_of_row_ = false;
-        bool eof_ = false;
+
+        enum class State {read, double_quote, consume_newlines, eof};
+        State state_ = State::consume_newlines;
 
         int line_no_ = 1;
         int col_no_ = 0;
