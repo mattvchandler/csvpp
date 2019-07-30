@@ -30,9 +30,6 @@ using namespace std;
 
 pair<string, int> parse(FILE * in)
 {
-    if(feof(in))
-        return {{}, 0};
-
     int quoted = 0, c;
     string field;
 
