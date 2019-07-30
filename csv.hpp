@@ -150,11 +150,6 @@ namespace csv
 
                     return *this;
                 }
-                Iterator & operator++(int)
-                {
-                    return ++*this;
-                }
-
                 bool equals(const Iterator<T> & rhs) const
                 {
                     return row == rhs.row;
@@ -206,24 +201,26 @@ namespace csv
             template<typename T>
             Row & operator>>(T & data)
             {
-                assert(reader);
-                if(end_of_row())
-                    throw Out_of_range_error("Read past end of row");
-
-                data = reader->read_field<T>();
-                end_of_row_ = reader->end_of_row();
+                data = read_field<T>();
                 return * this;
             }
 
             template<typename T = std::string>
             auto read_field()
             {
-                assert(reader);
-                if(end_of_row())
-                    throw Out_of_range_error("Read past end of row");
+                assert(reader_);
 
-                auto field = reader->read_field<T>();
-                end_of_row_ = reader->end_of_row();
+                if(end_of_row_)
+                {
+                    past_end_of_row_ = true;
+                    return T{};
+                }
+
+                auto field = reader_->read_field<T>();
+
+                if(reader_->end_of_row())
+                    end_of_row_ = true;
+
                 return field;
             }
 
@@ -251,7 +248,7 @@ namespace csv
 
             bool end_of_row() const { return end_of_row_; }
 
-            operator bool() { return reader && !end_of_row(); }
+            operator bool() { return reader_ && !past_end_of_row_; }
 
         private:
             friend Reader;
@@ -262,11 +259,12 @@ namespace csv
                 ((*this >> std::get<Is>(t)), ...);
             }
 
-            Row(): reader(nullptr) {}
-            explicit Row(Reader & reader): reader(&reader) {}
+            Row(): reader_(nullptr) {}
+            explicit Row(Reader & reader): reader_(&reader) {}
 
-            Reader * reader;
+            Reader * reader_;
             bool end_of_row_ = false;
+            bool past_end_of_row_ = false;
         };
 
         class Iterator
@@ -278,14 +276,14 @@ namespace csv
             using reference         = const value_type&;
             using iterator_category = std::input_iterator_tag;
 
-            Iterator(): reader(nullptr)
+            Iterator(): reader_(nullptr)
             {}
-            explicit Iterator(Reader & r): reader(&r)
+            explicit Iterator(Reader & r): reader_(&r)
             {
-                obj = reader->get_row();
+                obj = reader_->get_row();
 
-                if(reader->eof())
-                    reader = nullptr;
+                if(!*reader_)
+                    reader_ = nullptr;
             }
 
             const value_type & operator*() const { return obj; }
@@ -299,26 +297,22 @@ namespace csv
                 while(!obj.end_of_row())
                     obj.read_field();
 
-                assert(reader);
-                obj = reader->get_row();
+                assert(reader_);
+                obj = reader_->get_row();
 
-                if(reader->eof())
-                    reader = nullptr;
+                if(!*reader_)
+                    reader_ = nullptr;
 
                 return *this;
-            }
-            Iterator & operator++(int)
-            {
-                return ++*this;
             }
 
             bool equals(const Iterator & rhs) const
             {
-                return reader == rhs.reader;
+                return reader_ == rhs.reader_;
             }
 
         private:
-            Reader * reader;
+            Reader * reader_;
             value_type obj;
         };
 
@@ -387,10 +381,7 @@ namespace csv
             if(eof())
                 throw Out_of_range_error("Read past end-of-file");
 
-            if(end_of_row_)
-            {
-                end_of_row_ = false;
-            }
+            end_of_row_ = false;
 
             std::string field;
             if(conversion_retry_)
@@ -402,6 +393,9 @@ namespace csv
             {
                 field = parse();
             }
+
+            if(eof())
+                return {};
 
             // no conversion needed for strings
             if constexpr(std::is_convertible_v<std::string, T>)
@@ -429,18 +423,20 @@ namespace csv
             while(true)
             {
                 auto field = read_field<T>();
+                if(eof())
+                    return false;
+
                 *it++ = field;
 
                 if(end_of_row())
                     break;
-                else if(eof())
-                    return false;
             }
             return true;
         }
 
         Row get_row()
         {
+            consume_newlines();
             if(eof())
                 return Row();
             else
@@ -450,12 +446,11 @@ namespace csv
         template <typename T = std::string>
         std::optional<std::vector<T>> read_row_vec()
         {
-            if(eof())
-                return {};
-
             std::vector<T> data;
-            read_row<T>(std::back_inserter(data));
-            return data;
+            if(read_row<T>(std::back_inserter(data)))
+                return data;
+            else
+                return {};
         }
 
         template <typename ... Args>
@@ -521,13 +516,51 @@ namespace csv
         }
 
         // TODO: lenient parsing
+        int getc()
+        {
+            int c = input_stream_->get();
+            if(input_stream_->bad() && !input_stream_->eof())
+                throw Parse_error("Error reading from stream", line_no_, col_no_);
+
+            if(c == '\n')
+            {
+                ++line_no_;
+                col_no_ = 0;
+            }
+            else if(c != std::istream::traits_type::eof())
+                ++col_no_;
+
+            return c;
+        }
+
+        void consume_newlines()
+        {
+            if(state_ != State::consume_newlines)
+                return;
+
+            while(true)
+            {
+                if(int c = getc(); c == std::istream::traits_type::eof())
+                {
+                    end_of_row_ = true;
+                    state_ = State::eof;
+                    break;
+                }
+                else if(c != '\r' && c != '\n')
+                {
+                    state_ = State::read;
+                    input_stream_->unget();
+                    break;
+                }
+            }
+        }
+
         std::string parse()
         {
-            if(input_stream_->eof())
-            {
-                state_ = State::eof;
+            consume_newlines();
+
+            if(eof())
                 return {};
-            }
 
             bool quoted = false;
             std::string field;
@@ -535,40 +568,12 @@ namespace csv
             bool field_done = false;
             while(!field_done)
             {
-                int c = input_stream_->get();
-                if(input_stream_->bad() && !input_stream_->eof())
-                    throw Parse_error("Error reading from stream", line_no_, col_no_);
-
-                if(c == '\n')
-                {
-                    ++line_no_;
-                    col_no_ = 0;
-                }
-                else if(c != std::istream::traits_type::eof())
-                    ++col_no_;
-
+                int c = getc();
                 bool c_done = false;
                 while(!c_done)
                 {
                     switch(state_)
                     {
-                    case State::consume_newlines:
-                        if(c != std::istream::traits_type::eof() && c != '\0' && c != '\r' && c != '\n')
-                        {
-                            state_ = State::read;
-                            break;
-                        }
-                        else
-                        {
-                            c_done = true;
-                            if(c == std::istream::traits_type::eof())
-                            {
-                                field_done = true;
-                                state_ = State::eof;
-                            }
-                            break;
-                        }
-
                     case State::double_quote:
                         // end of the field?
                         if(c == delimiter_ || c == '\n' || c == '\r' || c == std::istream::traits_type::eof())
@@ -646,6 +651,7 @@ namespace csv
                         c_done = true;
                         break;
                     case State::eof:
+                    case State::consume_newlines:
                         throw std::runtime_error{"Illegal state"};
                     }
                 }
@@ -697,17 +703,17 @@ namespace csv
     {
     private:
 
-        std::unique_ptr<Reader> reader;
-        Value default_val;
-        std::vector<Header> headers;
-        std::map<Header, Value> obj;
+        std::unique_ptr<Reader> reader_;
+        Value default_val_;
+        std::vector<Header> headers_;
+        std::map<Header, Value> obj_;
 
         auto get_header_row(const std::vector<Header> & headers)
         {
             if(!std::empty(headers))
                 return headers;
 
-            auto header_row = reader->read_row_vec<Header>();
+            auto header_row = reader_->read_row_vec<Header>();
             if(header_row)
                 return *header_row;
             else
@@ -721,79 +727,75 @@ namespace csv
         Map_reader_iter() {}
         explicit Map_reader_iter(std::istream & input_stream, const Value & default_val = {}, const std::vector<Header> & headers = {},
                 const char delimiter = ',', const char quote = '"'):
-            reader(std::make_unique<Reader>(input_stream, delimiter, quote)),
-            default_val(default_val),
-            headers(get_header_row(headers))
+            reader_(std::make_unique<Reader>(input_stream, delimiter, quote)),
+            default_val_(default_val),
+            headers_(get_header_row(headers))
         {
             ++(*this);
         }
 
         explicit Map_reader_iter(const std::string & filename, const Value & default_val = {}, const std::vector<Header> & headers = {},
                 const char delimiter = ',', const char quote = '"'):
-            reader(std::make_unique<Reader>(filename, delimiter, quote)),
-            default_val(default_val),
-            headers(get_header_row(headers))
+            reader_(std::make_unique<Reader>(filename, delimiter, quote)),
+            default_val_(default_val),
+            headers_(get_header_row(headers))
         {
             ++(*this);
         }
 
         Map_reader_iter(Reader::input_string_t, const std::string & input_data, const Value & default_val = {}, const std::vector<Header> & headers = {},
                 const char delimiter = ',', const char quote = '"'):
-            reader(std::make_unique<Reader>(Reader::input_string, input_data, delimiter, quote)),
-            default_val(default_val),
-            headers(get_header_row(headers))
+            reader_(std::make_unique<Reader>(Reader::input_string, input_data, delimiter, quote)),
+            default_val_(default_val),
+            headers_(get_header_row(headers))
         {
             ++(*this);
         }
 
-        using value_type        = decltype(obj);
+        using value_type        = decltype(obj_);
         using difference_type   = std::ptrdiff_t;
         using pointer           = const value_type*;
         using reference         = const value_type&;
         using iterator_category = std::input_iterator_tag;
 
-        const value_type & operator*() const { return obj; }
-        const value_type * operator->() const { return &obj; }
+        const value_type & operator*() const { return obj_; }
+        const value_type * operator->() const { return &obj_; }
 
-        value_type & operator*() { return obj; }
-        value_type * operator->() { return &obj; }
+        value_type & operator*() { return obj_; }
+        value_type * operator->() { return &obj_; }
 
-        typename value_type::mapped_type & operator[](const typename value_type::key_type & key) { return obj.at(key); }
-        const typename value_type::mapped_type & operator[](const typename value_type::key_type & key) const { return obj.at(key); }
+        typename value_type::mapped_type & operator[](const typename value_type::key_type & key) { return obj_.at(key); }
+        const typename value_type::mapped_type & operator[](const typename value_type::key_type & key) const { return obj_.at(key); }
 
         Map_reader_iter & operator++()
         {
-            auto row = reader->read_row_vec<Value>();
+            auto row = reader_->read_row_vec<Value>();
             if(!row)
-                reader.reset();
+                reader_.reset();
             else
             {
-                if(std::size(*row) > std::size(headers))
+                if(std::size(*row) > std::size(headers_))
                     throw Out_of_range_error("Too many columns");
 
                 for(std::size_t i = 0; i < std::size(*row); ++i)
-                    obj[headers[i]] = (*row)[i];
+                    obj_[headers_[i]] = (*row)[i];
 
-                for(std::size_t i = std::size(*row); i < std::size(headers); ++i)
-                    obj[headers[i]] = default_val;
+                for(std::size_t i = std::size(*row); i < std::size(headers_); ++i)
+                    obj_[headers_[i]] = default_val_;
             }
 
             return *this;
-        }
-        Map_reader_iter & operator++(int)
-        {
-            return ++*this;
         }
 
         template <typename Header2, typename Value2>
         bool equals(const Map_reader_iter<Header2, Value2> & rhs) const
         {
-            return reader == rhs.reader;
+            return reader_ == rhs.reader_;
         }
 
         auto get_headers() const
         {
-            return headers;
+            return headers_;
         }
     };
 
@@ -821,7 +823,7 @@ namespace csv
             using reference         = void;
             using iterator_category = std::output_iterator_tag;
 
-            explicit Iterator(Writer & w): writer(&w)
+            explicit Iterator(Writer & w): writer_(&w)
             {}
 
             Iterator & operator*() { return *this; }
@@ -831,12 +833,12 @@ namespace csv
             template <typename T>
             Iterator & operator=(const T & value)
             {
-                writer->write_field(value);
+                writer_->write_field(value);
                 return *this;
             }
 
         private:
-            Writer * writer;
+            Writer * writer_;
         };
 
         explicit Writer(std::ostream & output_stream,
@@ -981,22 +983,22 @@ namespace csv
     class Map_writer_iter
     {
     private:
-        std::unique_ptr<Writer> writer;
-        std::vector<Header> headers;
-        Default_value default_val;
+        std::unique_ptr<Writer> writer_;
+        std::vector<Header> headers_;
+        Default_value default_val_;
 
     public:
         Map_writer_iter(std::ostream & output_stream, const std::vector<Header> & headers, const Default_value & default_val = {},
                 const char delimiter = ',', const char quote = '"'):
-            writer(std::make_unique<Writer>(output_stream, delimiter, quote)), headers(headers), default_val(default_val)
+            writer_(std::make_unique<Writer>(output_stream, delimiter, quote)), headers_(headers), default_val_(default_val)
         {
-            writer->write_row(headers);
+            writer_->write_row(headers);
         }
         Map_writer_iter(const std::string& filename, const std::vector<Header> & headers, const Default_value & default_val = {},
                 const char delimiter = ',', const char quote = '"'):
-            writer(std::make_unique<Writer>(filename, delimiter, quote)), headers(headers), default_val(default_val)
+            writer_(std::make_unique<Writer>(filename, delimiter, quote)), headers_(headers), default_val_(default_val)
         {
-            writer->write_row(headers);
+            writer_->write_row(headers);
         }
 
         using value_type        = void;
@@ -1012,19 +1014,19 @@ namespace csv
         template <typename K, typename T, typename std::enable_if_t<std::is_convertible_v<Header, K>, int> = 0>
         Map_writer_iter & operator=(const std::map<K, T> & row)
         {
-            for(auto & h: headers)
+            for(auto & h: headers_)
             {
                 try
                 {
-                    (*writer)<<row.at(h);
+                    (*writer_)<<row.at(h);
                 }
                 catch(std::out_of_range&)
                 {
-                    (*writer)<<default_val;
+                    (*writer_)<<default_val_;
                 }
             }
 
-            writer->end_row();
+            writer_->end_row();
             return *this;
         }
 
