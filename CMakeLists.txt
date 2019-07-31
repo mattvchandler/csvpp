@@ -50,6 +50,11 @@ endif()
 if(CSV_ENABLE_EMBCSV)
     target_sources(csv_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/embcsv.c)
     target_compile_definitions(csv_test PUBLIC "-DCSV_ENABLE_EMBCSV")
+
+    option(CSV_EMBCSV_NO_MALLOC "Disable malloc in embedded CSV" OFF)
+    if(CSV_EMBCSV_NO_MALLOC)
+        target_compile_definitions(csv_test PUBLIC "-DEMBCSV_NO_MALLOC")
+    endif()
 endif()
 
 if(CSV_ENABLE_TINYCSV)

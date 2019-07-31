@@ -1,53 +1,67 @@
 #include "embcsv.h"
 
 #include <errno.h>
-#include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-struct EMBCSV_reader
+#ifndef EMBCSV_NO_MALLOC
+EMBCSV_reader * EMBCSV_reader_init() { return EMBCSV_reader_init_full(',', '"'); }
+EMBCSV_reader * EMBCSV_reader_init_full(char delimiter, char quote)
+#else
+void EMBCSV_reader_init(EMBCSV_reader *r) { EMBCSV_reader_init_full(r, ',', '"'); }
+void EMBCSV_reader_init_full(EMBCSV_reader *r, char delimiter, char quote)
+#endif
 {
-    char * field;
-    size_t field_size;
-    size_t field_alloc;
-
-    bool quoted;
-    enum {EMBCSV_STATE_READY, EMBCSV_STATE_DOUBLE_QUOTE, EMBCSV_STATE_CONSUME_NEWLINES} state;
-};
-
-EMBCSV_reader * EMBCSV_reader_init()
-{
+    #ifndef EMBCSV_NO_MALLOC
     EMBCSV_reader * r = malloc(sizeof(EMBCSV_reader));
 
     r->field_alloc = EMBCSV_FIELD_BUF_SIZE;
     r->field = malloc(r->field_alloc);
+    #endif
+
     r->field_size = 0;
 
     r->quoted = false;
     r->state = EMBCSV_STATE_CONSUME_NEWLINES;
 
+    r->delimiter = delimiter;
+    r->quote = quote;
+
+    #ifndef EMBCSV_NO_MALLOC
     return r;
+    #endif
 }
 
+#ifndef EMBCSV_NO_MALLOC
 void EMBCSV_reader_free(EMBCSV_reader * r)
 {
     free(r->field);
     free(r);
 }
+#endif
 
 void EMBCSV_reader_pushc(EMBCSV_reader * r, char c)
 {
+    #ifndef EMBCSV_NO_MALLOC
     if(r->field_size == r->field_alloc)
     {
         r->field_alloc += EMBCSV_FIELD_BUF_SIZE;
         r->field = realloc(r->field, r->field_alloc);
     }
+    #else
+    if(r->field_size == EMBCSV_FIELD_BUF_SIZE)
+    {
+        r->field[EMBCSV_FIELD_BUF_SIZE - 1] = '\0';
+        return;
+    }
+    #endif
     r->field[r->field_size++] = c;
 }
 
 EMBCSV_result EMBCSV_reader_parse_char(EMBCSV_reader * r, int c, char ** field_out)
 {
+    *field_out = NULL;
+
     while(true)
     {
         switch(r->state)
@@ -64,13 +78,13 @@ EMBCSV_result EMBCSV_reader_parse_char(EMBCSV_reader * r, int c, char ** field_o
 
         case EMBCSV_STATE_DOUBLE_QUOTE:
 
-            if(c == EMBCSV_DELIMITER || c == '\n' || c == '\r' || c == EOF || c == '\0')
+            if(c == r->delimiter || c == '\n' || c == '\r' || c == EOF || c == '\0')
             {
                 r->quoted = false;
                 r->state = EMBCSV_STATE_READY;
                 break;
             }
-            else if(c == EMBCSV_QUOTE)
+            else if(c == r->quote)
             {
                 EMBCSV_reader_pushc(r, c);
                 r->state = EMBCSV_STATE_READY;
@@ -81,7 +95,7 @@ EMBCSV_result EMBCSV_reader_parse_char(EMBCSV_reader * r, int c, char ** field_o
 
         case EMBCSV_STATE_READY:
 
-            if(c == EMBCSV_QUOTE)
+            if(c == r->quote)
             {
                 if(r->quoted)
                 {
@@ -103,7 +117,7 @@ EMBCSV_result EMBCSV_reader_parse_char(EMBCSV_reader * r, int c, char ** field_o
             if((c == EOF || c == '\0') && r->quoted)
                 return EMBCSV_PARSE_ERROR;
 
-            if(c == EMBCSV_DELIMITER && !r->quoted)
+            if(c == r->delimiter && !r->quoted)
             {
                 EMBCSV_reader_pushc(r, '\0');
                 *field_out = r->field;

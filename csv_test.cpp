@@ -135,16 +135,26 @@ test::Result common_write_return(const CSV_data & data, const std::string & expe
 #ifdef CSV_ENABLE_EMBCSV
 test::Result test_read_embedded(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
-    if(delimiter != ',' || quote != '"')
-        return test::skip();
-
-    // can't distinguish between empty data and 1 empty field
-    if(std::empty(expected_data))
-        return test::skip();
+    #ifdef EMBCSV_NO_MALLOC
+    for(auto & row: expected_data)
+    {
+        for(auto & col: row)
+        {
+            if(std::size(col) >= EMBCSV_FIELD_BUF_SIZE - 1)
+                return test::skip();
+        }
+    }
+    #endif
 
     CSV_data data;
 
-    EMBCSV_reader * r = EMBCSV_reader_init();
+    #ifndef EMBCSV_NO_MALLOC
+    EMBCSV_reader * r = EMBCSV_reader_init_full(delimiter, quote);
+    #else
+    EMBCSV_reader r_obj;
+    EMBCSV_reader_init_full(&r_obj, delimiter, quote);
+    auto r = &r_obj;
+    #endif
 
     bool new_row = true;
     for(const char * c = csv_text.c_str();; ++c)
@@ -169,14 +179,18 @@ test::Result test_read_embedded(const std::string & csv_text, const CSV_data & e
                 new_row = true;
                 break;
             case EMBCSV_PARSE_ERROR:
+                #ifndef EMBCSV_NO_MALLOC
                 EMBCSV_reader_free(r);
+                #endif
                 return test::error();
         }
         if(!*c)
             break;
     }
 
+    #ifndef EMBCSV_NO_MALLOC
     EMBCSV_reader_free(r);
+    #endif
 
     return common_read_return(csv_text, expected_data, data);
 }
