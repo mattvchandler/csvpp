@@ -26,22 +26,27 @@ extern "C"
 {
 #endif
 
+#include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 char * CSV_strdup(const char * src);
 
+typedef enum { CSV_OK, CSV_PARSE_ERROR, CSV_IO_ERROR, CSV_INTERNAL_ERROR } CSV_error;
+
 // CSV reader object
-typedef struct _CSV_reader
-{
-} CSV_reader;
+typedef struct CSV_reader CSV_reader;
 
 // CSV writer object
-typedef struct _CSV_writer
-{
-} CSV_writer;
+typedef struct CSV_writer CSV_writer;
 
-// Record object
-typedef enum {CSV_OK, CSV_EOF, CSV_EMPTY_ROW, CSV_IO_ERROR, CSV_PARSE_ERROR, CSV_INTERNAL_ERROR} CSV_status;
+// array of strings structure for convenience
+typedef struct CSV_record CSV_record;
+
+void CSV_record_free(CSV_record * rec);
+size_t CSV_record_size(const CSV_record * rec);
+const char * CSV_record_get(const CSV_record * rec, size_t i);
+const char * const * CSV_record_arr(const CSV_record * rec);
 
 // create a new CSV reader object
 CSV_reader * CSV_reader_init_from_filename(const char * filename);
@@ -55,9 +60,26 @@ void CSV_reader_set_delimiter(CSV_reader * reader, const char delimiter);
 // set quote character
 void CSV_reader_set_quote(CSV_reader * reader, const char quote);
 
+// read a single field. returns NULL on error, otherwise, return is owned by caller
+// end_of_row_out will be set true if this is the last field in a row
+char * CSV_reader_read_field(CSV_reader * reader);
+
 // read the current record from the CSV file and advance to the next
-// fields_out is owned by CSV_reader and must not be freed or modified by the caller
-CSV_status CSV_reader_read_record(CSV_reader * reader, char *** fields_out, size_t * num_fields_out);
+// returns null on error, otherwise caller should free the return value with CSV_record_free
+CSV_record * CSV_reader_read_record(CSV_reader * reader);
+
+// variadic read. pass char **'s followed by null. caller will own all char *'s returned
+// returns true for success, false for failure
+bool CSV_reader_read_v(CSV_reader * reader, ...);
+
+bool CSV_reader_eof(const CSV_reader * reader);
+bool CSV_reader_end_of_row(const CSV_reader * reader);
+
+// get message for last error. returns null when no error has occurred
+const char * CSV_reader_get_error_msg(const CSV_reader * reader);
+
+// get error code for last error
+CSV_error CSV_reader_get_error(const CSV_reader * reader);
 
 // create a new CSV writer object
 CSV_writer * CSV_writer_init_from_filename(const char * filename);
@@ -72,7 +94,10 @@ void CSV_writer_set_delimiter(CSV_writer * writer, const char delimiter);
 void CSV_writer_set_quote(CSV_writer * writer, const char quote);
 
 // write a record
-CSV_status CSV_writer_write_record(CSV_writer * writer, const char *const * fields, const size_t num_fields);
+CSV_error CSV_writer_write_record(CSV_writer * writer, const char *const * fields, const size_t num_fields);
+
+// TODO: write single field
+// TODO: write varargs
 
 #ifdef __cplusplus
 }

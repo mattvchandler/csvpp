@@ -39,6 +39,7 @@ public:
         using namespace std;
         swap(csv_r, other.csv_r);
     }
+
     CSV_reader_wrapper & operator=(CSV_reader_wrapper && other)
     {
         if(&other != this)
@@ -53,34 +54,40 @@ public:
     operator const CSV_reader *() const { return csv_r; }
     operator CSV_reader *() { return csv_r; }
 
-    // allows easy access to the C struct's members (useless for this csv library)
-    CSV_reader operator*() { return *csv_r; }
-    CSV_reader * operator->() { return csv_r; }
-
     // wrappers for methods
     void set_delimiter(const char delimiter) const { CSV_reader_set_delimiter(csv_r, delimiter); }
     void set_quote(const char quote) const { CSV_reader_set_quote(csv_r, quote); }
+    bool eof() const { return CSV_reader_eof(csv_r); }
 
     // make the interface more C++ friendly
     std::optional<std::vector<std::string>> read_record() const
     {
-        char ** fields;
-        std::size_t num_fields;
-        switch(CSV_reader_read_record(csv_r, & fields, &num_fields))
+        auto rec = CSV_reader_read_record(csv_r);
+        if(rec)
         {
-        case CSV_OK:
-            return std::vector<std::string>(fields, fields + num_fields);
-        case CSV_EOF:
-            return std::nullopt;
-        case CSV_EMPTY_ROW:
-            return std::vector<std::string>{};
-        case CSV_IO_ERROR:
-            throw std::ios_base::failure{"IO Error"};
-        case CSV_PARSE_ERROR:
-            throw CSV_wrapper_parse_error{"Parse Error"};
-        default: [[fallthrough]];
-        case CSV_INTERNAL_ERROR:
-            throw std::runtime_error{"Internal error"};
+            std::vector<std::string> rec_vec{CSV_record_arr(rec), CSV_record_arr(rec) + CSV_record_size(rec)};
+            CSV_record_free(rec);
+
+            return rec_vec;
+        }
+        else if(eof())
+            return {};
+
+        else
+        {
+            const char * msg = CSV_reader_get_error_msg(csv_r);
+            if(!msg)
+                msg = "Internal error";
+
+            switch(CSV_reader_get_error(csv_r))
+            {
+            case CSV_IO_ERROR:
+                throw std::ios_base::failure{msg};
+            case CSV_PARSE_ERROR:
+                throw CSV_wrapper_parse_error{msg};
+            default:
+                throw std::runtime_error{msg};
+            }
         }
     }
 };
@@ -122,10 +129,6 @@ public:
     // allows you to use the wrapper object in C library calls (by casting to the C type)
     operator const CSV_writer *() const { return csv_w; }
     operator CSV_writer *() { return csv_w; }
-
-    // allows easy access to the C struct's members (useless for this csv library)
-    CSV_writer operator*() { return *csv_w; }
-    CSV_writer * operator->() { return csv_w; }
 
     // wrappers for methods
     void set_delimiter(const char delimiter) const { CSV_writer_set_delimiter(csv_w, delimiter); }
