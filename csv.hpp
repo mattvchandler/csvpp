@@ -550,6 +550,7 @@ namespace csv
                 {
                     state_ = State::read;
                     input_stream_->unget();
+                    --col_no_;
                     break;
                 }
             }
@@ -574,7 +575,7 @@ namespace csv
                 {
                     switch(state_)
                     {
-                    case State::double_quote:
+                    case State::quote:
                         // end of the field?
                         if(c == delimiter_ || c == '\n' || c == '\r' || c == std::istream::traits_type::eof())
                         {
@@ -602,7 +603,7 @@ namespace csv
                             //     break;
                             // }
                             // else
-                                throw Parse_error("Unescaped double-quote", line_no_, col_no_ - 1);
+                                throw Parse_error("Unescaped quote", line_no_, col_no_ - 1);
                         }
 
                     case State::read:
@@ -611,7 +612,7 @@ namespace csv
                         {
                             if(quoted)
                             {
-                                state_ = State::double_quote;
+                                state_ = State::quote;
                                 c_done = true;
                                 break;
                             }
@@ -626,7 +627,7 @@ namespace csv
                                 else // if(!lenient_)
                                 {
                                     // quotes are not allowed inside of an unquoted field
-                                    throw Parse_error("Double-quote found in unquoted field", line_no_, col_no_);
+                                    throw Parse_error("quote found in unquoted field", line_no_, col_no_);
                                 }
                             }
                         }
@@ -650,6 +651,7 @@ namespace csv
                         field += c;
                         c_done = true;
                         break;
+
                     case State::eof:
                     case State::consume_newlines:
                         throw std::runtime_error{"Illegal state"};
@@ -669,7 +671,7 @@ namespace csv
         std::optional<std::string> conversion_retry_;
         bool end_of_row_ = false;
 
-        enum class State {read, double_quote, consume_newlines, eof};
+        enum class State {read, quote, consume_newlines, eof};
         State state_ = State::consume_newlines;
 
         int line_no_ = 1;
