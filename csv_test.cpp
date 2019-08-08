@@ -502,9 +502,9 @@ test::Result test_read_tinycsv(const std::string & csv_text, const CSV_data & ex
     out.write(csv_text.data(), csv_text.size());
     out.close();
 
-    FILE * r_test = std::fopen("test.csv", "rb");
+    FILE * r = std::fopen("test.csv", "rb");
 
-    if(!r_test)
+    if(!r)
         throw std::runtime_error("could not open test.csv");
 
     CSV_data data(1);
@@ -513,17 +513,17 @@ test::Result test_read_tinycsv(const std::string & csv_text, const CSV_data & ex
     {
         try
         {
-            const auto & [field, end_of_row] = tinycsv_parse(r_test);
+            const auto & [field, end_of_row] = tinycsv_parse(r);
 
-            if(std::ferror(r_test))
+            if(std::ferror(r))
             {
-                std::fclose(r_test);
+                std::fclose(r);
                 throw std::runtime_error("Error reading test.csv");
             }
 
             data.back().push_back(field);
 
-            if(std::feof(r_test))
+            if(std::feof(r))
                 break;
 
             if(end_of_row)
@@ -532,12 +532,12 @@ test::Result test_read_tinycsv(const std::string & csv_text, const CSV_data & ex
         catch(int)
         {
             std::cerr<<"Tinycsv error\n";
-            std::fclose(r_test);
+            std::fclose(r);
             return test::error();
         }
 
     }
-    std::fclose(r_test);
+    std::fclose(r);
 
     return common_read_return(csv_text, expected_data, data);
 }
@@ -558,9 +558,9 @@ test::Result test_read_tinycsv_expanded(const std::string & csv_text, const CSV_
     out.write(csv_text.data(), csv_text.size());
     out.close();
 
-    FILE * r_test = std::fopen("test.csv", "rb");
+    FILE * r = std::fopen("test.csv", "rb");
 
-    if(!r_test)
+    if(!r)
         throw std::runtime_error("could not open test.csv");
 
     CSV_data data(1);
@@ -569,17 +569,17 @@ test::Result test_read_tinycsv_expanded(const std::string & csv_text, const CSV_
     {
         try
         {
-            const auto & [field, end_of_row] = tinycsv_expanded_parse(r_test);
+            const auto & [field, end_of_row] = tinycsv_expanded_parse(r);
 
-            if(std::ferror(r_test))
+            if(std::ferror(r))
             {
-                std::fclose(r_test);
+                std::fclose(r);
                 throw std::runtime_error("Error reading test.csv");
             }
 
             data.back().push_back(field);
 
-            if(std::feof(r_test))
+            if(std::feof(r))
                 break;
 
             if(end_of_row)
@@ -588,12 +588,12 @@ test::Result test_read_tinycsv_expanded(const std::string & csv_text, const CSV_
         catch(const char * what)
         {
             std::cerr<<"Tinycsv_expanded error: "<<what<<"\n";
-            std::fclose(r_test);
+            std::fclose(r);
             return test::error();
         }
 
     }
-    std::fclose(r_test);
+    std::fclose(r);
 
     return common_read_return(csv_text, expected_data, data);
 }
@@ -1496,12 +1496,12 @@ test::Result test_read_mine_cpp_row_tuple(const std::string & csv_text, const CS
 #ifdef CSV_ENABLE_C_CSV
 test::Result test_write_mine_c(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
-    CSV_writer * w_test = CSV_writer_init_from_filename("test.csv");
-    if(!w_test)
+    CSV_writer * w = CSV_writer_init_from_filename("test.csv");
+    if(!w)
         throw std::runtime_error("Could not init CSV_writer");
 
-    CSV_writer_set_delimiter(w_test, delimiter);
-    CSV_writer_set_quote(w_test, quote);
+    CSV_writer_set_delimiter(w, delimiter);
+    CSV_writer_set_quote(w, quote);
 
     for(const auto & row: data)
     {
@@ -1509,13 +1509,13 @@ test::Result test_write_mine_c(const std::string & expected_text, const CSV_data
         for(const auto & col: row)
             col_c_strs.push_back(col.c_str());
 
-        if(CSV_writer_write_record(w_test, col_c_strs.data(), row.size()) != CSV_OK)
+        if(CSV_writer_write_record(w, col_c_strs.data(), row.size()) != CSV_OK)
         {
-            CSV_writer_free(w_test);
+            CSV_writer_free(w);
             throw std::runtime_error("error writing CSV");
         }
     }
-    CSV_writer_free(w_test);
+    CSV_writer_free(w);
 
     std::ifstream out_file("test.csv", std::ifstream::binary);
     return common_write_return(data, expected_text, static_cast<std::stringstream const &>(std::stringstream() << out_file.rdbuf()).str());
@@ -2057,9 +2057,6 @@ int main(int, char *[])
 
     test_quotes(test_read_fail, "Read test: Too few rows",
             "1,2,3\r\n", {{"1", "2", "3"}, {"1", "2", "3"}});
-
-    test_quotes(test_read_pass, "Read test: multiple rows",
-            "1,2,3,4\r\n5,6,7,8\r\n", {{"1", "2", "3", "4"}, {"5", "6", "7", "8"}});
 
     test_quotes(test_read_pass, "Read test: fewer than header",
             "1,2,3,4\r\n5,6,7\r\n", {{"1", "2", "3", "4"}, {"5", "6", "7"}});
