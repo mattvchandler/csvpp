@@ -385,16 +385,10 @@ test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_d
             return test::skip();
         }
 
-        char ** row = new char*[expected_size];
-        std::fill(row, row + expected_size, nullptr);
+        std::vector<char *> row(expected_size, nullptr);
 
-        auto free_row = [&row, expected_size]()
-        {
-            for(std::size_t i = 0; i < expected_size; ++i)
-                if(row[i])
-                    std::free(row[i]);
-            delete [] row;
-        };
+        auto free_row = [&row]()
+            std::for_each(std::begin(row), std::end(row), std::free);
 
         bool good_read = false;
         switch(expected_size)
@@ -445,7 +439,7 @@ test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_d
             }
         }
 
-        data.emplace_back(row, row + expected_size);
+        data.emplace_back(std::begin(row), std::end(row));
         free_row();
     }
 
