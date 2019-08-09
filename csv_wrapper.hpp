@@ -140,7 +140,7 @@ public:
         std::vector<const char *> field_ptrs;
         std::transform(std::begin(fields), std::end(fields), std::back_inserter(field_ptrs), [](const std::string & i){ return i.c_str(); });
 
-        if(CSV_writer_write_record(csv_w, std::data(field_ptrs), std::size(field_ptrs)) != CSV_OK)
+        if(CSV_writer_write_record_ptr(csv_w, std::data(field_ptrs), std::size(field_ptrs)) != CSV_OK)
             throw std::runtime_error{"Error writing csv"};
     }
 };

@@ -387,41 +387,40 @@ test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_d
 
         std::vector<char *> row(expected_size, nullptr);
 
-        auto free_row = [&row]()
-            std::for_each(std::begin(row), std::end(row), std::free);
+        auto free_row = [&row](){ for(auto & i: row) std::free(i); };
 
-        bool good_read = false;
+        CSV_status status = CSV_OK;
         switch(expected_size)
         {
         case 0:
-            good_read = CSV_reader_read_v(r, NULL);
+            status = CSV_reader_read_record_v(r, NULL);
             break;
         case 1:
-            good_read = CSV_reader_read_v(r, &row[0], NULL);
+            status = CSV_reader_read_record_v(r, &row[0], NULL);
             break;
         case 2:
-            good_read = CSV_reader_read_v(r, &row[0], &row[1], NULL);
+            status = CSV_reader_read_record_v(r, &row[0], &row[1], NULL);
             break;
         case 3:
-            good_read = CSV_reader_read_v(r, &row[0], &row[1], &row[2], NULL);
+            status = CSV_reader_read_record_v(r, &row[0], &row[1], &row[2], NULL);
             break;
         case 4:
-            good_read = CSV_reader_read_v(r, &row[0], &row[1], &row[2], &row[3], NULL);
+            status = CSV_reader_read_record_v(r, &row[0], &row[1], &row[2], &row[3], NULL);
             break;
         case 5:
-            good_read = CSV_reader_read_v(r, &row[0], &row[1], &row[2], &row[3], &row[4], NULL);
+            status = CSV_reader_read_record_v(r, &row[0], &row[1], &row[2], &row[3], &row[4], NULL);
             break;
         }
-        if(!good_read)
+        if(status != CSV_OK)
         {
-            if(CSV_reader_eof(r))
+            if(status == CSV_EOF)
                 break;
 
             else
             {
                 free_row();
                 auto msg = CSV_reader_get_error_msg(r);
-                switch(CSV_reader_get_error(r))
+                switch(status)
                 {
                 case CSV_PARSE_ERROR:
                     std::cout<<msg<<'\n';
@@ -1488,7 +1487,7 @@ test::Result test_read_mine_cpp_row_tuple(const std::string & csv_text, const CS
 #endif
 
 #ifdef CSV_ENABLE_C_CSV
-test::Result test_write_mine_c(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_c_ptr(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
     CSV_writer * w = CSV_writer_init_from_filename("test.csv");
     if(!w)
@@ -1503,7 +1502,7 @@ test::Result test_write_mine_c(const std::string & expected_text, const CSV_data
         for(const auto & col: row)
             col_c_strs.push_back(col.c_str());
 
-        if(CSV_writer_write_record(w, col_c_strs.data(), row.size()) != CSV_OK)
+        if(CSV_writer_write_record_ptr(w, col_c_strs.data(), row.size()) != CSV_OK)
         {
             CSV_writer_free(w);
             throw std::runtime_error("error writing CSV");
@@ -1920,7 +1919,7 @@ int main(int, char *[])
 
     test::Test<const std::string, const CSV_data&, const char, const char> test_write{
         #ifdef CSV_ENABLE_C_CSV
-        test_write_mine_c,
+        test_write_mine_c_ptr,
         test_write_mine_c_wrapper,
         #endif
         #ifdef CSV_ENABLE_PYTHON

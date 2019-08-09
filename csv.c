@@ -23,20 +23,22 @@
 
 #include "csv.h"
 
+// CSV reader object
 struct CSV_reader
 {
     FILE * file_;
-    enum {CSV_STATE_READ, CSV_STATE_QUOTE, CSV_STATE_CONSUME_NEWLINES, CSV_STATE_EOF, CSV_STATE__ERROR} state_;
+    enum {CSV_STATE_READ, CSV_STATE_QUOTE, CSV_STATE_CONSUME_NEWLINES, CSV_STATE_EOF} state_;
     bool end_of_row_;
     unsigned int line_no_;
     unsigned int col_no_;
     char delimiter_;
     char quote_;
 
-    CSV_error error_;
+    CSV_status error_;
     char * error_message_;
 };
 
+// dynamic array of strings structure for convenience
 // CSV writer object
 struct CSV_writer
 {
@@ -52,6 +54,7 @@ struct CSV_record
     char ** fields_;
 };
 
+// strdup implementation, in case it's not implemented in string.h
 char * CSV_strdup(const char * src)
 {
     char * ret = (char *)malloc(sizeof(char) * (strlen(src) + 1));
@@ -113,6 +116,8 @@ const char * CSV_record_get(const CSV_record * rec, size_t i)
 
     return rec->fields_[i];
 }
+
+// get access to char ** within CSV_record (useful for passing to other interfaces)
 const char * const * CSV_record_arr(const CSV_record * rec)
 {
     return (const char * const *)rec->fields_;
@@ -156,7 +161,8 @@ void CSV_reader_free(CSV_reader * reader)
     free(reader);
 }
 
-void CSV_reader_set_error(CSV_reader * reader, CSV_error error, const char * msg, bool append_line_and_col)
+// set error code and message
+void CSV_reader_set_error(CSV_reader * reader, CSV_status error, const char * msg, bool append_line_and_col)
 {
     if(!reader)
         return;
@@ -189,12 +195,14 @@ void CSV_reader_set_quote(CSV_reader * reader, const char quote)
     reader->quote_ = quote;
 }
 
-int CSV_getc(CSV_reader * reader)
+// read a character, check for errors, and increment line & col
+int CSV_reader_getc(CSV_reader * reader)
 {
     if(!reader)
         return '\0';
 
     int c = fgetc(reader->file_);
+
     if(c == EOF && !feof(reader->file_))
         CSV_reader_set_error(reader, CSV_IO_ERROR, "I/O Error", false);
 
@@ -209,14 +217,15 @@ int CSV_getc(CSV_reader * reader)
     return c;
 }
 
-void consume_newlines(CSV_reader * reader)
+// consume newlines until EOF or other char
+void CSV_reader_consume_newlines(CSV_reader * reader)
 {
     if(!reader || reader->state_ != CSV_STATE_CONSUME_NEWLINES)
         return;
 
     while(true)
     {
-        int c = CSV_getc(reader);
+        int c = CSV_reader_getc(reader);
         if(reader->error_ == CSV_IO_ERROR)
             return;
 
@@ -224,6 +233,7 @@ void consume_newlines(CSV_reader * reader)
         {
             reader->end_of_row_ = true;
             reader->state_ = CSV_STATE_EOF;
+            CSV_reader_set_error(reader, CSV_EOF, "End of file", false);
             break;
         }
         else if(c != '\r' && c != '\n')
@@ -236,6 +246,7 @@ void consume_newlines(CSV_reader * reader)
     }
 }
 
+// append a character to a string, reallocating if out of space
 enum {FIELD_ALLOC_SIZE = 32};
 char * field_append(char * field, size_t * field_size, size_t * field_alloc, char c)
 {
@@ -249,12 +260,13 @@ char * field_append(char * field, size_t * field_size, size_t * field_alloc, cha
     return field;
 }
 
+// core parsing function. extracts a single field from the CSV file
 char * CSV_reader_parse(CSV_reader * reader)
 {
     if(!reader)
         return NULL;
 
-    consume_newlines(reader);
+    CSV_reader_consume_newlines(reader);
     if(reader->error_ == CSV_IO_ERROR)
         return NULL;
 
@@ -270,7 +282,7 @@ char * CSV_reader_parse(CSV_reader * reader)
     bool field_done = false;
     while(!field_done)
     {
-        int c = CSV_getc(reader);
+        int c = CSV_reader_getc(reader);
         if(reader->error_ == CSV_IO_ERROR)
             goto error;
 
@@ -397,12 +409,23 @@ CSV_record * CSV_reader_read_record(CSV_reader * reader)
     return rec;
 }
 
+// read a record into an array of fields. if fields is null, this will allocate it (and pass ownership to the caller),
+// and return the final size into num_fields
+// otherwise, will overwrite fields contents with strings (owned by caller) up to the limit specified in num_fields.
+// will discard any fields remaining until the end of the row
+// returns CSV_OK on successful read, CSV_TOO_MANY_FIELDS_ERROR fields is not null and there are more fields than num_fields
+// CSV_status CSV_reader_read_record_ptr(CSV_reader * reader, char ** fields, size_t * num_fields)
+// {
+// }
+
 // variadic read. pass char **'s followed by null. caller will own all char *'s returned
-// returns true for success, false for failure
-bool CSV_reader_read_v(CSV_reader * reader, ...)
+// discards any fields remaining until the end of the row
+// returns CSV_OK on successful read, CSV_TOO_MANY_FIELDS_ERROR fields than passed in
+// or other error code on failure
+CSV_status CSV_reader_read_record_v(CSV_reader * reader, ...)
 {
     if(!reader)
-        return false;
+        return CSV_INTERNAL_ERROR;
 
     va_list args;
     va_start(args, reader);
@@ -427,11 +450,11 @@ bool CSV_reader_read_v(CSV_reader * reader, ...)
         reader->end_of_row_ = false;
 
     va_end(args);
-    return true;
+    return CSV_OK;
 
 error:
     va_end(args);
-    return false;
+    return reader->error_;
 }
 
 bool CSV_reader_eof(const CSV_reader * reader)
@@ -440,6 +463,7 @@ bool CSV_reader_eof(const CSV_reader * reader)
         return true;
     return reader->state_ == CSV_STATE_EOF;
 }
+
 bool CSV_reader_end_of_row(const CSV_reader * reader)
 {
     if(!reader)
@@ -457,7 +481,7 @@ const char * CSV_reader_get_error_msg(const CSV_reader * reader)
 }
 
 // get error code for last error
-CSV_error CSV_reader_get_error(const CSV_reader * reader)
+CSV_status CSV_reader_get_error(const CSV_reader * reader)
 {
     if(!reader)
         return CSV_INTERNAL_ERROR;
@@ -503,7 +527,7 @@ void CSV_writer_set_quote(CSV_writer * writer, const char quote)
 }
 
 // write a single record
-CSV_error CSV_writer_write_record(CSV_writer * writer, char const * const * fields, const size_t num_fields)
+CSV_status CSV_writer_write_record_ptr(CSV_writer * writer, char const * const * fields, const size_t num_fields)
 {
     for(size_t field_i = 0; field_i < num_fields; ++field_i)
     {
