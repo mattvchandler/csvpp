@@ -98,6 +98,7 @@ namespace test
         }
         std::size_t get_num_passed() const { return num_passed; }
         std::size_t get_num_ran() const { return num_ran; }
+        std::size_t get_num_skipped() const { return num_skipped; }
 
     private:
 
@@ -111,7 +112,10 @@ namespace test
             {
                 Result result = f(args...);
                 if(result.type == Result::Result_type::skip)
+                {
                     --total;
+                    ++num_skipped;
+                }
                 else if(result.type == expected_result)
                     ++count;
                 else
@@ -139,6 +143,7 @@ namespace test
         std::vector<std::function<Result(Args...)>> test_cases;
         std::size_t num_passed = 0;
         std::size_t num_ran = 0;
+        std::size_t num_skipped = 0;
     };
 }
 

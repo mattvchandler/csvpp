@@ -2255,15 +2255,16 @@ int main(int, char *[])
     if(test_read.passed() && test_write.passed())
     {
         auto num_passed = test_read.get_num_passed() + test_write.get_num_passed();
-        std::cout<<"All "<<num_passed<<" tests PASSED\n";
+        auto num_skipped = test_read.get_num_skipped() + test_write.get_num_skipped();
+        std::cout<<"All "<<num_passed<<" tests PASSED. ("<<num_skipped<<" tests skipped)\n";
         return EXIT_SUCCESS;
     }
     else
     {
         auto num_passed = test_read.get_num_passed() + test_write.get_num_passed();
-        auto num_failed = test_read.get_num_ran() + test_write.get_num_ran()
-            - num_passed;
-        std::cout<<num_passed<<" tests PASSED, "<<num_failed<<" tests FAILED.\n";
+        auto num_failed = test_read.get_num_ran() + test_write.get_num_ran() - num_passed;
+        auto num_skipped = test_read.get_num_skipped() + test_write.get_num_skipped();
+        std::cout<<num_passed<<" tests PASSED, "<<num_failed<<" tests FAILED. ("<<num_skipped<<" tests skipped)\n";
         return EXIT_FAILURE;
     }
 }
