@@ -31,12 +31,12 @@ extern "C"
 #include <stdio.h>
 
 typedef enum {
-    CSV_OK,                    // no errors, ready to read / write another field
-    CSV_EOF,                   // reached end of file
-    CSV_PARSE_ERROR,           // parsing error. see CSV_reader_get_error_msg for details
-    CSV_IO_ERROR,              // IO error
-    CSV_TOO_MANY_FIELDS_ERROR, // more fields exist in one record than will fit in given storage
-    CSV_INTERNAL_ERROR         // Illegal reader / writer state reached
+    CSV_OK,                      // no errors, ready to read / write another field
+    CSV_EOF,                     // reached end of file
+    CSV_PARSE_ERROR,             // parsing error. see CSV_reader_get_error_msg for details
+    CSV_IO_ERROR,                // IO error
+    CSV_TOO_MANY_FIELDS_WARNING, // more fields exist in one record than will fit in given storage. Non fatal
+    CSV_INTERNAL_ERROR           // Illegal reader / writer state reached
 } CSV_status;
 
 // CSV reader object
@@ -87,13 +87,13 @@ CSV_record * CSV_reader_read_record(CSV_reader * reader);
 // and return the final size into num_fields
 // otherwise, will overwrite fields contents with strings (owned by caller) up to the limit specified in num_fields.
 // will discard any fields remaining until the end of the row
-// returns CSV_OK on successful read, CSV_TOO_MANY_FIELDS_ERROR fields is not null and there are more fields than num_fields
+// returns CSV_OK on successful read, CSV_TOO_MANY_FIELDS_WARNING fields is not null and there are more fields than num_fields
 // or other error code on failure
-CSV_status CSV_reader_read_record_ptr(CSV_reader * reader, char ** fields, size_t * num_fields);
+CSV_status CSV_reader_read_record_ptr(CSV_reader * reader, char *** fields, size_t * num_fields);
 
 // variadic read. pass char **'s followed by null. caller will own all char *'s returned
 // discards any fields remaining until the end of the row
-// returns CSV_OK on successful read, CSV_TOO_MANY_FIELDS_ERROR fields than passed in
+// returns CSV_OK on successful read, CSV_TOO_MANY_FIELDS_WARNING fields than passed in
 // or other error code on failure
 CSV_status CSV_reader_read_record_v(CSV_reader * reader, ...);
 

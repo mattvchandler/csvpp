@@ -413,19 +413,81 @@ CSV_record * CSV_reader_read_record(CSV_reader * reader)
 // and return the final size into num_fields
 // otherwise, will overwrite fields contents with strings (owned by caller) up to the limit specified in num_fields.
 // will discard any fields remaining until the end of the row
-// returns CSV_OK on successful read, CSV_TOO_MANY_FIELDS_ERROR fields is not null and there are more fields than num_fields
-// CSV_status CSV_reader_read_record_ptr(CSV_reader * reader, char ** fields, size_t * num_fields)
-// {
-// }
+// returns CSV_OK on successful read, CSV_TOO_MANY_FIELDS_WARNING fields is not null and there are more fields than num_fields
+CSV_status CSV_reader_read_record_ptr(CSV_reader * reader, char *** fields, size_t * num_fields)
+{
+    if(!reader)
+        return CSV_INTERNAL_ERROR;
+
+    size_t fields_alloc = 0;
+    size_t fields_size = 0;
+    if(!*fields)
+    {
+        fields_alloc = CSV_RECORD_ALLOC;
+        *fields = (char **)malloc(sizeof(char **) * fields_alloc);
+    }
+
+    bool too_many_fields = false;
+
+    while(true)
+    {
+        char * field = CSV_reader_read_field(reader);
+        if(!field)
+        {
+            for(size_t i = 0; i < fields_size; ++i)
+            {
+                free((*fields)[i]);
+                (*fields)[i] = NULL;
+            }
+
+            if(fields_alloc)
+            {
+                free(*fields);
+                *fields = NULL;
+            }
+
+            return reader->error_;
+        }
+
+        if(fields_alloc)
+        {
+            if(fields_size == fields_alloc)
+            {
+                fields_alloc *= 2;
+                *fields = (char **)realloc(*fields, sizeof(char **) * fields_alloc);
+            }
+
+            (*fields)[fields_size++] = field;
+        }
+        else
+        {
+            if(fields_size < *num_fields)
+                (*fields)[fields_size++] = field;
+            else
+            {
+                too_many_fields = true;
+                free(field);
+            }
+        }
+
+        if(CSV_reader_end_of_row(reader))
+            break;
+    }
+
+    *num_fields = fields_size;
+    return too_many_fields? CSV_TOO_MANY_FIELDS_WARNING : reader->error_;
+}
 
 // variadic read. pass char **'s followed by null. caller will own all char *'s returned
 // discards any fields remaining until the end of the row
-// returns CSV_OK on successful read, CSV_TOO_MANY_FIELDS_ERROR fields than passed in
+// returns CSV_OK on successful read, CSV_TOO_MANY_FIELDS_WARNING fields than passed in
 // or other error code on failure
 CSV_status CSV_reader_read_record_v(CSV_reader * reader, ...)
 {
     if(!reader)
         return CSV_INTERNAL_ERROR;
+
+    bool too_many_fields = false;
 
     va_list args;
     va_start(args, reader);
@@ -437,24 +499,30 @@ CSV_status CSV_reader_read_record_v(CSV_reader * reader, ...)
         if(CSV_reader_end_of_row(reader))
         {
             CSV_reader_set_error(reader, CSV_PARSE_ERROR, "Attempted to read past end of row", false);
-            goto error;
+            goto end;
         }
 
         *arg = CSV_reader_read_field(reader);
 
         if(!arg)
-            goto error;
+            goto end;
     }
 
-    if(CSV_reader_end_of_row(reader))
-        reader->end_of_row_ = false;
+    // discard any remaining fields
+    while(!CSV_reader_end_of_row(reader))
+    {
+        too_many_fields = true;
+        char * discard = CSV_reader_read_field(reader);
+        if(!discard)
+            goto end;
+        free(discard);
+    }
 
-    va_end(args);
-    return CSV_OK;
+    reader->end_of_row_ = false;
 
-error:
+end:
     va_end(args);
-    return reader->error_;
+    return too_many_fields ? CSV_TOO_MANY_FIELDS_WARNING : reader->error_;
 }
 
 bool CSV_reader_eof(const CSV_reader * reader)

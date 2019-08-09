@@ -199,7 +199,6 @@ test::Result test_read_embedded(const std::string & csv_text, const CSV_data & e
 #ifdef CSV_ENABLE_C_CSV
 test::Result test_read_mine_c_field(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
-    return test::skip();
     std::ofstream out{"test.csv", std::ifstream::binary};
     if(!out)
         throw std::runtime_error{"could not open test.csv"};
@@ -234,7 +233,7 @@ test::Result test_read_mine_c_field(const std::string & csv_text, const CSV_data
             switch(CSV_reader_get_error(r))
             {
             case CSV_PARSE_ERROR:
-                // std::cout<<msg<<'\n';
+                std::cout<<msg<<'\n';
                 CSV_reader_free(r);
                 return test::error();
 
@@ -247,6 +246,8 @@ test::Result test_read_mine_c_field(const std::string & csv_text, const CSV_data
                 throw std::runtime_error{std::string{"bad error for CSV_reader: "} + msg};
             }
         }
+
+        start_of_row = CSV_reader_end_of_row(r);
     }
 
     CSV_reader_free(r);
@@ -291,7 +292,7 @@ test::Result test_read_mine_c_record(const std::string & csv_text, const CSV_dat
             switch(CSV_reader_get_error(r))
             {
             case CSV_PARSE_ERROR:
-                std::cout<<msg<<'\n';
+                // std::cout<<msg<<'\n';
                 CSV_reader_free(r);
                 return test::error();
 
@@ -306,6 +307,137 @@ test::Result test_read_mine_c_record(const std::string & csv_text, const CSV_dat
         }
     }
 
+    CSV_reader_free(r);
+
+    return common_read_return(csv_text, expected_data, data);
+}
+
+test::Result test_read_mine_c_ptr(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+{
+    std::ofstream out{"test.csv", std::ifstream::binary};
+    if(!out)
+        throw std::runtime_error{"could not open test.csv"};
+
+    out.write(csv_text.data(), csv_text.size());
+    out.close();
+
+    CSV_reader * r = CSV_reader_init_from_filename("test.csv");
+
+    if(!r)
+        throw std::runtime_error("could not init CSV_reader");
+
+    CSV_reader_set_delimiter(r, delimiter);
+    CSV_reader_set_quote(r, quote);
+
+    CSV_data data;
+
+    while(true)
+    {
+        std::array<char *, 5> rec;
+        std::fill(std::begin(rec), std::end(rec), nullptr);
+
+        std::size_t num_fields = std::size(rec);
+        auto rec_data = std::data(rec);
+
+        auto free_rec = [&rec]()
+        {
+            for(auto &i: rec)
+                std::free(i);
+        };
+
+        auto status = CSV_reader_read_record_ptr(r, &rec_data, &num_fields);
+        if(status == CSV_OK)
+        {
+            data.emplace_back(std::begin(rec), std::begin(rec) + num_fields);
+            free_rec();
+        }
+        else if(CSV_reader_eof(r))
+        {
+            free_rec();
+            break;
+        }
+        else
+        {
+            free_rec();
+            auto msg = CSV_reader_get_error_msg(r);
+            CSV_reader_free(r);
+            switch(status)
+            {
+            case CSV_TOO_MANY_FIELDS_WARNING:
+                return test::skip();
+
+            case CSV_PARSE_ERROR:
+                // std::cout<<msg<<'\n';
+                return test::error();
+
+            case CSV_IO_ERROR:
+                throw std::runtime_error{msg};
+
+            default:
+                throw std::runtime_error{std::string{"bad error for CSV_reader: "} + msg};
+            }
+        }
+    }
+    CSV_reader_free(r);
+
+    return common_read_return(csv_text, expected_data, data);
+}
+
+test::Result test_read_mine_c_ptr_dyn(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+{
+    std::ofstream out{"test.csv", std::ifstream::binary};
+    if(!out)
+        throw std::runtime_error{"could not open test.csv"};
+
+    out.write(csv_text.data(), csv_text.size());
+    out.close();
+
+    CSV_reader * r = CSV_reader_init_from_filename("test.csv");
+
+    if(!r)
+        throw std::runtime_error("could not init CSV_reader");
+
+    CSV_reader_set_delimiter(r, delimiter);
+    CSV_reader_set_quote(r, quote);
+
+    CSV_data data;
+
+    while(true)
+    {
+        char ** rec = NULL;
+        std::size_t num_fields = 0;
+        auto status = CSV_reader_read_record_ptr(r, &rec, &num_fields);
+        if(status == CSV_OK)
+        {
+            data.emplace_back(rec, rec + num_fields);
+
+            for(std::size_t i = 0; i < num_fields; ++i)
+                std::free(rec[i]);
+            std::free(rec);
+        }
+
+        else if(CSV_reader_eof(r))
+            break;
+
+        else
+        {
+            auto msg = CSV_reader_get_error_msg(r);
+            CSV_reader_free(r);
+
+            switch(status)
+            {
+            case CSV_PARSE_ERROR:
+                // std::cout<<msg<<'\n';
+                return test::error();
+
+            case CSV_IO_ERROR:
+                throw std::runtime_error{msg};
+
+            default:
+                throw std::runtime_error{std::string{"bad error for CSV_reader: "} + msg};
+            }
+        }
+    }
     CSV_reader_free(r);
 
     return common_read_return(csv_text, expected_data, data);
@@ -419,21 +551,14 @@ test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_d
             else
             {
                 free_row();
-                auto msg = CSV_reader_get_error_msg(r);
+                CSV_reader_free(r);
+
                 switch(status)
                 {
-                case CSV_PARSE_ERROR:
-                    std::cout<<msg<<'\n';
-                    CSV_reader_free(r);
-                    return test::error();
-
-                case CSV_IO_ERROR:
-                    CSV_reader_free(r);
-                    throw std::runtime_error{msg};
-
+                case CSV_TOO_MANY_FIELDS_WARNING:
+                    return test::skip();
                 default:
-                    CSV_reader_free(r);
-                    throw std::runtime_error{std::string{"bad error for CSV_reader: "} + msg};
+                    throw std::runtime_error{"Got an error after checking for errors somehow"};
                 }
             }
         }
@@ -1882,6 +2007,8 @@ int main(int, char *[])
         #ifdef CSV_ENABLE_C_CSV
         test_read_mine_c_field,
         test_read_mine_c_record,
+        test_read_mine_c_ptr,
+        test_read_mine_c_ptr_dyn,
         test_read_mine_c_variadic,
         test_read_mine_c_wrapper,
         #endif
