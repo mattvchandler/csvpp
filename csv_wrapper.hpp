@@ -57,38 +57,47 @@ public:
     // wrappers for methods
     void set_delimiter(const char delimiter) const { CSV_reader_set_delimiter(csv_r, delimiter); }
     void set_quote(const char quote) const { CSV_reader_set_quote(csv_r, quote); }
+    bool end_of_row() const { return CSV_reader_end_of_row(csv_r); }
     bool eof() const { return CSV_reader_eof(csv_r); }
 
     // make the interface more C++ friendly
     std::optional<std::vector<std::string>> read_record() const
     {
-        auto rec = CSV_reader_read_record(csv_r);
-        if(rec)
+        std::vector<std::string> rec;
+
+        while(true)
         {
-            std::vector<std::string> rec_vec{CSV_record_arr(rec), CSV_record_arr(rec) + CSV_record_size(rec)};
-            CSV_record_free(rec);
-
-            return rec_vec;
-        }
-        else if(eof())
-            return {};
-
-        else
-        {
-            const char * msg = CSV_reader_get_error_msg(csv_r);
-            if(!msg)
-                msg = "Internal error";
-
-            switch(CSV_reader_get_error(csv_r))
+            char * field = CSV_reader_read_field(csv_r);
+            if(field)
             {
-            case CSV_IO_ERROR:
-                throw std::ios_base::failure{msg};
-            case CSV_PARSE_ERROR:
-                throw CSV_wrapper_parse_error{msg};
-            default:
-                throw std::runtime_error{msg};
+                rec.push_back(field);
+                std::free(field);
             }
+            else if(eof())
+                return {};
+
+            else
+            {
+                const char * msg = CSV_reader_get_error_msg(csv_r);
+                if(!msg)
+                    msg = "Internal error";
+
+                switch(CSV_reader_get_error(csv_r))
+                {
+                case CSV_IO_ERROR:
+                    throw std::ios_base::failure{msg};
+                case CSV_PARSE_ERROR:
+                    throw CSV_wrapper_parse_error{msg};
+                default:
+                    throw std::runtime_error{msg};
+                }
+            }
+
+            if(end_of_row())
+                break;
         }
+
+        return rec;
     }
 };
 
