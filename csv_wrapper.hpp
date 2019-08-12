@@ -148,11 +148,27 @@ public:
     {
         for(auto &i: fields)
         {
-            if(CSV_writer_write_field(csv_w, i.c_str()) != CSV_OK)
-                throw std::runtime_error{"Error writing csv"};
+            switch(CSV_writer_write_field(csv_w, i.c_str()))
+            {
+            case CSV_OK:
+                break;
+            case CSV_IO_ERROR:
+                throw std::ios_base::failure{"Error writing CSV"};
+            default:
+            case CSV_INTERNAL_ERROR:
+                throw std::runtime_error{"Error writing CSV"};
+            }
         }
-        if(CSV_writer_end_row(csv_w) != CSV_OK)
-            throw std::runtime_error{"Error writing csv"};
+        switch(CSV_writer_end_row(csv_w))
+        {
+        case CSV_OK:
+            break;
+        case CSV_IO_ERROR:
+            throw std::ios_base::failure{"Error writing CSV"};
+        default:
+        case CSV_INTERNAL_ERROR:
+            throw std::runtime_error{"Error writing CSV"};
+        }
     }
 };
 
