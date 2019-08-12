@@ -45,6 +45,7 @@ struct CSV_writer
     FILE * file_;
     char delimiter_;
     char quote_;
+    bool start_of_row_;
 };
 
 struct CSV_record
@@ -478,7 +479,7 @@ CSV_status CSV_reader_read_record_ptr(CSV_reader * reader, char *** fields, size
     return too_many_fields? CSV_TOO_MANY_FIELDS_WARNING : reader->error_;
 }
 
-// variadic read. pass char **'s followed by null. caller will own all char *'s returned
+// variadic read. pass char **'s followed by NULL. caller will own all char *'s returned
 // discards any fields remaining until the end of the row
 // returns CSV_OK on successful read, CSV_TOO_MANY_FIELDS_WARNING fields than passed in
 // or other error code on failure
@@ -563,14 +564,16 @@ CSV_writer * CSV_writer_init_from_filename(const char * filename)
     CSV_writer * writer = (CSV_writer *)malloc(sizeof(CSV_writer));
     writer->file_ = fopen(filename, "wb");
 
-    writer->delimiter_ = ',';
-    writer->quote_ = '"';
-
     if(!writer->file_)
     {
         free(writer);
         return NULL;
     }
+
+    writer->delimiter_ = ',';
+    writer->quote_ = '"';
+
+    writer->start_of_row_ = true;
 
     return (CSV_writer *)writer;
 }
@@ -594,66 +597,134 @@ void CSV_writer_set_quote(CSV_writer * writer, const char quote)
     writer->quote_ = quote;
 }
 
-// write a single record
-CSV_status CSV_writer_write_record_ptr(CSV_writer * writer, char const * const * fields, const size_t num_fields)
+// end the current row (for use w/ CSV_writer_write_field)
+CSV_status CSV_writer_end_row(CSV_writer * writer)
 {
-    for(size_t field_i = 0; field_i < num_fields; ++field_i)
-    {
-        const char * field = fields[field_i];
-
-        if(field)
-        {
-            bool quoted = false;
-            const char * i = NULL;
-            for(i = field; *i; ++i)
-            {
-                if(*i == writer->quote_ || *i == writer->delimiter_ || *i == '\n' || *i == '\r')
-                {
-                    quoted = true;
-                    break;
-                }
-            }
-
-            if(quoted)
-            {
-                fputc(writer->quote_, writer->file_);
-                if(ferror(writer->file_))
-                    return CSV_IO_ERROR;
-            }
-
-            for(i = field; *i; ++i)
-            {
-                fputc(*i, writer->file_);
-                if(ferror(writer->file_))
-                    return CSV_IO_ERROR;
-
-                if(*i == writer->quote_)
-                {
-                    fputc(writer->quote_, writer->file_);
-                    if(ferror(writer->file_))
-                        return CSV_IO_ERROR;
-                }
-            }
-
-            if(quoted)
-            {
-                fputc(writer->quote_, writer->file_);
-                if(ferror(writer->file_))
-                    return CSV_IO_ERROR;
-            }
-        }
-
-        if(field_i < num_fields - 1)
-        {
-            fputc(writer->delimiter_, writer->file_);
-            if(ferror(writer->file_))
-                return CSV_IO_ERROR;
-        }
-    }
+    if(!writer)
+        return CSV_INTERNAL_ERROR;
 
     fputs("\r\n", writer->file_);
     if(ferror(writer->file_))
         return CSV_IO_ERROR;
 
+    writer->start_of_row_ = true;
+
+    return CSV_OK;
+}
+
+// write a single field. Use CSV_writer_end_row to move to the next record
+CSV_status CSV_writer_write_field(CSV_writer * writer, const char * field)
+{
+    if(!writer)
+        return CSV_INTERNAL_ERROR;
+
+    if(!writer->start_of_row_)
+    {
+        fputc(writer->delimiter_, writer->file_);
+        if(ferror(writer->file_))
+            return CSV_IO_ERROR;
+    }
+
+    if(field)
+    {
+        bool quoted = false;
+        for(const char * i = field; *i; ++i)
+        {
+            if(*i == writer->quote_ || *i == writer->delimiter_ || *i == '\n' || *i == '\r')
+            {
+                quoted = true;
+                break;
+            }
+        }
+
+        if(quoted)
+        {
+            fputc(writer->quote_, writer->file_);
+            if(ferror(writer->file_))
+                return CSV_IO_ERROR;
+        }
+
+        for(const char * i = field; *i; ++i)
+        {
+            fputc(*i, writer->file_);
+            if(ferror(writer->file_))
+                return CSV_IO_ERROR;
+
+            if(*i == writer->quote_)
+            {
+                fputc(writer->quote_, writer->file_);
+                if(ferror(writer->file_))
+                    return CSV_IO_ERROR;
+            }
+        }
+
+        if(quoted)
+        {
+            fputc(writer->quote_, writer->file_);
+            if(ferror(writer->file_))
+                return CSV_IO_ERROR;
+        }
+    }
+
+    writer->start_of_row_ = false;
+
+    return CSV_OK;
+}
+
+// write a CSV_record object
+CSV_status CSV_writer_write_record(CSV_writer * writer, const CSV_record * fields)
+{
+    if(!writer)
+        return CSV_INTERNAL_ERROR;
+
+    for(size_t i = 0; i < CSV_record_size(fields); ++i)
+    {
+        CSV_status stat = CSV_writer_write_field(writer, CSV_record_get(fields, i));
+        if(stat != CSV_OK)
+            return stat;
+    }
+
+    return CSV_writer_end_row(writer);
+}
+
+// write an array of strings as a record
+CSV_status CSV_writer_write_record_ptr(CSV_writer * writer, char const * const * fields, const size_t num_fields)
+{
+    if(!writer)
+        return CSV_INTERNAL_ERROR;
+
+    for(size_t i = 0; i < num_fields; ++i)
+    {
+        CSV_status stat = CSV_writer_write_field(writer, fields[i]);
+        if(stat != CSV_OK)
+            return stat;
+    }
+
+    return CSV_writer_end_row(writer);
+}
+
+// write const char * arguments as a record. last argument should be NULL
+CSV_status CSV_writer_write_record_v(CSV_writer * writer, ...)
+{
+    if(!writer)
+        return CSV_INTERNAL_ERROR;
+
+    va_list args;
+    va_start(args, writer);
+
+    const char * arg = NULL;
+    while((arg = va_arg(args, const char *)))
+    {
+        CSV_status stat = CSV_writer_write_field(writer, arg);
+        if(stat != CSV_OK)
+        {
+            va_end(args);
+            return stat;
+        }
+    }
+
+    CSV_writer_end_row(writer);
+
+    va_end(args);
     return CSV_OK;
 }

@@ -91,7 +91,7 @@ CSV_record * CSV_reader_read_record(CSV_reader * reader);
 // or other error code on failure
 CSV_status CSV_reader_read_record_ptr(CSV_reader * reader, char *** fields, size_t * num_fields);
 
-// variadic read. pass char **'s followed by null. caller will own all char *'s returned
+// variadic read. pass char **'s followed by NULL. caller will own all char *'s returned
 // discards any fields remaining until the end of the row
 // returns CSV_OK on successful read, CSV_TOO_MANY_FIELDS_WARNING fields than passed in
 // or other error code on failure
@@ -121,10 +121,17 @@ void CSV_writer_set_quote(CSV_writer * writer, const char quote);
 // end the current row (for use w/ CSV_writer_write_field)
 CSV_status CSV_writer_end_row(CSV_writer * writer);
 
+// write a single field. Use CSV_writer_end_row to move to the next record
 CSV_status CSV_writer_write_field(CSV_writer * writer, const char * field);
+
+// write a CSV_record object
 CSV_status CSV_writer_write_record(CSV_writer * writer, const CSV_record * fields);
+
+// write an array of strings as a record
 CSV_status CSV_writer_write_record_ptr(CSV_writer * writer, const char *const * fields, const size_t num_fields);
-CSV_status CSV_writer_write_recortd_v(CSV_writer * writer, ...);
+
+// write const char * arguments as a record. last argument should be NULL
+CSV_status CSV_writer_write_record_v(CSV_writer * writer, ...);
 
 #ifdef __cplusplus
 }

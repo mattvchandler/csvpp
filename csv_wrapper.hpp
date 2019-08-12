@@ -146,10 +146,12 @@ public:
     // make the interface more C++ friendly
     void write_record(const std::vector<std::string> & fields) const
     {
-        std::vector<const char *> field_ptrs;
-        std::transform(std::begin(fields), std::end(fields), std::back_inserter(field_ptrs), [](const std::string & i){ return i.c_str(); });
-
-        if(CSV_writer_write_record_ptr(csv_w, std::data(field_ptrs), std::size(field_ptrs)) != CSV_OK)
+        for(auto &i: fields)
+        {
+            if(CSV_writer_write_field(csv_w, i.c_str()) != CSV_OK)
+                throw std::runtime_error{"Error writing csv"};
+        }
+        if(CSV_writer_end_row(csv_w) != CSV_OK)
             throw std::runtime_error{"Error writing csv"};
     }
 };
