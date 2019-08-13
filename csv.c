@@ -114,7 +114,7 @@ void CSV_string_null_terminate(CSV_string * str)
     if(str->size == str->alloc)
     {
         str->alloc += CSV_STR_ALLOC;
-        str->str = realloc(str->str, sizeof(char) * str->alloc);
+        str->str = (char *)realloc(str->str, sizeof(char) * str->alloc);
     }
 
     str->str[str->size] = '\0';
@@ -142,7 +142,7 @@ void CSV_string_append(CSV_string * str, const char c)
     if(str->size == str->alloc)
     {
         str->alloc += CSV_STR_ALLOC;
-        str->str = realloc(str->str, sizeof(char) * str->alloc);
+        str->str = (char *)realloc(str->str, sizeof(char) * str->alloc);
     }
 
     str->str[str->size++] = c;
@@ -282,7 +282,7 @@ void CSV_reader_set_error(CSV_reader * reader, CSV_status error, const char * ms
 
     if(append_line_and_col)
     {
-        const char * format =  "%s at line: %d, col: %d";
+        const char * format =  "%s at line: %u, col: %u";
         int err_msg_size = snprintf(NULL, 0, format, msg, reader->line_no_, reader->col_no_);
         reader->error_message_ = (char *)realloc(reader->error_message_, sizeof(char) * (err_msg_size + 1));
         sprintf(reader->error_message_, format, msg, reader->line_no_, reader->col_no_);
@@ -538,7 +538,7 @@ CSV_status CSV_reader_read_record_ptr(CSV_reader * reader, char *** fields, size
     if(!*fields)
     {
         fields_alloc = CSV_RECORD_ALLOC;
-        *fields = (char **)malloc(sizeof(char **) * fields_alloc);
+        *fields = (char **)malloc(sizeof(char *) * fields_alloc);
     }
 
     bool too_many_fields = false;
@@ -568,7 +568,7 @@ CSV_status CSV_reader_read_record_ptr(CSV_reader * reader, char *** fields, size
             if(fields_size == fields_alloc)
             {
                 fields_alloc *= 2;
-                *fields = (char **)realloc(*fields, sizeof(char **) * fields_alloc);
+                *fields = (char **)realloc(*fields, sizeof(char *) * fields_alloc);
             }
 
             (*fields)[fields_size++] = field;
@@ -618,7 +618,7 @@ CSV_status CSV_reader_read_record_v(CSV_reader * reader, ...)
 
         *arg = CSV_reader_read_field(reader);
 
-        if(!arg)
+        if(!(*arg))
             goto end;
     }
 
@@ -781,7 +781,7 @@ CSV_status CSV_writer_write_field(CSV_writer * writer, const char * field)
     if(!writer)
         return CSV_INTERNAL_ERROR;
 
-    CSV_status status = CSV_OK;
+    CSV_status status;
     if(!writer->start_of_row_)
     {
         if((status = CSV_writer_putc(writer, writer->delimiter_)) != CSV_OK)

@@ -716,7 +716,6 @@ bool python_too_lenient(const std::string & csv, const char delimiter, const cha
             if(i == std::end(csv))
                 return false;
 
-            empty = true;
             continue;
         }
         empty = false;
@@ -1022,10 +1021,10 @@ test::Result test_read_mine_cpp_iters(const std::string & csv_text, const CSV_da
         csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote);
         CSV_data data;
 
-        for(auto & r: r)
+        for(auto & row: r)
         {
             data.emplace_back();
-            std::copy(r.begin(), r.end(), std::back_inserter(data.back()));
+            std::copy(row.begin(), row.end(), std::back_inserter(data.back()));
         }
 
         return common_read_return(csv_text, expected_data, data);
@@ -1044,10 +1043,10 @@ test::Result test_read_mine_cpp_range(const std::string & csv_text, const CSV_da
         csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote);
         CSV_data data;
 
-        for(auto & r: r)
+        for(auto & row: r)
         {
             data.emplace_back();
-            for(auto & field: r)
+            for(auto & field: row)
                 data.back().push_back(field);
         }
 
@@ -1171,6 +1170,7 @@ test::Result test_read_mine_cpp_map(const std::string & csv_text, const CSV_data
                         {
                             std::cout<<"row mismatch:\n";
                             std::vector<std::string> row_v;
+
                             for(auto & h: headers)
                                 row_v.emplace_back(std::move(r.at(h)));
 
@@ -1268,6 +1268,7 @@ test::Result test_read_mine_cpp_map_as_int(const std::string & csv_text, const C
                         {
                             std::cout<<"row mismatch:\n";
                             std::vector<std::string> row_v;
+
                             for(auto & h: headers)
                                 row_v.emplace_back(std::to_string(r.at(h)));
 
@@ -1564,7 +1565,7 @@ test::Result test_read_mine_cpp_row_tuple(const std::string & csv_text, const CS
 #endif
 
 #ifdef CSV_ENABLE_C_CSV
-test::Result test_write_mine_c_field(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_c_field(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     CSV_writer * w = CSV_writer_init_to_str();
     if(!w)
@@ -1595,7 +1596,7 @@ test::Result test_write_mine_c_field(const std::string & expected_text, const CS
     return common_write_return(data, expected_text, output);
 }
 
-test::Result test_write_mine_c_record(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_c_record(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     CSV_writer * w = CSV_writer_init_to_str();
     if(!w)
@@ -1633,7 +1634,7 @@ test::Result test_write_mine_c_record(const std::string & expected_text, const C
     return common_write_return(data, expected_text, output);
 }
 
-test::Result test_write_mine_c_ptr(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_c_ptr(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     CSV_writer * w = CSV_writer_init_to_str();
     if(!w)
@@ -1660,7 +1661,7 @@ test::Result test_write_mine_c_ptr(const std::string & expected_text, const CSV_
     return common_write_return(data, expected_text, output);
 }
 
-test::Result test_write_mine_c_variadic(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_c_variadic(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     CSV_writer * w = CSV_writer_init_to_str();
     if(!w)
@@ -1709,7 +1710,7 @@ test::Result test_write_mine_c_variadic(const std::string & expected_text, const
     return common_write_return(data, expected_text, output);
 }
 
-test::Result test_write_mine_c_wrapper(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_c_wrapper(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     CSV_writer_wrapper w;
     w.set_delimiter(delimiter);
@@ -1749,7 +1750,7 @@ def test_write_python_map(expected_text, data, delimiter, quote):
 #endif
 
 #ifdef CSV_ENABLE_LIBCSV
-test::Result test_write_libcsv(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_libcsv(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     if(delimiter != ',' || quote != '"')
         return test::skip();
@@ -1795,7 +1796,7 @@ test::Result test_write_libcsv(const std::string & expected_text, const CSV_data
 #endif
 
 #ifdef CSV_ENABLE_CPP_CSV
-test::Result test_write_mine_cpp_stream(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_cpp_stream(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -1810,7 +1811,7 @@ test::Result test_write_mine_cpp_stream(const std::string & expected_text, const
     return common_write_return(data, expected_text, str.str());
 }
 
-test::Result test_write_mine_cpp_row(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_cpp_row(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -1823,7 +1824,7 @@ test::Result test_write_mine_cpp_row(const std::string & expected_text, const CS
     return common_write_return(data, expected_text, str.str());
 }
 
-test::Result test_write_mine_cpp_iter(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_cpp_iter(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -1837,7 +1838,7 @@ test::Result test_write_mine_cpp_iter(const std::string & expected_text, const C
     return common_write_return(data, expected_text, str.str());
 }
 
-test::Result test_write_mine_cpp_map(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_cpp_map(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     if(!std::empty(data))
@@ -1859,7 +1860,7 @@ test::Result test_write_mine_cpp_map(const std::string & expected_text, const CS
     return common_write_return(data, expected_text, str.str());
 }
 
-test::Result test_write_mine_cpp_variadic(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_cpp_variadic(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -1893,7 +1894,7 @@ test::Result test_write_mine_cpp_variadic(const std::string & expected_text, con
     }
     return common_write_return(data, expected_text, str.str());
 }
-test::Result test_write_mine_cpp_tuple(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+test::Result test_write_mine_cpp_tuple(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -2056,12 +2057,12 @@ int main(int, char *[])
         }
     };
 
-    auto test_write_python = [&test_write_python_fun, convert_result](const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+    auto test_write_python = [&test_write_python_fun, convert_result](const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
     {
         return convert_result(test_write_python_fun(expected_text, data, delimiter, quote));
     };
 
-    auto test_write_python_map = [&test_write_python_map_fun, convert_result](const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
+    auto test_write_python_map = [&test_write_python_map_fun, convert_result](const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
     {
         return convert_result(test_write_python_map_fun(expected_text, data, delimiter, quote));
     };

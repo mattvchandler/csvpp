@@ -46,13 +46,13 @@ namespace csv
     class Out_of_range_error: public std::out_of_range
     {
     public:
-        Out_of_range_error(const char * msg): std::out_of_range(msg) {}
+        explicit Out_of_range_error(const char * msg): std::out_of_range(msg) {}
     };
 
     class Type_conversion_error: public std::runtime_error
     {
     public:
-        Type_conversion_error(const std::string & field):
+        explicit Type_conversion_error(const std::string & field):
             std::runtime_error("Could not convert '" + field + "' to requested type")
         {}
     };
@@ -176,7 +176,7 @@ namespace csv
                 }
             private:
                 friend Row;
-                Range(Row & row):row(row) {}
+                explicit Range(Row & row):row(row) {}
                 Row & row;
             };
 

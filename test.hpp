@@ -50,7 +50,7 @@ namespace test
         enum class Result_type {fail, pass, error, skip};
 
         explicit Result(Result_type t, FailureFun f): type{t}, failure_fun{f} {}
-        Result(Result_type t): type{t} {}
+        explicit Result(Result_type t): type{t} {}
 
         Result_type type {Result_type::skip};
         FailureFun failure_fun {[](){}};
@@ -122,9 +122,9 @@ namespace test
                     result.failed();
             }
 
-            auto passed = count == total;
+            auto did_pass = count == total;
 
-            if(passed)
+            if(did_pass)
                 std::cout<<"PASSED ";
             else
                 std::cout<<"***FAILED*** ";
@@ -137,7 +137,7 @@ namespace test
                 std::cout<<" - "<<test_cases.size() - total<<" tests skipped";
             std::cout<<")\n";
 
-            return passed;
+            return did_pass;
         }
 
         std::vector<std::function<Result(Args...)>> test_cases;

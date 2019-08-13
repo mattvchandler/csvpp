@@ -13,7 +13,7 @@
 class CSV_wrapper_parse_error: public std::runtime_error
 {
 public:
-    CSV_wrapper_parse_error(const std::string & what): std::runtime_error{what} {}
+    explicit CSV_wrapper_parse_error(const std::string & what): std::runtime_error{what} {}
 };
 class CSV_reader_wrapper
 {
