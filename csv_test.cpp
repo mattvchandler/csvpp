@@ -133,7 +133,7 @@ test::Result common_write_return(const CSV_data & data, const std::string & expe
 }
 
 #ifdef CSV_ENABLE_EMBCSV
-test::Result test_read_embedded(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_embedded(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     #ifdef EMBCSV_NO_MALLOC
     for(auto & row: expected_data)
@@ -149,10 +149,10 @@ test::Result test_read_embedded(const std::string & csv_text, const CSV_data & e
     CSV_data data;
 
     #ifndef EMBCSV_NO_MALLOC
-    EMBCSV_reader * r = EMBCSV_reader_init_full(delimiter, quote);
+    EMBCSV_reader * r = EMBCSV_reader_init_full(delimiter, quote, lenient);
     #else
     EMBCSV_reader r_obj;
-    EMBCSV_reader_init_full(&r_obj, delimiter, quote);
+    EMBCSV_reader_init_full(&r_obj, delimiter, quote, lenient);
     auto r = &r_obj;
     #endif
 
@@ -197,7 +197,7 @@ test::Result test_read_embedded(const std::string & csv_text, const CSV_data & e
 #endif
 
 #ifdef CSV_ENABLE_C_CSV
-test::Result test_read_mine_c_field(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_c_field(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
@@ -205,6 +205,7 @@ test::Result test_read_mine_c_field(const std::string & csv_text, const CSV_data
 
     CSV_reader_set_delimiter(r, delimiter);
     CSV_reader_set_quote(r, quote);
+    CSV_reader_set_lenient(r, lenient);
 
     CSV_data data;
 
@@ -247,7 +248,7 @@ test::Result test_read_mine_c_field(const std::string & csv_text, const CSV_data
     return common_read_return(csv_text, expected_data, data);
 }
 
-test::Result test_read_mine_c_record(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_c_record(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
@@ -255,6 +256,7 @@ test::Result test_read_mine_c_record(const std::string & csv_text, const CSV_dat
 
     CSV_reader_set_delimiter(r, delimiter);
     CSV_reader_set_quote(r, quote);
+    CSV_reader_set_lenient(r, lenient);
 
     CSV_data data;
 
@@ -296,7 +298,7 @@ test::Result test_read_mine_c_record(const std::string & csv_text, const CSV_dat
     return common_read_return(csv_text, expected_data, data);
 }
 
-test::Result test_read_mine_c_ptr(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_c_ptr(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
@@ -304,6 +306,7 @@ test::Result test_read_mine_c_ptr(const std::string & csv_text, const CSV_data &
 
     CSV_reader_set_delimiter(r, delimiter);
     CSV_reader_set_quote(r, quote);
+    CSV_reader_set_lenient(r, lenient);
 
     CSV_data data;
 
@@ -359,7 +362,7 @@ test::Result test_read_mine_c_ptr(const std::string & csv_text, const CSV_data &
     return common_read_return(csv_text, expected_data, data);
 }
 
-test::Result test_read_mine_c_ptr_dyn(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_c_ptr_dyn(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
@@ -367,6 +370,7 @@ test::Result test_read_mine_c_ptr_dyn(const std::string & csv_text, const CSV_da
 
     CSV_reader_set_delimiter(r, delimiter);
     CSV_reader_set_quote(r, quote);
+    CSV_reader_set_lenient(r, lenient);
 
     CSV_data data;
 
@@ -411,7 +415,7 @@ test::Result test_read_mine_c_ptr_dyn(const std::string & csv_text, const CSV_da
     return common_read_return(csv_text, expected_data, data);
 }
 
-test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
@@ -419,6 +423,7 @@ test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_d
 
     CSV_reader_set_delimiter(r, delimiter);
     CSV_reader_set_quote(r, quote);
+    CSV_reader_set_lenient(r, lenient);
 
     CSV_data parsed_data;
 
@@ -464,6 +469,7 @@ test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_d
 
     CSV_reader_set_delimiter(r, delimiter);
     CSV_reader_set_quote(r, quote);
+    CSV_reader_set_lenient(r, lenient);
 
     CSV_data data;
 
@@ -530,11 +536,12 @@ test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_d
     return common_read_return(csv_text, expected_data, data);
 }
 
-test::Result test_read_mine_c_wrapper(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_c_wrapper(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     CSV_reader_wrapper csv_r{CSV_reader_wrapper::input_string, csv_text};
     csv_r.set_delimiter(delimiter);
     csv_r.set_quote(quote);
+    csv_r.set_lenient(lenient);
     CSV_data data;
 
     decltype(csv_r.read_record()) record;
@@ -556,9 +563,9 @@ test::Result test_read_mine_c_wrapper(const std::string & csv_text, const CSV_da
 #endif
 
 #ifdef CSV_ENABLE_TINYCSV
-test::Result test_read_tinycsv(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_tinycsv(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
-    if(delimiter != ',' || quote != '"')
+    if(delimiter != ',' || quote != '"' || lenient)
         return test::skip();
 
     // tinycsv can't distinguish between empty data and 1 empty field
@@ -612,9 +619,9 @@ test::Result test_read_tinycsv(const std::string & csv_text, const CSV_data & ex
     return common_read_return(csv_text, expected_data, data);
 }
 
-test::Result test_read_tinycsv_expanded(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_tinycsv_expanded(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
-    if(delimiter != ',' || quote != '"')
+    if(delimiter != ',' || quote != '"' || lenient)
         return test::skip();
 
     // tinycsv can't distinguish between empty data and 1 empty field
@@ -671,6 +678,7 @@ test::Result test_read_tinycsv_expanded(const std::string & csv_text, const CSV_
 #endif
 
 #ifdef CSV_ENABLE_PYTHON
+// TODO: python's parser follows different rules in some corner cases. How do we detect and skip only those?
 // python allows fields w/ unescaped quotes. use this to pre-parse and filter those inputs out (this is essentially a stripped down csv::Reader::parse)
 bool python_too_lenient(const std::string & csv, const char delimiter, const char quote)
 {
@@ -688,16 +696,13 @@ bool python_too_lenient(const std::string & csv, const char delimiter, const cha
                 else if(*i != quote)
                     return false;
             }
-            else
+            else if(empty)
             {
-                if(empty)
-                {
-                    quoted = true;
-                    continue;
-                }
-                else
-                    return true;
+                quoted = true;
+                continue;
             }
+            else
+                return true;
         }
         if(i == std::end(csv) && quoted)
         {
@@ -732,7 +737,6 @@ def test_read_python(csv_text, expected_data, delimiter, quote):
         return Result.PASS if data == expected_data else Result.FAIL
     except csv.Error as e:
         raise Parse_error(r.line_num, e)
-
 
 def test_read_python_map(csv_text, expected_data, delimiter, quote):
     infile = io.StringIO(csv_text, newline='')
@@ -792,7 +796,7 @@ void libcsv_read_cb2(int, void * data)
     stat->start_of_row = true;
 }
 
-test::Result test_read_libcsv(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_libcsv(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     for(auto & row: expected_data)
     {
@@ -803,8 +807,10 @@ test::Result test_read_libcsv(const std::string & csv_text, const CSV_data & exp
         }
     }
 
+    auto lenient_flags = lenient ? 0 : CSV_STRICT | CSV_STRICT_FINI;
+
     csv_parser parse;
-    if(csv_init(&parse, CSV_APPEND_NULL | CSV_STRICT | CSV_STRICT_FINI) != 0)
+    if(csv_init(&parse, CSV_APPEND_NULL | lenient_flags) != 0)
         throw std::runtime_error("Could not init libcsv");
 
     csv_set_delim(&parse, delimiter);
@@ -839,11 +845,11 @@ test::Result test_read_libcsv(const std::string & csv_text, const CSV_data & exp
 #endif
 
 #ifdef CSV_ENABLE_CPP_CSV
-test::Result test_read_mine_cpp_read_all(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_read_all(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
-        return common_read_return(csv_text, expected_data, csv::Reader(csv::Reader::input_string, csv_text, delimiter, quote).read_all());
+        return common_read_return(csv_text, expected_data, csv::Reader(csv::Reader::input_string, csv_text, delimiter, quote, lenient).read_all());
     }
     catch(const csv::Parse_error & e)
     {
@@ -852,11 +858,11 @@ test::Result test_read_mine_cpp_read_all(const std::string & csv_text, const CSV
     }
 }
 
-test::Result test_read_mine_cpp_read_row_vec(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_read_row_vec(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
-        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote);
+        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote, lenient);
 
         CSV_data data;
         while(true)
@@ -876,7 +882,7 @@ test::Result test_read_mine_cpp_read_row_vec(const std::string & csv_text, const
     }
 }
 
-test::Result test_read_mine_cpp_read_all_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_read_all_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     std::vector<std::vector<int>> expected_ints;
     for(auto & row: expected_data)
@@ -907,7 +913,7 @@ test::Result test_read_mine_cpp_read_all_as_int(const std::string & csv_text, co
     }
     try
     {
-        auto data = csv::Reader(csv::Reader::input_string, csv_text, delimiter, quote).read_all<int>();
+        auto data = csv::Reader(csv::Reader::input_string, csv_text, delimiter, quote, lenient).read_all<int>();
 
         auto failure_fun = [csv_text, data, expected_data]()
         {
@@ -933,11 +939,11 @@ test::Result test_read_mine_cpp_read_all_as_int(const std::string & csv_text, co
     }
 }
 
-test::Result test_read_mine_cpp_read_row(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_read_row(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
-        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote);
+        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote, lenient);
 
         CSV_data data;
 
@@ -959,11 +965,11 @@ test::Result test_read_mine_cpp_read_row(const std::string & csv_text, const CSV
     }
 }
 
-test::Result test_read_mine_cpp_stream(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_stream(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
-        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote);
+        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote, lenient);
 
         CSV_data data;
         std::string field;
@@ -987,11 +993,11 @@ test::Result test_read_mine_cpp_stream(const std::string & csv_text, const CSV_d
     }
 }
 
-test::Result test_read_mine_cpp_fields(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_fields(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
-        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote);
+        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote, lenient);
 
         CSV_data data;
         std::string field;
@@ -1014,11 +1020,11 @@ test::Result test_read_mine_cpp_fields(const std::string & csv_text, const CSV_d
     }
 }
 
-test::Result test_read_mine_cpp_iters(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_iters(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
-        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote);
+        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote, lenient);
         CSV_data data;
 
         for(auto & row: r)
@@ -1036,11 +1042,11 @@ test::Result test_read_mine_cpp_iters(const std::string & csv_text, const CSV_da
     }
 }
 
-test::Result test_read_mine_cpp_range(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_range(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
-        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote);
+        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote, lenient);
         CSV_data data;
 
         for(auto & row: r)
@@ -1059,11 +1065,11 @@ test::Result test_read_mine_cpp_range(const std::string & csv_text, const CSV_da
     }
 }
 
-test::Result test_read_mine_cpp_row_fields(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_row_fields(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
-        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote);
+        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote, lenient);
 
         CSV_data data;
         while(r)
@@ -1089,11 +1095,11 @@ test::Result test_read_mine_cpp_row_fields(const std::string & csv_text, const C
     }
 }
 
-test::Result test_read_mine_cpp_row_stream(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_row_stream(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
-        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote);
+        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote, lenient);
 
         CSV_data data;
         while(r)
@@ -1119,11 +1125,11 @@ test::Result test_read_mine_cpp_row_stream(const std::string & csv_text, const C
     }
 }
 
-test::Result test_read_mine_cpp_row_vec(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_row_vec(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
-        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote);
+        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote, lenient);
         CSV_data data;
         for(auto & row: r)
             data.emplace_back(row.read_vec());
@@ -1137,11 +1143,11 @@ test::Result test_read_mine_cpp_row_vec(const std::string & csv_text, const CSV_
     }
 }
 
-test::Result test_read_mine_cpp_map(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_map(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
-        csv::Map_reader_iter r(csv::Reader::input_string, csv_text, std::string{"<DEFAULT VALUE>"}, {}, delimiter, quote);
+        csv::Map_reader_iter r{csv::Reader::input_string, csv_text, std::string{"<DEFAULT VALUE>"}, {}, delimiter, quote, lenient};
 
         auto & headers = expected_data.at(0);
         if(r.get_headers() != headers)
@@ -1204,7 +1210,7 @@ test::Result test_read_mine_cpp_map(const std::string & csv_text, const CSV_data
     }
 }
 
-test::Result test_read_mine_cpp_map_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_map_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     std::vector<std::vector<int>> expected_ints;
     for(auto & row: expected_data)
@@ -1236,7 +1242,7 @@ test::Result test_read_mine_cpp_map_as_int(const std::string & csv_text, const C
 
     try
     {
-        csv::Map_reader_iter<int, int> r(csv::Reader::input_string, csv_text, {}, {}, delimiter, quote);
+        csv::Map_reader_iter<int, int> r(csv::Reader::input_string, csv_text, {}, {}, delimiter, quote, lenient);
 
         auto headers = expected_ints.at(0);
         if(r.get_headers() != headers)
@@ -1302,12 +1308,12 @@ test::Result test_read_mine_cpp_map_as_int(const std::string & csv_text, const C
     }
 }
 
-test::Result test_read_mine_cpp_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
-        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote);
-        auto parsed_data = csv::Reader{csv::Reader::input_string, csv_text, delimiter, quote}.read_all(); // this will catch any parse errors, but it gives us how many columns in each row, which we need to run this test.
+        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote, lenient);
+        auto parsed_data = csv::Reader{csv::Reader::input_string, csv_text, delimiter, quote, lenient}.read_all(); // this will catch any parse errors, but it gives us how many columns in each row, which we need to run this test.
 
         CSV_data data;
         for(auto & expected_row: parsed_data)
@@ -1358,12 +1364,12 @@ test::Result test_read_mine_cpp_variadic(const std::string & csv_text, const CSV
     }
 }
 
-test::Result test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
-        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote);
-        auto parsed_data = csv::Reader{csv::Reader::input_string, csv_text, delimiter, quote}.read_all(); // this will catch any parse errors, but it gives us how many columns in each row, which we need to run this test.
+        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote, lenient);
+        auto parsed_data = csv::Reader{csv::Reader::input_string, csv_text, delimiter, quote, lenient}.read_all(); // this will catch any parse errors, but it gives us how many columns in each row, which we need to run this test.
 
         CSV_data data;
         for(auto & expected_row: parsed_data)
@@ -1433,12 +1439,12 @@ test::Result test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_da
     }
 }
 
-test::Result test_read_mine_cpp_row_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_row_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
-        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote);
-        auto parsed_data = csv::Reader{csv::Reader::input_string, csv_text, delimiter, quote}.read_all(); // this will catch any parse errors, but it gives us how many columns in each row, which we need to run this test.
+        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote, lenient);
+        auto parsed_data = csv::Reader{csv::Reader::input_string, csv_text, delimiter, quote, lenient}.read_all(); // this will catch any parse errors, but it gives us how many columns in each row, which we need to run this test.
 
         CSV_data data;
         for(auto & expected_row: parsed_data)
@@ -1489,12 +1495,12 @@ test::Result test_read_mine_cpp_row_variadic(const std::string & csv_text, const
     }
 }
 
-test::Result test_read_mine_cpp_row_tuple(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+test::Result test_read_mine_cpp_row_tuple(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
-        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote);
-        auto parsed_data = csv::Reader{csv::Reader::input_string, csv_text, delimiter, quote}.read_all(); // this will catch any parse errors, but it gives us how many columns in each row, which we need to run this test.
+        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote, lenient);
+        auto parsed_data = csv::Reader{csv::Reader::input_string, csv_text, delimiter, quote, lenient}.read_all(); // this will catch any parse errors, but it gives us how many columns in each row, which we need to run this test.
 
         CSV_data data;
 
@@ -1932,9 +1938,9 @@ test::Result test_write_mine_cpp_tuple(const std::string & expected_text, const 
 
 // helper to run a test for each combination of delimiter and quote char
 template<typename Test>
-void test_quotes(Test test, const std::string & title, const std::string & csv_text, const CSV_data& data)
+void test_quotes(Test test, const std::string & title, const std::string & csv_text, const CSV_data& data, const bool lenient = false)
 {
-    test(title, csv_text, data, ',', '"');
+    test(title, csv_text, data, ',', '"', lenient);
 
     std::string modified_csv_text = std::regex_replace(csv_text, std::regex(","), "|");
     CSV_data modified_data = data;
@@ -1942,7 +1948,7 @@ void test_quotes(Test test, const std::string & title, const std::string & csv_t
         for(auto & col: row)
             col = std::regex_replace(col, std::regex{","}, "|");
 
-    test(title + " w/ pipe delimiter", modified_csv_text, modified_data, '|', '"');
+    test(title + " w/ pipe delimiter", modified_csv_text, modified_data, '|', '"', lenient);
 
     modified_csv_text = std::regex_replace(csv_text, std::regex("\""), "'");
     modified_data = data;
@@ -1950,7 +1956,7 @@ void test_quotes(Test test, const std::string & title, const std::string & csv_t
         for(auto & col: row)
             col = std::regex_replace(col, std::regex{"\""}, "'");
 
-    test(title + " w/ single quote", modified_csv_text, modified_data, ',', '\'');
+    test(title + " w/ single quote", modified_csv_text, modified_data, ',', '\'', lenient);
 
     modified_csv_text = std::regex_replace(csv_text, std::regex(","), "|");
     modified_csv_text = std::regex_replace(modified_csv_text, std::regex("\""), "'");
@@ -1962,10 +1968,9 @@ void test_quotes(Test test, const std::string & title, const std::string & csv_t
             col = std::regex_replace(col, std::regex{"\""}, "'");
         }
 
-    test(title + " w/ pipe delimiter & single quote", modified_csv_text, modified_data, '|', '\'');
+    test(title + " w/ pipe delimiter & single quote", modified_csv_text, modified_data, '|', '\'', lenient);
 }
 
-// TODO: lenient parsing
 int main(int, char *[])
 {
     #ifdef CSV_ENABLE_PYTHON
@@ -2013,10 +2018,10 @@ int main(int, char *[])
     auto test_write_python_map_fun = pybind11::globals()["test_write_python_map"];
 
     // bind python funs, and handle exceptions
-    auto test_read_python = [&test_read_python_fun, convert_result, handle_parse_error](const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+    auto test_read_python = [&test_read_python_fun, convert_result, handle_parse_error](const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
     {
-        // pre-parse and skip inputs that python is too lenient on
-        if(python_too_lenient(csv_text, delimiter, quote))
+        // Python's parser is very lenient even when Strict is enabled, and handles some quoting errors very strangely when not Strict. Rather than dealing with that, just skip them
+        if(lenient || python_too_lenient(csv_text, delimiter, quote))
             return test::skip();
 
         try
@@ -2035,10 +2040,9 @@ int main(int, char *[])
         }
     };
 
-    auto test_read_python_map = [&test_read_python_map_fun, convert_result, handle_parse_error](const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
+    auto test_read_python_map = [&test_read_python_map_fun, convert_result, handle_parse_error](const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
     {
-        // pre-parse and skip inputs that python is too lenient on
-        if(python_too_lenient(csv_text, delimiter, quote))
+        if(lenient || python_too_lenient(csv_text, delimiter, quote))
             return test::skip();
 
         try
@@ -2068,7 +2072,7 @@ int main(int, char *[])
     };
     #endif
 
-    test::Test<const std::string&, const CSV_data&, const char, const char> test_read{
+    test::Test<const std::string&, const CSV_data&, const char, const char, const bool> test_read{
         #ifdef CSV_ENABLE_EMBCSV
         test_read_embedded,
         #endif
@@ -2139,9 +2143,9 @@ int main(int, char *[])
 
     // create a bound function obj for test_read & test_write's pass & fail methods
     using namespace std::placeholders;
-    auto test_read_pass = std::bind(&decltype(test_read)::test_pass, &test_read, _1, _2, _3, _4, _5);
-    auto test_read_fail = std::bind(&decltype(test_read)::test_fail, &test_read, _1, _2, _3, _4, _5);
-    auto test_read_error = std::bind(&decltype(test_read)::test_error, &test_read, _1, _2, _3, _4, _5);
+    auto test_read_pass  = std::bind(&decltype(test_read)::test_pass,  &test_read,  _1, _2, _3, _4, _5, _6);
+    auto test_read_fail  = std::bind(&decltype(test_read)::test_fail,  &test_read,  _1, _2, _3, _4, _5, _6);
+    auto test_read_error = std::bind(&decltype(test_read)::test_error, &test_read,  _1, _2, _3, _4, _5, _6);
     auto test_write_pass = std::bind(&decltype(test_write)::test_pass, &test_write, _1, _2, _3, _4, _5);
 
     std::cout<<"Reader Tests:\n";
@@ -2186,17 +2190,32 @@ int main(int, char *[])
     test_quotes(test_read_error, "Read test: unterminated quote",
             "\"1\r\n", {{"<parse error>"}});
 
+    test_quotes(test_read_pass, "Read test: unterminated quote (lenient)",
+            "\"1\r\n", {{"1\r\n"}}, true);
+
     test_quotes(test_read_error, "Read test: unescaped quote",
             "12\"3\r\n", {{"<parse error>"}});
+
+    test_quotes(test_read_pass, "Read test: unescaped quote (lenient)",
+            "12\"3\r\n", {{"12\"3"}}, true);
 
     test_quotes(test_read_error, "Read test: unescaped quote at start of field",
             "\"123,234\r\n", {{"<parse error>"}});
 
+    test_quotes(test_read_pass, "Read test: unescaped quote at start of field (lenient)",
+            "\"123,234\r\n", {{"123,234\r\n"}}, true);
+
     test_quotes(test_read_error, "Read test: unescaped quote at end of field",
             "123,234\"\r\n", {{"<parse error>"}});
 
+    test_quotes(test_read_pass, "Read test: unescaped quote at end of field (lenient)",
+            "123,234\"\r\n", {{"123", "234\""}}, true);
+
     test_quotes(test_read_error, "Read test: unescaped quote inside quoted field",
             "\"12\"3\"\r\n", {{"<parse error>"}});
+
+    test_quotes(test_read_pass, "Read test: unescaped quote inside quoted field (lenient)",
+            "\"12\"3\"\r\n", {{"12\"3"}}, true);
 
     test_quotes(test_read_pass, "Read test: empty quoted fields",
             "\"\",\"\",\"\",\"\"\r\n", {{"", "", "", ""}});
@@ -2234,8 +2253,8 @@ int main(int, char *[])
     test_quotes(test_read_pass, "Read test: mixed empty lines in middle",
             "1,2,3\r\n\n\r\n\r\r\n\r\n\r4,5,6\r\n", {{"1", "2", "3"}, {"4", "5", "6"}});
 
-    test_quotes(test_read_error, "Read test: mixed empty lines in middle, then parse error",
-            "1,2,3\r\n\n\r\n\r\r\n\r\n\r4,5,\"6\r\n", {{"1", "2", "3"}, {"4", "5", "6"}});
+    test_quotes(test_read_pass, "Read test: mixed empty lines in middle, then parse error (lenient)",
+            "1,2,3\r\n\n\r\n\r\r\n\r\n\r4,5,\"6\r\n", {{"1", "2", "3"}, {"4", "5", "6\r\n"}}, true);
 
     test_quotes(test_read_fail, "Read test: Too many cols",
             "1,2,3,4,5\r\n", {{"1", "2", "3", "4"}});

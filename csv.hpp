@@ -317,18 +317,22 @@ namespace csv
         };
 
         explicit Reader(std::istream & input_stream,
-                const char delimiter = ',', const char quote = '"'):
-            input_stream_(&input_stream),
-            delimiter_(delimiter),
-            quote_(quote)
+                const char delimiter = ',', const char quote = '"',
+                const bool lenient = false):
+            input_stream_{&input_stream},
+            delimiter_{delimiter},
+            quote_{quote},
+            lenient_{lenient}
         {}
 
         explicit Reader(const std::string & filename,
-                const char delimiter = ',', const char quote = '"'):
-            internal_input_stream_(std::make_unique<std::ifstream>(filename)),
-            input_stream_(internal_input_stream_.get()),
-            delimiter_(delimiter),
-            quote_(quote)
+                const char delimiter = ',', const char quote = '"',
+                const bool lenient = false):
+            internal_input_stream_{std::make_unique<std::ifstream>(filename)},
+            input_stream_{internal_input_stream_.get()},
+            delimiter_{delimiter},
+            quote_{quote},
+            lenient_{lenient}
         {
             if(!(*internal_input_stream_))
                 throw std::ios_base::failure{"Could not open file: " + filename};
@@ -339,11 +343,13 @@ namespace csv
         static inline constexpr input_string_t input_string{};
 
         Reader(input_string_t, const std::string & input_data,
-                const char delimiter = ',', const char quote = '"'):
-            internal_input_stream_(std::make_unique<std::istringstream>(input_data)),
-            input_stream_(internal_input_stream_.get()),
-            delimiter_(delimiter),
-            quote_(quote)
+                const char delimiter = ',', const char quote = '"',
+                const bool lenient = false):
+            internal_input_stream_{std::make_unique<std::istringstream>(input_data)},
+            input_stream_{internal_input_stream_.get()},
+            delimiter_{delimiter},
+            quote_{quote},
+            lenient_{lenient}
         {}
 
         ~Reader() = default;
@@ -355,6 +361,10 @@ namespace csv
 
         bool end_of_row() const { return end_of_row_ || eof(); }
         bool eof() const { return state_ == State::eof; }
+
+        void set_delimiter(const char delimiter) { delimiter_ = delimiter; }
+        void set_quote(const char quote) { quote_ = quote; }
+        void set_lenient(const bool lenient) { lenient_ = lenient; }
 
         operator bool() { return !eof(); }
 
@@ -515,7 +525,6 @@ namespace csv
             (read_row_variadic_helper(std::get<Is>(t)), ...);
         }
 
-        // TODO: lenient parsing
         int getc()
         {
             int c = input_stream_->get();
@@ -591,20 +600,16 @@ namespace csv
                             c_done = true;
                             break;
                         }
-                        else
+                        else if(lenient_)
                         {
-                            // TODO lenient
-                            // if(lenient_)
-                            // {
-                            //     field += quote_;
-                            //     field += c;
-                            //     c_done = true;
-                            //     state_ = State::read;
-                            //     break;
-                            // }
-                            // else
-                                throw Parse_error("Unescaped quote", line_no_, col_no_ - 1);
+                            field += quote_;
+                            field += c;
+                            state_ = State::read;
+                            c_done = true;
+                            break;
                         }
+                        else
+                            throw Parse_error("Unescaped quote", line_no_, col_no_ - 1);
 
                     case State::read:
                         // we need special handling for quotes
@@ -624,7 +629,7 @@ namespace csv
                                     c_done = true;
                                     break;
                                 }
-                                else // if(!lenient_)
+                                else if(!lenient_)
                                 {
                                     // quotes are not allowed inside of an unquoted field
                                     throw Parse_error("quote found in unquoted field", line_no_, col_no_);
@@ -632,9 +637,16 @@ namespace csv
                             }
                         }
 
-                        if(c == std::istream::traits_type::eof() && quoted/* && !lenient_ */)
+                        if(quoted && c == std::istream::traits_type::eof())
                         {
-                            throw Parse_error("Unterminated quoted field - reached end-of-file", line_no_, col_no_);
+                            if(lenient_)
+                            {
+                                end_of_row_ = field_done = c_done = true;
+                                state_ = State::consume_newlines;
+                                break;
+                            }
+                            else
+                                throw Parse_error("Unterminated quoted field - reached end-of-file", line_no_, col_no_);
                         }
                         else if(!quoted && c == delimiter_)
                         {
@@ -652,8 +664,7 @@ namespace csv
                         c_done = true;
                         break;
 
-                    case State::eof:
-                    case State::consume_newlines:
+                    default:
                         throw std::runtime_error{"Illegal state"};
                     }
                 }
@@ -666,16 +677,16 @@ namespace csv
 
         char delimiter_ {','};
         char quote_ {'"'};
-        std::optional<std::string> line_terminator_ {};
+        bool lenient_ { false };
 
         std::optional<std::string> conversion_retry_;
-        bool end_of_row_ = false;
+        bool end_of_row_ { false };
 
         enum class State {read, quote, consume_newlines, eof};
-        State state_ = State::consume_newlines;
+        State state_ { State::consume_newlines };
 
-        int line_no_ = 1;
-        int col_no_ = 0;
+        unsigned int line_no_ { 1 };
+        unsigned int col_no_ { 0 };
     };
 
     inline bool operator==(const Reader::Iterator & lhs, const Reader::Iterator & rhs)
@@ -728,28 +739,31 @@ namespace csv
     public:
         Map_reader_iter() {}
         explicit Map_reader_iter(std::istream & input_stream, const Value & default_val = {}, const std::vector<Header> & headers = {},
-                const char delimiter = ',', const char quote = '"'):
-            reader_(std::make_unique<Reader>(input_stream, delimiter, quote)),
-            default_val_(default_val),
-            headers_(get_header_row(headers))
+                const char delimiter = ',', const char quote = '"',
+                const bool lenient = false):
+            reader_{std::make_unique<Reader>(input_stream, delimiter, quote, lenient)},
+            default_val_{default_val},
+            headers_{get_header_row(headers)}
         {
             ++(*this);
         }
 
         explicit Map_reader_iter(const std::string & filename, const Value & default_val = {}, const std::vector<Header> & headers = {},
-                const char delimiter = ',', const char quote = '"'):
-            reader_(std::make_unique<Reader>(filename, delimiter, quote)),
-            default_val_(default_val),
-            headers_(get_header_row(headers))
+                const char delimiter = ',', const char quote = '"',
+                const bool lenient = false):
+            reader_{std::make_unique<Reader>(filename, delimiter, quote, lenient)},
+            default_val_{default_val},
+            headers_{get_header_row(headers)}
         {
             ++(*this);
         }
 
         Map_reader_iter(Reader::input_string_t, const std::string & input_data, const Value & default_val = {}, const std::vector<Header> & headers = {},
-                const char delimiter = ',', const char quote = '"'):
-            reader_(std::make_unique<Reader>(Reader::input_string, input_data, delimiter, quote)),
-            default_val_(default_val),
-            headers_(get_header_row(headers))
+                const char delimiter = ',', const char quote = '"',
+                const bool lenient = false):
+            reader_{std::make_unique<Reader>(Reader::input_string, input_data, delimiter, quote, lenient)},
+            default_val_{default_val},
+            headers_{get_header_row(headers)}
         {
             ++(*this);
         }
@@ -874,6 +888,9 @@ namespace csv
         {
             return Iterator(*this);
         }
+
+        void set_delimiter(const char delimiter) { delimiter_ = delimiter; }
+        void set_quote(const char quote) { quote_ = quote; }
 
         template<typename Iter>
         void write_row(Iter first, Iter last)

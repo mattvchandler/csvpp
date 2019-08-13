@@ -26,6 +26,8 @@ struct EMBCSV_reader
     char delimiter;
     char quote;
 
+    bool lenient;
+
     bool quoted;
     enum {EMBCSV_STATE_READY, EMBCSV_STATE_DOUBLE_QUOTE, EMBCSV_STATE_CONSUME_NEWLINES} state;
 };
@@ -35,11 +37,11 @@ typedef enum {EMBCSV_INCOMPLETE, EMBCSV_FIELD, EMBCSV_END_OF_ROW, EMBCSV_PARSE_E
 
 #ifndef EMBCSV_NO_MALLOC
 EMBCSV_reader * EMBCSV_reader_init();
-EMBCSV_reader * EMBCSV_reader_init_full(char delimiter, char quote);
+EMBCSV_reader * EMBCSV_reader_init_full(char delimiter, char quote, bool lenient);
 void EMBCSV_reader_free(EMBCSV_reader * r);
 #else
 void EMBCSV_reader_init(EMBCSV_reader *r);
-void EMBCSV_reader_init_full(EMBCSV_reader *r, char delimiter, char quote);
+void EMBCSV_reader_init_full(EMBCSV_reader *r, char delimiter, char quote, bool lenient);
 #endif
 EMBCSV_result EMBCSV_reader_parse_char(EMBCSV_reader * r, int c, char ** field_out);
 

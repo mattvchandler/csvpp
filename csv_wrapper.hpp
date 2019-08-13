@@ -67,6 +67,8 @@ public:
     // wrappers for methods
     void set_delimiter(const char delimiter) { CSV_reader_set_delimiter(csv_r, delimiter); }
     void set_quote(const char quote) { CSV_reader_set_quote(csv_r, quote); }
+    void set_lenient(const bool lenient) { CSV_reader_set_lenient(csv_r, lenient); }
+
     bool end_of_row() const { return CSV_reader_end_of_row(csv_r); }
     bool eof() const { return CSV_reader_eof(csv_r); }
 

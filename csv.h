@@ -78,6 +78,9 @@ void CSV_reader_set_delimiter(CSV_reader * reader, const char delimiter);
 // set quote character
 void CSV_reader_set_quote(CSV_reader * reader, const char quote);
 
+// enable / disable lenient parsing
+void CSV_reader_set_lenient(CSV_reader * reader, const bool lenient);
+
 // read a single field. returns NULL on error, otherwise, return is owned by caller
 // end_of_row_out will be set true if this is the last field in a row
 char * CSV_reader_read_field(CSV_reader * reader);

@@ -49,6 +49,7 @@ struct CSV_reader
     unsigned int col_no_;
     char delimiter_;
     char quote_;
+    bool lenient_;
 
     CSV_status error_;
     char * error_message_;
@@ -222,6 +223,8 @@ CSV_reader * CSV_reader_init_common(void)
     reader->delimiter_ = ',';
     reader->quote_ = '"';
 
+    reader->lenient_ = false;
+
     reader->error_ = CSV_OK;
     reader->error_message_ = NULL;
 
@@ -297,13 +300,28 @@ void CSV_reader_set_error(CSV_reader * reader, CSV_status error, const char * ms
 // set delimiter character
 void CSV_reader_set_delimiter(CSV_reader * reader, const char delimiter)
 {
+    if(!reader)
+        return;
+
     reader->delimiter_ = delimiter;
 }
 
 // set quote character
 void CSV_reader_set_quote(CSV_reader * reader, const char quote)
 {
+    if(!reader)
+        return;
+
     reader->quote_ = quote;
+}
+
+// set lenient character
+void CSV_reader_set_lenient(CSV_reader * reader, const bool lenient)
+{
+    if(!reader)
+        return;
+
+    reader->lenient_ = lenient;
 }
 
 // read a character, check for errors, and increment line & col
@@ -419,6 +437,14 @@ char * CSV_reader_parse(CSV_reader * reader)
                     c_done = true;
                     break;
                 }
+                else if(reader->lenient_)
+                {
+                    CSV_string_append(field, reader->quote_);
+                    CSV_string_append(field, c);
+                    reader->state_ = CSV_STATE_READ;
+                    c_done =true;
+                    break;
+                }
                 else
                 {
                     CSV_reader_set_error(reader, CSV_PARSE_ERROR, "Unescaped quote", true);
@@ -442,7 +468,7 @@ char * CSV_reader_parse(CSV_reader * reader)
                             c_done = true;
                             break;
                         }
-                        else
+                        else if(!reader->lenient_)
                         {
                             CSV_reader_set_error(reader, CSV_PARSE_ERROR, "Quote found in unquoted field", true);
                             goto error;
@@ -452,8 +478,17 @@ char * CSV_reader_parse(CSV_reader * reader)
 
                 if(quoted && (c == EOF || c == '\0'))
                 {
-                    CSV_reader_set_error(reader, CSV_PARSE_ERROR, "Unterminated quoted field - reached end-of-field", true);
-                    goto error;
+                    if(reader->lenient_)
+                    {
+                        reader->end_of_row_ = field_done = c_done = true;
+                        reader->state_ = CSV_STATE_CONSUME_NEWLINES;
+                        break;
+                    }
+                    else
+                    {
+                        CSV_reader_set_error(reader, CSV_PARSE_ERROR, "Unterminated quoted field - reached end-of-field", true);
+                        goto error;
+                    }
                 }
                 else if(!quoted && c == reader->delimiter_)
                 {
