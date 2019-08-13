@@ -51,7 +51,7 @@ typedef struct CSV_record CSV_record;
 // strdup implementation, in case it's not implemented in string.h
 char * CSV_strdup(const char * src);
 
-CSV_record * CSV_record_init();
+CSV_record * CSV_record_init(void);
 void CSV_record_free(CSV_record * rec);
 
 // take ownership of field and append it to the record
@@ -63,8 +63,11 @@ const char * CSV_record_get(const CSV_record * rec, size_t i);
 // get access to char ** within CSV_record (useful for passing to other interfaces)
 const char * const * CSV_record_arr(const CSV_record * rec);
 
-// create a new CSV reader object
+// create a new CSV reader object parsing from a file
 CSV_reader * CSV_reader_init_from_filename(const char * filename);
+
+// create a new CSV reader object parsing from an in-memory string
+CSV_reader * CSV_reader_init_from_str(const char * input);
 
 // delete a CSV reader object
 void CSV_reader_free(CSV_reader * reader);
@@ -106,8 +109,11 @@ const char * CSV_reader_get_error_msg(const CSV_reader * reader);
 // get error code for last error
 CSV_status CSV_reader_get_error(const CSV_reader * reader);
 
-// create a new CSV writer object
+// create a new CSV writer object writing to a file
 CSV_writer * CSV_writer_init_from_filename(const char * filename);
+
+// create a new CSV writer object writing to a string
+CSV_writer * CSV_writer_init_to_str(void);
 
 // delete a CSV writer object and close the file
 void CSV_writer_free(CSV_writer * writer);
@@ -132,6 +138,9 @@ CSV_status CSV_writer_write_record_ptr(CSV_writer * writer, const char *const * 
 
 // write const char * arguments as a record. last argument should be NULL
 CSV_status CSV_writer_write_record_v(CSV_writer * writer, ...);
+
+// get the string output (when initialized w/ CSV_writer_init_to_str, otherwise returns NULL)
+const char * CSV_writer_get_str(CSV_writer * writer);
 
 #ifdef __cplusplus
 }

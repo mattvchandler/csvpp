@@ -23,10 +23,19 @@
 
 #include "csv.h"
 
+enum {CSV_STR_ALLOC = 32}; // initial size of dynamic string allocation
+enum {CSV_RECORD_ALLOC = 8}; // initial size of CSV_record allocation
+
 // CSV reader object
 struct CSV_reader
 {
-    FILE * file_;
+    union
+    {
+        FILE * file_;
+        const char * str_;
+    };
+    enum {CSV_SOURCE_FILE, CSV_SOURCE_STR} source_;
+
     enum {CSV_STATE_READ, CSV_STATE_QUOTE, CSV_STATE_CONSUME_NEWLINES, CSV_STATE_EOF} state_;
     bool end_of_row_;
     unsigned int line_no_;
@@ -42,7 +51,18 @@ struct CSV_reader
 // CSV writer object
 struct CSV_writer
 {
-    FILE * file_;
+    union
+    {
+        FILE * file_;
+        struct
+        {
+            char * str_;
+            size_t str_size_;
+            size_t str_alloc_;
+        };
+    };
+    enum {CSV_DEST_FILE, CSV_DEST_STR} dest_;
+
     char delimiter_;
     char quote_;
     bool start_of_row_;
@@ -63,8 +83,7 @@ char * CSV_strdup(const char * src)
     return ret;
 }
 
-enum {CSV_RECORD_ALLOC = 8};
-CSV_record * CSV_record_init()
+CSV_record * CSV_record_init(void)
 {
     CSV_record * rec = (CSV_record *)malloc(sizeof(CSV_record));
 
@@ -124,17 +143,10 @@ const char * const * CSV_record_arr(const CSV_record * rec)
     return (const char * const *)rec->fields_;
 }
 
-// create a new CSV reader object
-CSV_reader * CSV_reader_init_from_filename(const char * filename)
+// common CSV reader initialization helper
+CSV_reader * CSV_reader_init_common(void)
 {
     CSV_reader * reader = (CSV_reader *)malloc(sizeof(CSV_reader));
-    reader->file_ = fopen(filename, "rb");
-
-    if(!reader->file_)
-    {
-        free(reader);
-        return NULL;
-    }
 
     reader->state_ = CSV_STATE_CONSUME_NEWLINES;
     reader->end_of_row_ = false;
@@ -151,10 +163,43 @@ CSV_reader * CSV_reader_init_from_filename(const char * filename)
     return reader;
 }
 
+// create a new CSV reader object parsing from a file
+CSV_reader * CSV_reader_init_from_filename(const char * filename)
+{
+    FILE * file = fopen(filename, "rb");
+    if(!file)
+        return NULL;
+
+    CSV_reader * reader = CSV_reader_init_common();
+
+    reader->source_ = CSV_SOURCE_FILE;
+    reader->file_ = file;
+
+    return reader;
+}
+
+// create a new CSV reader object parsing from an in-memory string
+CSV_reader * CSV_reader_init_from_str(const char * input)
+{
+    if(!input)
+        return NULL;
+
+    CSV_reader * reader = CSV_reader_init_common();
+
+    reader->source_ = CSV_SOURCE_STR;
+    reader->str_ = input;
+
+    return reader;
+}
+
 // delete a CSV reader object
 void CSV_reader_free(CSV_reader * reader)
 {
-    fclose(reader->file_);
+    if(!reader)
+        return;
+
+    if(reader->source_ == CSV_SOURCE_FILE)
+        fclose(reader->file_);
 
     if(reader->error_message_)
         free(reader->error_message_);
@@ -202,9 +247,20 @@ int CSV_reader_getc(CSV_reader * reader)
     if(!reader)
         return '\0';
 
-    int c = fgetc(reader->file_);
+    int c = '\0';
 
-    if(c == EOF && !feof(reader->file_))
+    switch(reader->source_)
+    {
+    case CSV_SOURCE_FILE:
+        c = fgetc(reader->file_);
+        break;
+    case CSV_SOURCE_STR:
+        if(*reader->str_)
+            c = *(reader->str_++);
+        break;
+    }
+
+    if(reader->source_ == CSV_SOURCE_FILE && c == EOF  && !feof(reader->file_))
         CSV_reader_set_error(reader, CSV_IO_ERROR, "I/O Error", false);
 
     else if(c == '\n')
@@ -212,7 +268,7 @@ int CSV_reader_getc(CSV_reader * reader)
         ++reader->line_no_;
         reader->col_no_ = 0;
     }
-    else if(c != EOF)
+    else if(c != EOF && c != '\0')
         ++reader->col_no_;
 
     return c;
@@ -230,7 +286,7 @@ void CSV_reader_consume_newlines(CSV_reader * reader)
         if(reader->error_ == CSV_IO_ERROR)
             return;
 
-        if(c == EOF)
+        if(c == EOF || c == '\0')
         {
             reader->end_of_row_ = true;
             reader->state_ = CSV_STATE_EOF;
@@ -240,7 +296,15 @@ void CSV_reader_consume_newlines(CSV_reader * reader)
         else if(c != '\r' && c != '\n')
         {
             reader->state_ = CSV_STATE_READ;
-            ungetc(c, reader->file_);
+            switch(reader->source_)
+            {
+            case CSV_SOURCE_FILE:
+                ungetc(c, reader->file_);
+                break;
+            case CSV_SOURCE_STR:
+                --reader->str_;
+                break;
+            }
             --reader->col_no_;
             break;
         }
@@ -248,7 +312,6 @@ void CSV_reader_consume_newlines(CSV_reader * reader)
 }
 
 // append a character to a string, reallocating if out of space
-enum {FIELD_ALLOC_SIZE = 32};
 char * field_append(char * field, size_t * field_size, size_t * field_alloc, char c)
 {
     if(*field_size == *field_alloc)
@@ -277,7 +340,7 @@ char * CSV_reader_parse(CSV_reader * reader)
     bool quoted = false;
 
     size_t field_size = 0;
-    size_t field_alloc = FIELD_ALLOC_SIZE;
+    size_t field_alloc = CSV_STR_ALLOC;
     char * field = (char *)malloc(sizeof(char) * field_alloc);
 
     bool field_done = false;
@@ -293,7 +356,7 @@ char * CSV_reader_parse(CSV_reader * reader)
             switch(reader->state_)
             {
             case CSV_STATE_QUOTE:
-                if(c == reader->delimiter_ || c == '\n' || c == '\r' || c == EOF)
+                if(c == reader->delimiter_ || c == '\n' || c == '\r' || c == EOF || c == '\0')
                 {
                     quoted = false;
                     reader->state_ = CSV_STATE_READ;
@@ -337,7 +400,7 @@ char * CSV_reader_parse(CSV_reader * reader)
                     }
                 }
 
-                if(c == EOF && quoted)
+                if(quoted && (c == EOF || c == '\0'))
                 {
                     CSV_reader_set_error(reader, CSV_PARSE_ERROR, "Unterminated quoted field - reached end-of-field", true);
                     goto error;
@@ -347,7 +410,7 @@ char * CSV_reader_parse(CSV_reader * reader)
                     field_done = c_done = true;
                     break;
                 }
-                else if(!quoted && (c == '\n' || c == '\r' || c == EOF))
+                else if(!quoted && (c == '\n' || c == '\r' || c == EOF || c == '\0'))
                 {
                     reader->end_of_row_ = field_done = c_done = true;
                     reader->state_ = CSV_STATE_CONSUME_NEWLINES;
@@ -558,30 +621,63 @@ CSV_status CSV_reader_get_error(const CSV_reader * reader)
     return reader->error_;
 }
 
-// create a new CSV writer object
-CSV_writer * CSV_writer_init_from_filename(const char * filename)
+// common CSV writer initialization helper
+CSV_writer * CSV_writer_init_common(void)
 {
     CSV_writer * writer = (CSV_writer *)malloc(sizeof(CSV_writer));
-    writer->file_ = fopen(filename, "wb");
-
-    if(!writer->file_)
-    {
-        free(writer);
-        return NULL;
-    }
-
     writer->delimiter_ = ',';
     writer->quote_ = '"';
 
     writer->start_of_row_ = true;
 
-    return (CSV_writer *)writer;
+    return writer;
+}
+
+// create a new CSV writer object writing to a file
+CSV_writer * CSV_writer_init_from_filename(const char * filename)
+{
+    FILE * file = fopen(filename, "wb");
+
+    if(!file)
+        return NULL;
+
+    CSV_writer * writer = CSV_writer_init_common();
+
+    writer->dest_ = CSV_DEST_FILE;
+    writer->file_ = file;
+
+    return writer;
+}
+
+// create a new CSV writer object writing to a string
+CSV_writer * CSV_writer_init_to_str(void)
+{
+    CSV_writer * writer = CSV_writer_init_common();
+
+    writer->dest_ = CSV_DEST_STR;
+    writer->str_alloc_ = CSV_STR_ALLOC;
+    writer->str_size_ = 0;
+    writer->str_ = (char *)malloc(sizeof(char) * writer->str_alloc_);
+
+    return writer;
 }
 
 // delete a CSV writer object
 void CSV_writer_free(CSV_writer * writer)
 {
-    fclose(writer->file_);
+    if(!writer)
+        return;
+
+    switch(writer->dest_)
+    {
+    case CSV_DEST_FILE:
+        fclose(writer->file_);
+        break;
+    case CSV_DEST_STR:
+        free(writer->str_);
+        break;
+    }
+
     free(writer);
 }
 
@@ -597,15 +693,35 @@ void CSV_writer_set_quote(CSV_writer * writer, const char quote)
     writer->quote_ = quote;
 }
 
+// write a character
+CSV_status CSV_writer_putc(CSV_writer * writer, const char c)
+{
+    switch(writer->dest_)
+    {
+    case CSV_DEST_FILE:
+        fputc(c, writer->file_);
+        if(ferror(writer->file_))
+            return CSV_IO_ERROR;
+        break;
+    case CSV_DEST_STR:
+        writer->str_ = field_append(writer->str_, &writer->str_size_, &writer->str_alloc_, c);
+        break;
+    }
+
+    return CSV_OK;
+}
+
 // end the current row (for use w/ CSV_writer_write_field)
 CSV_status CSV_writer_end_row(CSV_writer * writer)
 {
     if(!writer)
         return CSV_INTERNAL_ERROR;
 
-    fputs("\r\n", writer->file_);
-    if(ferror(writer->file_))
-        return CSV_IO_ERROR;
+    CSV_status status = CSV_OK;
+    if((status = CSV_writer_putc(writer, '\r')) != CSV_OK)
+        return status;
+    if((status = CSV_writer_putc(writer, '\n')) != CSV_OK)
+        return status;
 
     writer->start_of_row_ = true;
 
@@ -618,11 +734,11 @@ CSV_status CSV_writer_write_field(CSV_writer * writer, const char * field)
     if(!writer)
         return CSV_INTERNAL_ERROR;
 
+    CSV_status status = CSV_OK;
     if(!writer->start_of_row_)
     {
-        fputc(writer->delimiter_, writer->file_);
-        if(ferror(writer->file_))
-            return CSV_IO_ERROR;
+        if((status = CSV_writer_putc(writer, writer->delimiter_)) != CSV_OK)
+            return status;
     }
 
     if(field)
@@ -639,30 +755,26 @@ CSV_status CSV_writer_write_field(CSV_writer * writer, const char * field)
 
         if(quoted)
         {
-            fputc(writer->quote_, writer->file_);
-            if(ferror(writer->file_))
-                return CSV_IO_ERROR;
+            if((status = CSV_writer_putc(writer, writer->quote_)) != CSV_OK)
+                return status;
         }
 
         for(const char * i = field; *i; ++i)
         {
-            fputc(*i, writer->file_);
-            if(ferror(writer->file_))
-                return CSV_IO_ERROR;
+            if((status = CSV_writer_putc(writer, *i)) != CSV_OK)
+                return status;
 
             if(*i == writer->quote_)
             {
-                fputc(writer->quote_, writer->file_);
-                if(ferror(writer->file_))
-                    return CSV_IO_ERROR;
+                if((status = CSV_writer_putc(writer, writer->quote_)) != CSV_OK)
+                    return status;
             }
         }
 
         if(quoted)
         {
-            fputc(writer->quote_, writer->file_);
-            if(ferror(writer->file_))
-                return CSV_IO_ERROR;
+            if((status = CSV_writer_putc(writer, writer->quote_)) != CSV_OK)
+                return status;
         }
     }
 
@@ -727,4 +839,22 @@ CSV_status CSV_writer_write_record_v(CSV_writer * writer, ...)
 
     va_end(args);
     return CSV_OK;
+}
+
+// get the string output (when initialized w/ CSV_writer_init_to_str, otherwise returns NULL)
+const char * CSV_writer_get_str(CSV_writer * writer)
+{
+    if(!writer || writer->dest_ != CSV_DEST_STR)
+        return NULL;
+
+    // null terminate, if needed
+    if(writer->str_size_ == writer->str_alloc_)
+    {
+        writer->str_alloc_ += CSV_STR_ALLOC;
+        writer->str_ = realloc(writer->str_, sizeof(char) * writer->str_alloc_);
+    }
+
+    writer->str_[writer->str_size_] = '\0';
+
+    return writer->str_;
 }

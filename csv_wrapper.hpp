@@ -22,11 +22,21 @@ private:
 
 public:
     // forwards to C ctor / dtor
-    explicit CSV_reader_wrapper(const char * filename): csv_r{ CSV_reader_init_from_filename(filename) }
+    explicit CSV_reader_wrapper(const std::string & filename): csv_r{ CSV_reader_init_from_filename(filename.c_str()) }
     {
         if(!csv_r)
-            throw std::runtime_error{"Could not init " + std::string{filename}};
+            throw std::runtime_error{"Could not init " + filename};
     }
+
+    // disambiguation tag
+    struct input_string_t{};
+    static inline constexpr input_string_t input_string{};
+    CSV_reader_wrapper(input_string_t, const std::string & str): csv_r{ CSV_reader_init_from_str(str.c_str()) }
+    {
+        if(!csv_r)
+            throw std::runtime_error{"Could not init from str: " + str};
+    }
+
     ~CSV_reader_wrapper() { CSV_reader_free(csv_r); }
 
     // non-copyable
@@ -55,8 +65,8 @@ public:
     operator CSV_reader *() { return csv_r; }
 
     // wrappers for methods
-    void set_delimiter(const char delimiter) const { CSV_reader_set_delimiter(csv_r, delimiter); }
-    void set_quote(const char quote) const { CSV_reader_set_quote(csv_r, quote); }
+    void set_delimiter(const char delimiter) { CSV_reader_set_delimiter(csv_r, delimiter); }
+    void set_quote(const char quote) { CSV_reader_set_quote(csv_r, quote); }
     bool end_of_row() const { return CSV_reader_end_of_row(csv_r); }
     bool eof() const { return CSV_reader_eof(csv_r); }
 
@@ -113,6 +123,11 @@ public:
         if(!csv_w)
             throw std::runtime_error{"Could not init " + std::string{filename}};
     }
+    CSV_writer_wrapper(): csv_w{ CSV_writer_init_to_str() }
+    {
+        if(!csv_w)
+            throw std::runtime_error{"Could not init for writing to string"};
+    }
     ~CSV_writer_wrapper() { CSV_writer_free(csv_w); }
 
     // non-copyable
@@ -140,8 +155,9 @@ public:
     operator CSV_writer *() { return csv_w; }
 
     // wrappers for methods
-    void set_delimiter(const char delimiter) const { CSV_writer_set_delimiter(csv_w, delimiter); }
-    void set_quote(const char quote) const { CSV_writer_set_quote(csv_w, quote); }
+    void set_delimiter(const char delimiter) { CSV_writer_set_delimiter(csv_w, delimiter); }
+    void set_quote(const char quote) { CSV_writer_set_quote(csv_w, quote); }
+    std::string get_str() { return std::string{ CSV_writer_get_str(csv_w) }; }
 
     // make the interface more C++ friendly
     void write_record(const std::vector<std::string> & fields) const

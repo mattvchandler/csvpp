@@ -199,15 +199,7 @@ test::Result test_read_embedded(const std::string & csv_text, const CSV_data & e
 #ifdef CSV_ENABLE_C_CSV
 test::Result test_read_mine_c_field(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
-    std::ofstream out{"test.csv", std::ifstream::binary};
-    if(!out)
-        throw std::runtime_error{"could not open test.csv"};
-
-    out.write(csv_text.data(), csv_text.size());
-    out.close();
-
-    CSV_reader * r = CSV_reader_init_from_filename("test.csv");
-
+    CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
         throw std::runtime_error("could not init CSV_reader");
 
@@ -257,15 +249,7 @@ test::Result test_read_mine_c_field(const std::string & csv_text, const CSV_data
 
 test::Result test_read_mine_c_record(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
-    std::ofstream out{"test.csv", std::ifstream::binary};
-    if(!out)
-        throw std::runtime_error{"could not open test.csv"};
-
-    out.write(csv_text.data(), csv_text.size());
-    out.close();
-
-    CSV_reader * r = CSV_reader_init_from_filename("test.csv");
-
+    CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
         throw std::runtime_error("could not init CSV_reader");
 
@@ -314,15 +298,7 @@ test::Result test_read_mine_c_record(const std::string & csv_text, const CSV_dat
 
 test::Result test_read_mine_c_ptr(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
-    std::ofstream out{"test.csv", std::ifstream::binary};
-    if(!out)
-        throw std::runtime_error{"could not open test.csv"};
-
-    out.write(csv_text.data(), csv_text.size());
-    out.close();
-
-    CSV_reader * r = CSV_reader_init_from_filename("test.csv");
-
+    CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
         throw std::runtime_error("could not init CSV_reader");
 
@@ -385,15 +361,7 @@ test::Result test_read_mine_c_ptr(const std::string & csv_text, const CSV_data &
 
 test::Result test_read_mine_c_ptr_dyn(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
-    std::ofstream out{"test.csv", std::ifstream::binary};
-    if(!out)
-        throw std::runtime_error{"could not open test.csv"};
-
-    out.write(csv_text.data(), csv_text.size());
-    out.close();
-
-    CSV_reader * r = CSV_reader_init_from_filename("test.csv");
-
+    CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
         throw std::runtime_error("could not init CSV_reader");
 
@@ -445,15 +413,7 @@ test::Result test_read_mine_c_ptr_dyn(const std::string & csv_text, const CSV_da
 
 test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
-    std::ofstream out{"test.csv", std::ifstream::binary};
-    if(!out)
-        throw std::runtime_error{"could not open test.csv"};
-
-    out.write(csv_text.data(), csv_text.size());
-    out.close();
-
-    CSV_reader * r = CSV_reader_init_from_filename("test.csv");
-
+    CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
         throw std::runtime_error("could not init CSV_reader");
 
@@ -498,8 +458,7 @@ test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_d
 
     CSV_reader_free(r);
 
-    r = CSV_reader_init_from_filename("test.csv");
-
+    r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
         throw std::runtime_error("could not init CSV_reader");
 
@@ -573,14 +532,7 @@ test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_d
 
 test::Result test_read_mine_c_wrapper(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote)
 {
-    std::ofstream out{"test.csv", std::ifstream::binary};
-    if(!out)
-        throw std::runtime_error{"could not open test.csv"};
-
-    out.write(csv_text.data(), csv_text.size());
-    out.close();
-
-    CSV_reader_wrapper csv_r{"test.csv"};
+    CSV_reader_wrapper csv_r{CSV_reader_wrapper::input_string, csv_text};
     csv_r.set_delimiter(delimiter);
     csv_r.set_quote(quote);
     CSV_data data;
@@ -1614,7 +1566,7 @@ test::Result test_read_mine_cpp_row_tuple(const std::string & csv_text, const CS
 #ifdef CSV_ENABLE_C_CSV
 test::Result test_write_mine_c_field(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
-    CSV_writer * w = CSV_writer_init_from_filename("test.csv");
+    CSV_writer * w = CSV_writer_init_to_str();
     if(!w)
         throw std::runtime_error{"Could not init CSV_writer"};
 
@@ -1637,15 +1589,15 @@ test::Result test_write_mine_c_field(const std::string & expected_text, const CS
             throw std::runtime_error{"error writing CSV"};
         }
     }
+    auto output = std::string{ CSV_writer_get_str(w) };
     CSV_writer_free(w);
 
-    std::ifstream out_file("test.csv", std::ifstream::binary);
-    return common_write_return(data, expected_text, static_cast<std::stringstream const &>(std::stringstream() << out_file.rdbuf()).str());
+    return common_write_return(data, expected_text, output);
 }
 
 test::Result test_write_mine_c_record(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
-    CSV_writer * w = CSV_writer_init_from_filename("test.csv");
+    CSV_writer * w = CSV_writer_init_to_str();
     if(!w)
         throw std::runtime_error{"Could not init CSV_writer"};
 
@@ -1675,15 +1627,15 @@ test::Result test_write_mine_c_record(const std::string & expected_text, const C
 
         CSV_record_free(rec);
     }
+    auto output = std::string{ CSV_writer_get_str(w) };
     CSV_writer_free(w);
 
-    std::ifstream out_file("test.csv", std::ifstream::binary);
-    return common_write_return(data, expected_text, static_cast<std::stringstream const &>(std::stringstream() << out_file.rdbuf()).str());
+    return common_write_return(data, expected_text, output);
 }
 
 test::Result test_write_mine_c_ptr(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
-    CSV_writer * w = CSV_writer_init_from_filename("test.csv");
+    CSV_writer * w = CSV_writer_init_to_str();
     if(!w)
         throw std::runtime_error{"Could not init CSV_writer"};
 
@@ -1702,15 +1654,15 @@ test::Result test_write_mine_c_ptr(const std::string & expected_text, const CSV_
             throw std::runtime_error{"error writing CSV"};
         }
     }
+    auto output = std::string{ CSV_writer_get_str(w) };
     CSV_writer_free(w);
 
-    std::ifstream out_file("test.csv", std::ifstream::binary);
-    return common_write_return(data, expected_text, static_cast<std::stringstream const &>(std::stringstream() << out_file.rdbuf()).str());
+    return common_write_return(data, expected_text, output);
 }
 
 test::Result test_write_mine_c_variadic(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
-    CSV_writer * w = CSV_writer_init_from_filename("test.csv");
+    CSV_writer * w = CSV_writer_init_to_str();
     if(!w)
         throw std::runtime_error{"Could not init CSV_writer"};
 
@@ -1751,25 +1703,22 @@ test::Result test_write_mine_c_variadic(const std::string & expected_text, const
             throw std::runtime_error{"error writing CSV"};
         }
     }
+    auto output = std::string{ CSV_writer_get_str(w) };
     CSV_writer_free(w);
 
-    std::ifstream out_file("test.csv", std::ifstream::binary);
-    return common_write_return(data, expected_text, static_cast<std::stringstream const &>(std::stringstream() << out_file.rdbuf()).str());
+    return common_write_return(data, expected_text, output);
 }
 
 test::Result test_write_mine_c_wrapper(const std::string & expected_text, const CSV_data data, const char delimiter, const char quote)
 {
-    { // scoped so file is closed at end
-        CSV_writer_wrapper csv_w{"test.csv"};
-        csv_w.set_delimiter(delimiter);
-        csv_w.set_quote(quote);
+    CSV_writer_wrapper w;
+    w.set_delimiter(delimiter);
+    w.set_quote(quote);
 
-        for(const auto & row: data)
-            csv_w.write_record(row);
-    }
+    for(const auto & row: data)
+        w.write_record(row);
 
-    std::ifstream out_file("test.csv", std::ifstream::binary);
-    return common_write_return(data, expected_text, static_cast<std::stringstream const &>(std::stringstream() << out_file.rdbuf()).str());
+    return common_write_return(data, expected_text, w.get_str());
 }
 #endif
 
@@ -2371,7 +2320,9 @@ int main(int, char *[])
 
     std::cout<<"\n";
 
+    #ifdef CSV_ENABLE_TINYCSV
     remove("test.csv");
+    #endif
 
     if(test_read.passed() && test_write.passed())
     {
