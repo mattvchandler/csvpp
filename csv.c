@@ -26,6 +26,13 @@
 enum {CSV_STR_ALLOC = 32}; // initial size of dynamic string allocation
 enum {CSV_RECORD_ALLOC = 8}; // initial size of CSV_record allocation
 
+typedef struct CSV_string
+{
+    char * str;
+    size_t size;
+    size_t alloc;
+} CSV_string;
+
 // CSV reader object
 struct CSV_reader
 {
@@ -54,12 +61,7 @@ struct CSV_writer
     union
     {
         FILE * file_;
-        struct
-        {
-            char * str_;
-            size_t str_size_;
-            size_t str_alloc_;
-        };
+        CSV_string * str_;
     };
     enum {CSV_DEST_FILE, CSV_DEST_STR} dest_;
 
@@ -81,6 +83,69 @@ char * CSV_strdup(const char * src)
     char * ret = (char *)malloc(sizeof(char) * (strlen(src) + 1));
     strcpy(ret, src);
     return ret;
+}
+
+CSV_string * CSV_string_init(void)
+{
+    CSV_string * str = (CSV_string *) malloc(sizeof(CSV_string));
+
+    str->alloc = CSV_STR_ALLOC;
+    str->size = 0;
+    str->str = (char *)malloc(sizeof(char) * str->alloc);
+
+    return str;
+}
+
+void CSV_string_free(CSV_string * str)
+{
+    if(!str)
+        return;
+
+    free(str->str);
+    free(str);
+}
+
+// null-terminate the string
+void CSV_string_null_terminate(CSV_string * str)
+{
+    if(!str)
+        return;
+
+    if(str->size == str->alloc)
+    {
+        str->alloc += CSV_STR_ALLOC;
+        str->str = realloc(str->str, sizeof(char) * str->alloc);
+    }
+
+    str->str[str->size] = '\0';
+}
+
+// take ownership of the internal string (null-terminated) and discard the rest
+char * CSV_string_steal(CSV_string * str)
+{
+    if(!str)
+        return NULL;
+
+    CSV_string_null_terminate(str);
+    char * ret = str->str;
+
+    free(str);
+    return ret;
+}
+
+// append a char to the string
+void CSV_string_append(CSV_string * str, const char c)
+{
+    if(!str)
+        return;
+
+    if(str->size == str->alloc)
+    {
+        str->alloc += CSV_STR_ALLOC;
+        str->str = realloc(str->str, sizeof(char) * str->alloc);
+    }
+
+    str->str[str->size++] = c;
 }
 
 CSV_record * CSV_record_init(void)
@@ -114,7 +179,7 @@ void CSV_record_append(CSV_record * rec, char * field)
 
     if(rec->size_ == rec->alloc_)
     {
-        rec->alloc_ *= 2;
+        rec->alloc_ += CSV_RECORD_ALLOC;
         rec->fields_ = realloc(rec->fields_, sizeof(char *) * rec->alloc_);
     }
 
@@ -311,19 +376,6 @@ void CSV_reader_consume_newlines(CSV_reader * reader)
     }
 }
 
-// append a character to a string, reallocating if out of space
-char * field_append(char * field, size_t * field_size, size_t * field_alloc, char c)
-{
-    if(*field_size == *field_alloc)
-    {
-        *field_alloc *= 2;
-        field = realloc(field, *field_alloc);
-    }
-    field[(*field_size)++] = c;
-
-    return field;
-}
-
 // core parsing function. extracts a single field from the CSV file
 char * CSV_reader_parse(CSV_reader * reader)
 {
@@ -339,9 +391,7 @@ char * CSV_reader_parse(CSV_reader * reader)
 
     bool quoted = false;
 
-    size_t field_size = 0;
-    size_t field_alloc = CSV_STR_ALLOC;
-    char * field = (char *)malloc(sizeof(char) * field_alloc);
+    CSV_string * field = CSV_string_init();
 
     bool field_done = false;
     while(!field_done)
@@ -364,7 +414,7 @@ char * CSV_reader_parse(CSV_reader * reader)
                 }
                 else if(c == reader->quote_)
                 {
-                    field = field_append(field, &field_size, &field_alloc, c);
+                    CSV_string_append(field, c);
                     reader->state_ = CSV_STATE_READ;
                     c_done = true;
                     break;
@@ -386,7 +436,7 @@ char * CSV_reader_parse(CSV_reader * reader)
                     }
                     else
                     {
-                        if(field_size == 0)
+                        if(field->size == 0)
                         {
                             quoted = true;
                             c_done = true;
@@ -417,7 +467,7 @@ char * CSV_reader_parse(CSV_reader * reader)
                     break;
                 }
 
-                field = field_append(field, &field_size, &field_alloc, c);
+                CSV_string_append(field, c);
                 c_done = true;
                 break;
 
@@ -428,10 +478,10 @@ char * CSV_reader_parse(CSV_reader * reader)
         }
     }
 
-    return field_append(field, &field_size, &field_alloc, '\0');
+    return CSV_string_steal(field);
 
 error:
-    free(field);
+    CSV_string_free(field);
     return NULL;
 }
 
@@ -653,11 +703,8 @@ CSV_writer * CSV_writer_init_from_filename(const char * filename)
 CSV_writer * CSV_writer_init_to_str(void)
 {
     CSV_writer * writer = CSV_writer_init_common();
-
     writer->dest_ = CSV_DEST_STR;
-    writer->str_alloc_ = CSV_STR_ALLOC;
-    writer->str_size_ = 0;
-    writer->str_ = (char *)malloc(sizeof(char) * writer->str_alloc_);
+    writer->str_ = CSV_string_init();
 
     return writer;
 }
@@ -674,7 +721,7 @@ void CSV_writer_free(CSV_writer * writer)
         fclose(writer->file_);
         break;
     case CSV_DEST_STR:
-        free(writer->str_);
+        CSV_string_free(writer->str_);
         break;
     }
 
@@ -704,7 +751,7 @@ CSV_status CSV_writer_putc(CSV_writer * writer, const char c)
             return CSV_IO_ERROR;
         break;
     case CSV_DEST_STR:
-        writer->str_ = field_append(writer->str_, &writer->str_size_, &writer->str_alloc_, c);
+        CSV_string_append(writer->str_, c);
         break;
     }
 
@@ -847,14 +894,6 @@ const char * CSV_writer_get_str(CSV_writer * writer)
     if(!writer || writer->dest_ != CSV_DEST_STR)
         return NULL;
 
-    // null terminate, if needed
-    if(writer->str_size_ == writer->str_alloc_)
-    {
-        writer->str_alloc_ += CSV_STR_ALLOC;
-        writer->str_ = realloc(writer->str_, sizeof(char) * writer->str_alloc_);
-    }
-
-    writer->str_[writer->str_size_] = '\0';
-
-    return writer->str_;
+    CSV_string_null_terminate(writer->str_);
+    return writer->str_->str;
 }
