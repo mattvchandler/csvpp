@@ -24,8 +24,8 @@
 #include <exception>
 #include <fstream>
 #include <map>
+#include <memory>
 #include <optional>
-#include <regex>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -973,12 +973,26 @@ namespace csv
         {
             std::string field_str = str(field);
 
-            auto escaped_chars = {delimiter_, quote_, '\r', '\n'};
-            if(std::find_first_of(field_str.begin(), field_str.end(), escaped_chars.begin(), escaped_chars.end()) == field_str.end())
-                return field_str;
+            std::string ret{quote_};
+            ret.reserve(std::size(field) + 2);
+            bool quoted = false;
+            for(auto c: field)
+            {
+                if(c == quote_)
+                {
+                    quoted = true;
+                    ret += quote_;
+                }
+                else if(c == delimiter_ || c == '\r' || c == '\n')
+                    quoted = true;
 
-            auto ret = std::regex_replace(field_str, std::regex(std::string{quote_}), std::string{quote_} + std::string{quote_});
-            ret = quote_ + ret + quote_;
+                ret += c;
+            }
+
+            if(!quoted)
+                return field;
+
+            ret += quote_;
             return ret;
         }
 
