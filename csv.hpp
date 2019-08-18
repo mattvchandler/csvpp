@@ -898,17 +898,9 @@ namespace csv
             if(!start_of_row_)
                 end_row();
 
-            bool first_item = true;
+            for(; first != last; ++first)
+                write_field(*first);
 
-            for(; first != last; ++ first)
-            {
-                if(!first_item)
-                    (*output_stream_)<<delimiter_;
-
-                (*output_stream_)<<quote(*first);
-
-                first_item = false;
-            }
             end_row();
         }
 
