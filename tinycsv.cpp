@@ -9,20 +9,20 @@ string;pair<S,I>p(FILE*f){I q=0,c;S w;
 while(1){G if(c==EOF&&!E)throw 0;if(c==
 '"'){if(q){G if(c==','||c=='\n'||c=='\r'
 ||E)q=0;else if(c!='"')throw 0;}else{if(
-w.Z<1){q=1;continue;}else throw 0;}}if(E
+!w.Z){q=1;continue;}else throw 0;}}if(E
 &&q)throw 0;if(!q&&c==',')break;if(!q&&(
 c=='\n'||c=='\r'||E)){while(!E){G if(c!=
 '\r'&&c!='\n'){if(!E)ungetc(c,f);break;}
 }return{w,1};}w+=c;}return{w,0};}I main(
 I c,char**v){if(c>2)return 1;FILE*f=0;if
-(c<2||v[1]==S("-"))f=stdin;else f=fopen(
+(c<2||v[1]==S{"-"})f=stdin;else f=fopen(
 v[1],"r");try{if(!f)throw 0;vector<
 vector<S>>d(1);vector<I>z;for(I i=0;;){
-auto[w,e]=p(f);if(E)break;d.back().
-push_back(w);z.resize(max(i+1,(I)z.Z));z
-[i]=max(z[i],(I)w.Z);if(e){i=0;d.
-push_back({});}else++i;}for(auto&r:d){
-for(I i=0;i<r.Z;++i){if(i!=0)printf(
-" | ");printf("%-*s",z[i],data(r[i]));}
-putchar('\n');}}catch(I){puts("error");
-return 1;}}
+auto[w,e]=p(f);if(ferror(f))break;d.
+back().push_back(w);z.resize(max(i+1,(I)
+z.Z));z[i]=max(z[i],(I)w.Z);if(E)break;
+if(e){i=0;d.push_back({});}else++i;}for(
+auto&r:d){for(I i=0;i<r.Z;++i){if(i!=0)
+printf(" | ");printf("%-*s",z[i],data(r[
+i]));}putchar('\n');}}catch(I){puts(
+"error");return 1;}}

@@ -37,7 +37,7 @@ pair<string, int> parse(FILE * in)
     {
         c = getc(in);
 
-        if(c==EOF && !feof(in))
+        if(c == EOF && !feof(in))
             throw "error reading from stream";
 
         if(c == '"')
@@ -56,27 +56,22 @@ pair<string, int> parse(FILE * in)
             }
             else
             {
-                if(field.empty())
+                if(!field.size())
                 {
                     quoted = 1;
                     continue;
                 }
-                else
-                {
-                    // quotes are not allowed inside of an unquoted field
+                else // quotes are not allowed inside of an unquoted field
                     throw "Double-quote found in unquoted field";
-                }
             }
         }
 
         if(feof(in) && quoted)
-        {
             throw "Unterminated quoted field - reached end-of-file";
-        }
+
         if(!quoted && c == ',')
-        {
             break;
-        }
+
         if(!quoted && (c == '\n' || c == '\r' || feof(in)))
         {
             // consume newlines
@@ -99,7 +94,7 @@ pair<string, int> parse(FILE * in)
     return {field, 0};
 }
 
-int main(int argc, char * argv[])
+int main(int argc, char ** argv)
 {
     if(argc > 2)
     {
@@ -107,7 +102,7 @@ int main(int argc, char * argv[])
         return 1;
     }
 
-    FILE * in = NULL;
+    FILE * in = 0;
     if(argc < 2 || argv[1] == string{"-"})
         in = stdin;
     else
@@ -115,20 +110,23 @@ int main(int argc, char * argv[])
 
     try
     {
-        if(!in) throw "could not open file";
+        if(!in)
+            throw "could not open file";
 
         vector<vector<string>> data(1);
         vector<int> col_size;
         for(int i = 0;;)
         {
             auto [field, end_of_row] = parse(in);
-            if(ferror(in)) break;
+            if(ferror(in))
+                break;
             data.back().push_back(field);
 
             col_size.resize(max(i + 1, (int)col_size.size()));
 
             col_size[i] = max(col_size[i], (int)field.size());
-            if(feof(in)) break;
+            if(feof(in))
+                break;
 
             if(end_of_row)
             {
@@ -140,9 +138,10 @@ int main(int argc, char * argv[])
         }
         for(auto &row: data)
         {
-            for(int i = 0; i < size(row); ++i)
+            for(int i = 0; i < row.size(); ++i)
             {
-                if(i != 0) printf(" | ");
+                if(i != 0)
+                    printf(" | ");
                 printf("%-*s", col_size[i], std::data(row[i]));
             }
             putchar('\n');

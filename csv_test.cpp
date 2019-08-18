@@ -678,7 +678,6 @@ test::Result test_read_tinycsv_expanded(const std::string & csv_text, const CSV_
 #endif
 
 #ifdef CSV_ENABLE_PYTHON
-// TODO: python's parser follows different rules in some corner cases. How do we detect and skip only those?
 // python allows fields w/ unescaped quotes. use this to pre-parse and filter those inputs out (this is essentially a stripped down csv::Reader::parse)
 bool python_too_lenient(const std::string & csv, const char delimiter, const char quote)
 {
