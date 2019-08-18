@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 #include <algorithm>
+#include <array>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -889,7 +890,6 @@ test::Result test_read_mine_cpp_read_all_as_int(const std::string & csv_text, co
         expected_ints.emplace_back();
         for(auto & col: row)
         {
-            using namespace std::string_literals;
             try
             {
                 expected_ints.back().push_back(std::stoi(col));
@@ -898,13 +898,14 @@ test::Result test_read_mine_cpp_read_all_as_int(const std::string & csv_text, co
             }
             catch(const std::invalid_argument & e)
             {
-                if(e.what() == "stoi"s)
+                // TODO; c++20 start_with
+                if(std::string_view{e.what(), 4} == "stoi")
                     return test::skip();
                 throw;
             }
             catch(const std::out_of_range & e)
             {
-                if(e.what() == "stoi"s)
+                if(std::string_view{e.what(), 4} == "stoi")
                     return test::skip();
                 throw;
             }
@@ -1217,7 +1218,6 @@ test::Result test_read_mine_cpp_map_as_int(const std::string & csv_text, const C
         expected_ints.emplace_back();
         for(auto & col: row)
         {
-            using namespace std::string_literals;
             try
             {
                 expected_ints.back().push_back(std::stoi(col));
@@ -1226,13 +1226,13 @@ test::Result test_read_mine_cpp_map_as_int(const std::string & csv_text, const C
             }
             catch(const std::invalid_argument & e)
             {
-                if(e.what() == "stoi"s)
+                if(std::string_view{e.what(), 4} == "stoi")
                     return test::skip();
                 throw;
             }
             catch(const std::out_of_range & e)
             {
-                if(e.what() == "stoi"s)
+                if(std::string_view{e.what(), 4} == "stoi")
                     return test::skip();
                 throw;
             }
