@@ -144,7 +144,7 @@ int main(int argc, char ** argv)
                     printf(" | ");
                 printf("%-*s", col_size[i], std::data(row[i]));
             }
-            putchar('\n');
+            puts(""); // for newline
         }
     }
     catch(const char * what)

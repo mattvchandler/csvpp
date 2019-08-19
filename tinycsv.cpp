@@ -24,5 +24,5 @@ z.Z));z[i]=max(z[i],(I)w.Z);if(E)break;
 if(e){i=0;d.push_back({});}else++i;}for(
 auto&r:d){for(I i=0;i<r.Z;++i){if(i!=0)
 printf(" | ");printf("%-*s",z[i],data(r[
-i]));}putchar('\n');}}catch(I){puts(
-"error");return 1;}}
+i]));}puts("");}}catch(I){puts("error");
+return 1;}}
