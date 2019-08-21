@@ -41,7 +41,7 @@ struct CSV_reader
         FILE * file_;
         const char * str_;
     };
-    enum {CSV_SOURCE_FILE, CSV_SOURCE_STR} source_;
+    enum {CSV_SOURCE_FILENAME, CSV_SOURCE_FILE, CSV_SOURCE_STR} source_;
 
     enum {CSV_STATE_READ, CSV_STATE_QUOTE, CSV_STATE_CONSUME_NEWLINES, CSV_STATE_EOF} state_;
     bool end_of_row_;
@@ -240,6 +240,20 @@ CSV_reader * CSV_reader_init_from_filename(const char * filename)
 
     CSV_reader * reader = CSV_reader_init_common();
 
+    reader->source_ = CSV_SOURCE_FILENAME;
+    reader->file_ = file;
+
+    return reader;
+}
+
+// create a new CSV reader object parsing from a FILE *
+CSV_reader * CSV_reader_init_from_file(FILE * file)
+{
+    if(!file)
+        return NULL;
+
+    CSV_reader * reader = CSV_reader_init_common();
+
     reader->source_ = CSV_SOURCE_FILE;
     reader->file_ = file;
 
@@ -266,7 +280,7 @@ void CSV_reader_free(CSV_reader * reader)
     if(!reader)
         return;
 
-    if(reader->source_ == CSV_SOURCE_FILE)
+    if(reader->source_ == CSV_SOURCE_FILENAME)
         fclose(reader->file_);
 
     if(reader->error_message_)
@@ -334,6 +348,7 @@ int CSV_reader_getc(CSV_reader * reader)
 
     switch(reader->source_)
     {
+    case CSV_SOURCE_FILENAME:
     case CSV_SOURCE_FILE:
         c = fgetc(reader->file_);
         break;
@@ -343,7 +358,7 @@ int CSV_reader_getc(CSV_reader * reader)
         break;
     }
 
-    if(reader->source_ == CSV_SOURCE_FILE && c == EOF  && !feof(reader->file_))
+    if((reader->source_ == CSV_SOURCE_FILENAME || reader->source_ == CSV_SOURCE_FILE) && c == EOF  && !feof(reader->file_))
         CSV_reader_set_error(reader, CSV_IO_ERROR, "I/O Error", false);
 
     else if(c == '\n')
@@ -381,6 +396,7 @@ void CSV_reader_consume_newlines(CSV_reader * reader)
             reader->state_ = CSV_STATE_READ;
             switch(reader->source_)
             {
+            case CSV_SOURCE_FILENAME:
             case CSV_SOURCE_FILE:
                 ungetc(c, reader->file_);
                 break;

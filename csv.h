@@ -66,6 +66,9 @@ const char * const * CSV_record_arr(const CSV_record * rec);
 // create a new CSV reader object parsing from a file
 CSV_reader * CSV_reader_init_from_filename(const char * filename);
 
+// create a new CSV reader object parsing from a FILE *
+CSV_reader * CSV_reader_init_from_file(FILE * file);
+
 // create a new CSV reader object parsing from an in-memory string
 CSV_reader * CSV_reader_init_from_str(const char * input);
 
