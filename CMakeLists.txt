@@ -24,6 +24,8 @@ option(CSV_ENABLE_LIBCSV "Enable testing against libcsv" OFF)
 option(CSV_ENABLE_PYTHON "Enable testing against python's csv libary" OFF)
 option(CSV_ENABLE_ALL "Enable generation and testing of all of the above" OFF)
 
+option(CSV_ENABLE_EXAMPLES "Build example programs" OFF)
+
 if(CSV_ENABLE_ALL)
     set(CSV_ENABLE_CPP_CSV ON)
     set(CSV_ENABLE_C_CSV ON)
@@ -116,4 +118,8 @@ if(CSV_ENABLE_PYTHON)
 
     target_compile_definitions(csv_test PUBLIC "-DCSV_ENABLE_PYTHON")
     target_link_libraries(csv_test pybind11::embed)
+endif()
+
+if(CSV_ENABLE_EXAMPLES)
+    add_subdirectory(examples)
 endif()
