@@ -1866,23 +1866,55 @@ test::Result test_write_mine_cpp_iter(const std::string & expected_text, const C
     return common_write_return(data, expected_text, str.str());
 }
 
-test::Result test_write_mine_cpp_map(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_mine_cpp_stream_as_int(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
+    auto int_data = convert_to_int(data);
+    if(!int_data)
+        return test::skip();
+
     std::ostringstream str;
-    if(!std::empty(data))
-    {
-        auto headers =  data[0];
-        csv::Map_writer_iter w(str, headers, {}, delimiter, quote);
-        for(auto row = std::begin(data) + 1; row != std::end(data); ++row, ++w)
+    { // scoped so dtor is called before checking result
+        csv::Writer w(str, delimiter, quote);
+        for(const auto & row: *int_data)
         {
-            if(std::size(*row) != std::size(headers))
-                return test::skip();
+            for(const auto & col: row)
+                w<<col;
+            w<<csv::end_row;
+        }
+    }
+    return common_write_return(data, expected_text, str.str());
+}
 
-            std::map<std::string, std::string> out_row;
-            for(std::size_t i = 0; i < std::size(headers); ++i)
-                out_row[headers[i]] = (*row)[i];
+test::Result test_write_mine_cpp_row_as_int(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+{
+    auto int_data = convert_to_int(data);
+    if(!int_data)
+        return test::skip();
 
-            *w = out_row;
+    std::ostringstream str;
+    { // scoped so dtor is called before checking result
+        csv::Writer w(str, delimiter, quote);
+        for(const auto & row: *int_data)
+        {
+            w.write_row(row);
+        }
+    }
+    return common_write_return(data, expected_text, str.str());
+}
+
+test::Result test_write_mine_cpp_iter_as_int(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+{
+    auto int_data = convert_to_int(data);
+    if(!int_data)
+        return test::skip();
+
+    std::ostringstream str;
+    { // scoped so dtor is called before checking result
+        csv::Writer w(str, delimiter, quote);
+        for(const auto & row: *int_data)
+        {
+            std::copy(row.begin(), row.end(), w.iterator());
+            w.end_row();
         }
     }
     return common_write_return(data, expected_text, str.str());
@@ -1956,6 +1988,29 @@ test::Result test_write_mine_cpp_tuple(const std::string & expected_text, const 
     }
     return common_write_return(data, expected_text, str.str());
 }
+
+test::Result test_write_mine_cpp_map(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+{
+    std::ostringstream str;
+    if(!std::empty(data))
+    {
+        auto headers =  data[0];
+        csv::Map_writer_iter w(str, headers, {}, delimiter, quote);
+        for(auto row = std::begin(data) + 1; row != std::end(data); ++row, ++w)
+        {
+            if(std::size(*row) != std::size(headers))
+                return test::skip();
+
+            std::map<std::string, std::string> out_row;
+            for(std::size_t i = 0; i < std::size(headers); ++i)
+                out_row[headers[i]] = (*row)[i];
+
+            *w = out_row;
+        }
+    }
+    return common_write_return(data, expected_text, str.str());
+}
+
 #endif
 
 // helper to run a test for each combination of delimiter and quote char
@@ -2158,9 +2213,12 @@ int main(int, char *[])
         test_write_mine_cpp_stream,
         test_write_mine_cpp_row,
         test_write_mine_cpp_iter,
-        test_write_mine_cpp_map,
+        test_write_mine_cpp_stream_as_int,
+        test_write_mine_cpp_row_as_int,
+        test_write_mine_cpp_iter_as_int,
         test_write_mine_cpp_variadic,
         test_write_mine_cpp_tuple,
+        test_write_mine_cpp_map,
         #endif
     };
 
