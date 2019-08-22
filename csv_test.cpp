@@ -845,6 +845,38 @@ test::Result test_read_libcsv(const std::string & csv_text, const CSV_data & exp
 #endif
 
 #ifdef CSV_ENABLE_CPP_CSV
+std::optional<std::vector<std::vector<int>>> convert_to_int(const CSV_data & expected_data)
+{
+    std::vector<std::vector<int>> expected_ints;
+    for(auto & row: expected_data)
+    {
+        expected_ints.emplace_back();
+        for(auto & col: row)
+        {
+            try
+            {
+                expected_ints.back().push_back(std::stoi(col));
+                if(std::to_string(expected_ints.back().back()) != col)
+                    return {};
+            }
+            catch(const std::invalid_argument & e)
+            {
+                // TODO; c++20 start_with
+                if(std::string_view{e.what(), 4} == "stoi")
+                    return {};
+                throw;
+            }
+            catch(const std::out_of_range & e)
+            {
+                if(std::string_view{e.what(), 4} == "stoi")
+                    return {};
+                throw;
+            }
+        }
+    }
+    return expected_ints;
+}
+
 test::Result test_read_mine_cpp_read_all(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
@@ -884,33 +916,10 @@ test::Result test_read_mine_cpp_read_row_vec(const std::string & csv_text, const
 
 test::Result test_read_mine_cpp_read_all_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
-    std::vector<std::vector<int>> expected_ints;
-    for(auto & row: expected_data)
-    {
-        expected_ints.emplace_back();
-        for(auto & col: row)
-        {
-            try
-            {
-                expected_ints.back().push_back(std::stoi(col));
-                if(std::to_string(expected_ints.back().back()) != col)
-                    return test::skip();
-            }
-            catch(const std::invalid_argument & e)
-            {
-                // TODO; c++20 start_with
-                if(std::string_view{e.what(), 4} == "stoi")
-                    return test::skip();
-                throw;
-            }
-            catch(const std::out_of_range & e)
-            {
-                if(std::string_view{e.what(), 4} == "stoi")
-                    return test::skip();
-                throw;
-            }
-        }
-    }
+    auto expected_ints = convert_to_int(expected_data);
+    if(!expected_ints)
+        return test::skip();
+
     try
     {
         auto data = csv::Reader(csv::Reader::input_string, csv_text, delimiter, quote, lenient).read_all<int>();
@@ -930,7 +939,7 @@ test::Result test_read_mine_cpp_read_all_as_int(const std::string & csv_text, co
             std::cout << "expected: "; print_data(expected_data); std::cout << '\n';
             std::cout << "got:      "; print_data(str_data);      std::cout << "\n\n";
         };
-        return test::pass_fail(data == expected_ints, failure_fun);
+        return test::pass_fail(data == *expected_ints, failure_fun);
     }
     catch(const csv::Parse_error & e)
     {
@@ -1143,6 +1152,43 @@ test::Result test_read_mine_cpp_row_vec(const std::string & csv_text, const CSV_
     }
 }
 
+test::Result test_read_mine_cpp_row_vec_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+{
+    auto expected_ints = convert_to_int(expected_data);
+    if(!expected_ints)
+        return test::skip();
+
+    try
+    {
+        csv::Reader r(csv::Reader::input_string, csv_text, delimiter, quote, lenient);
+        std::vector<std::vector<int>> data;
+        for(auto & row: r)
+            data.emplace_back(row.read_vec<int>());
+
+        auto failure_fun = [csv_text, data, expected_data]()
+        {
+            CSV_data str_data;
+            for(auto & row: data)
+            {
+                str_data.emplace_back();
+                for(auto & col: row)
+                {
+                    str_data.back().push_back(std::to_string(col));
+                }
+            }
+            std::cout << "given:    "; print_escapes(csv_text);   std::cout << '\n';
+            std::cout << "expected: "; print_data(expected_data); std::cout << '\n';
+            std::cout << "got:      "; print_data(str_data);      std::cout << "\n\n";
+        };
+        return test::pass_fail(data == *expected_ints, failure_fun);
+    }
+    catch(const csv::Parse_error & e)
+    {
+        // std::cerr<<e.what()<<"\n";
+        return test::error();
+    }
+}
+
 test::Result test_read_mine_cpp_map(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
@@ -1212,38 +1258,15 @@ test::Result test_read_mine_cpp_map(const std::string & csv_text, const CSV_data
 
 test::Result test_read_mine_cpp_map_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
-    std::vector<std::vector<int>> expected_ints;
-    for(auto & row: expected_data)
-    {
-        expected_ints.emplace_back();
-        for(auto & col: row)
-        {
-            try
-            {
-                expected_ints.back().push_back(std::stoi(col));
-                if(std::to_string(expected_ints.back().back()) != col)
-                    return test::skip();
-            }
-            catch(const std::invalid_argument & e)
-            {
-                if(std::string_view{e.what(), 4} == "stoi")
-                    return test::skip();
-                throw;
-            }
-            catch(const std::out_of_range & e)
-            {
-                if(std::string_view{e.what(), 4} == "stoi")
-                    return test::skip();
-                throw;
-            }
-        }
-    }
+    auto expected_ints = convert_to_int(expected_data);
+    if(!expected_ints)
+        return test::skip();
 
     try
     {
         csv::Map_reader_iter<int, int> r(csv::Reader::input_string, csv_text, {}, {}, delimiter, quote, lenient);
 
-        auto headers = expected_ints.at(0);
+        auto headers = expected_ints->at(0);
         if(r.get_headers() != headers)
             return test::fail([csv_text, headers, got_headers=r.get_headers()]()
                     {
@@ -1258,14 +1281,14 @@ test::Result test_read_mine_cpp_map_as_int(const std::string & csv_text, const C
                     });
 
         std::size_t i = 1;
-        for(; r != csv::Map_reader_iter{} && i < std::size(expected_ints); ++r, ++i)
+        for(; r != csv::Map_reader_iter{} && i < std::size(*expected_ints); ++r, ++i)
         {
-            if(std::size(expected_ints[i]) != std::size(headers))
+            if(std::size((*expected_ints)[i]) != std::size(headers))
                 return test::skip();
 
             std::remove_reference_t<decltype(*r)> expected_row;
             for(std::size_t j = 0; j < std::size(headers); ++j)
-                expected_row.emplace(headers[j], expected_ints[i][j]);
+                expected_row.emplace(headers[j], (*expected_ints)[i][j]);
 
             if(*r != expected_row)
             {
@@ -1283,7 +1306,7 @@ test::Result test_read_mine_cpp_map_as_int(const std::string & csv_text, const C
                         });
             }
         }
-        if(i != std::size(expected_ints) || r != csv::Map_reader_iter{})
+        if(i != std::size(*expected_ints) || r != csv::Map_reader_iter{})
                 return test::fail([](){ std::cout<<"wrong # of rows\n"; });
 
         return test::pass();
@@ -2106,6 +2129,7 @@ int main(int, char *[])
         test_read_mine_cpp_row_fields,
         test_read_mine_cpp_row_stream,
         test_read_mine_cpp_row_vec,
+        test_read_mine_cpp_row_vec_as_int,
         test_read_mine_cpp_map,
         test_read_mine_cpp_map_as_int,
         test_read_mine_cpp_variadic,

@@ -224,11 +224,17 @@ namespace csv
                 return field;
             }
 
+            template<typename T = std::string, typename OutputIter>
+            void read(OutputIter it)
+            {
+                std::copy(begin<T>(), end<T>(), it);
+            }
+
             template<typename T = std::string>
             std::vector<T> read_vec()
             {
                 std::vector<T> vec;
-                std::copy(begin(), end(), std::back_inserter(vec));
+                std::copy(begin<T>(), end<T>(), std::back_inserter(vec));
                 return vec;
             }
 
@@ -427,67 +433,54 @@ namespace csv
             }
         }
 
-        template <typename T = std::string, typename OutputIter>
-        bool read_row(OutputIter it)
-        {
-            while(true)
-            {
-                auto field = read_field<T>();
-                if(eof())
-                    return false;
-
-                *it++ = field;
-
-                if(end_of_row())
-                    break;
-            }
-            return true;
-        }
-
         Row get_row()
         {
             consume_newlines();
             if(eof())
-                return Row();
+                return Row{};
             else
-                return Row(*this);
+                return Row{*this};
+        }
+
+        template <typename T = std::string, typename OutputIter>
+        bool read_row(OutputIter it)
+        {
+            auto row = get_row();
+            if(!row)
+                return false;
+
+            row.read<T>(it);
+            return true;
         }
 
         template <typename T = std::string>
         std::optional<std::vector<T>> read_row_vec()
         {
-            std::vector<T> data;
-            if(read_row<T>(std::back_inserter(data)))
-                return data;
-            else
+            auto row = get_row();
+            if(!row)
                 return {};
+
+            return row.read_vec<T>();
         }
 
         template <typename ... Args>
         std::optional<std::tuple<Args...>> read_row_tuple()
         {
-            if(eof())
+            auto row = get_row();
+            if(!row)
                 return {};
 
-            std::tuple<Args...> ret;
-            read_row_tuple_helper(ret, std::index_sequence_for<Args...>{});
-
-            if(end_of_row())
-            {
-                end_of_row_ = false;
-            }
-
-            return ret;
+            return row.read_tuple<Args...>();
         }
 
         template <typename ... Data>
         void read_row_v(Data & ... data)
         {
-            (read_row_variadic_helper(data), ...);
-            if(end_of_row())
-            {
-                end_of_row_ = false;
-            }
+            auto row = get_row();
+            if(!row)
+                return;
+
+            return row.read_v(data...);
         }
 
         template <typename T = std::string>
@@ -506,25 +499,6 @@ namespace csv
         }
 
     private:
-        // essentially the same as operator<<, but throws if caller tries to read beyond the end of a row
-        template <typename T>
-        void read_row_variadic_helper(T & t)
-        {
-            if(end_of_row())
-            {
-                end_of_row_ = false;
-                throw Out_of_range_error("Read past end of row");
-            }
-
-            *this >> t;
-        }
-
-        template <typename Tuple, std::size_t ... Is>
-        void read_row_tuple_helper(Tuple & t, std::index_sequence<Is...>)
-        {
-            (read_row_variadic_helper(std::get<Is>(t)), ...);
-        }
-
         int getc()
         {
             int c = input_stream_->get();
