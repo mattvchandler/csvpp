@@ -38,22 +38,22 @@ namespace csv
     {
     public:
         Parse_error(const char * msg, int line_no, int col_no):
-            std::runtime_error("Error parsing CSV at line: " +
-                std::to_string(line_no) + ", col: " + std::to_string(col_no) + ": " + msg)
+            std::runtime_error{"Error parsing CSV at line: " +
+                std::to_string(line_no) + ", col: " + std::to_string(col_no) + ": " + msg}
         {}
     };
 
     class Out_of_range_error: public std::out_of_range
     {
     public:
-        explicit Out_of_range_error(const char * msg): std::out_of_range(msg) {}
+        explicit Out_of_range_error(const char * msg): std::out_of_range{msg} {}
     };
 
     class Type_conversion_error: public std::runtime_error
     {
     public:
         explicit Type_conversion_error(const std::string & field):
-            std::runtime_error("Could not convert '" + field + "' to requested type")
+            std::runtime_error{"Could not convert '" + field + "' to requested type"}
         {}
     };
 
@@ -122,9 +122,9 @@ namespace csv
                 using reference         = const T&;
                 using iterator_category = std::input_iterator_tag;
 
-                Iterator(): row(nullptr)
+                Iterator(): row{nullptr}
                 {}
-                explicit Iterator(Reader::Row & row): row(&row)
+                explicit Iterator(Reader::Row & row): row{&row}
                 {
                     ++*this;
                 }
@@ -167,42 +167,35 @@ namespace csv
             public:
                 auto begin()
                 {
-                    return Row::Iterator<T>(row);
+                    return Row::Iterator<T>{row};
                 }
 
                 auto end()
                 {
-                    return Row::Iterator<T>();
+                    return Row::Iterator<T>{};
                 }
             private:
                 friend Row;
-                explicit Range(Row & row):row(row) {}
+                explicit Range(Row & row):row{row} {}
                 Row & row;
             };
 
             template<typename T = std::string>
             auto begin()
             {
-                return Row::Iterator<T>(*this);
+                return Row::Iterator<T>{*this};
             }
 
             template<typename T = std::string>
             auto end()
             {
-                return Row::Iterator<T>();
+                return Row::Iterator<T>{};
             }
 
             template<typename T = std::string>
             auto range()
             {
-                return Range<T>(*this);
-            }
-
-            template<typename T>
-            Row & operator>>(T & data)
-            {
-                data = read_field<T>();
-                return * this;
+                return Range<T>{*this};
             }
 
             template<typename T = std::string>
@@ -222,6 +215,13 @@ namespace csv
                     end_of_row_ = true;
 
                 return field;
+            }
+
+            template<typename T>
+            Row & operator>>(T & data)
+            {
+                data = read_field<T>();
+                return * this;
             }
 
             template<typename T = std::string, typename OutputIter>
@@ -265,12 +265,12 @@ namespace csv
                 ((*this >> std::get<Is>(t)), ...);
             }
 
-            Row(): reader_(nullptr) {}
-            explicit Row(Reader & reader): reader_(&reader) {}
+            Row(): reader_{nullptr} {}
+            explicit Row(Reader & reader): reader_{&reader} {}
 
-            Reader * reader_;
-            bool end_of_row_ = false;
-            bool past_end_of_row_ = false;
+            Reader * reader_ { nullptr };
+            bool end_of_row_ { false };
+            bool past_end_of_row_ { false };
         };
 
         class Iterator
@@ -282,9 +282,9 @@ namespace csv
             using reference         = const value_type&;
             using iterator_category = std::input_iterator_tag;
 
-            Iterator(): reader_(nullptr)
+            Iterator(): reader_{nullptr}
             {}
-            explicit Iterator(Reader & r): reader_(&r)
+            explicit Iterator(Reader & r): reader_{&r}
             {
                 obj = reader_->get_row();
 
@@ -318,7 +318,7 @@ namespace csv
             }
 
         private:
-            Reader * reader_;
+            Reader * reader_ { nullptr };
             value_type obj;
         };
 
@@ -384,13 +384,6 @@ namespace csv
             return Iterator();
         }
 
-        template<typename T>
-        Reader & operator>>(T & data)
-        {
-            data = read_field<T>();
-            return * this;
-        }
-
         template<typename T = std::string>
         T read_field()
         {
@@ -432,6 +425,14 @@ namespace csv
                 return field_val;
             }
         }
+
+        template<typename T>
+        Reader & operator>>(T & data)
+        {
+            data = read_field<T>();
+            return * this;
+        }
+
 
         Row get_row()
         {
@@ -813,8 +814,7 @@ namespace csv
             using reference         = void;
             using iterator_category = std::output_iterator_tag;
 
-            explicit Iterator(Writer & w): writer_(&w)
-            {}
+            explicit Iterator(Writer & w): writer_{&w} {}
 
             Iterator & operator*() { return *this; }
             Iterator & operator++() { return *this; }
@@ -833,20 +833,21 @@ namespace csv
 
         explicit Writer(std::ostream & output_stream,
                 const char delimiter = ',', const char quote = '"'):
-            output_stream_(&output_stream),
-            delimiter_(delimiter),
-            quote_(quote)
+            output_stream_{&output_stream},
+            delimiter_{delimiter},
+            quote_{quote}
         {}
         explicit Writer(const std::string& filename,
                 const char delimiter = ',', const char quote = '"'):
-            internal_output_stream_(std::make_unique<std::ofstream>(filename, std::ios::binary)),
-            output_stream_(internal_output_stream_.get()),
-            delimiter_(delimiter),
-            quote_(quote)
+            internal_output_stream_{std::make_unique<std::ofstream>(filename, std::ios::binary)},
+            output_stream_{internal_output_stream_.get()},
+            delimiter_{delimiter},
+            quote_{quote}
         {
             if(!(*internal_output_stream_))
                 throw std::ios_base::failure{"Could not open file: " + filename};
         }
+
         ~Writer()
         {
             if(!start_of_row_)
@@ -865,43 +866,6 @@ namespace csv
 
         void set_delimiter(const char delimiter) { delimiter_ = delimiter; }
         void set_quote(const char quote) { quote_ = quote; }
-
-        template<typename Iter>
-        void write_row(Iter first, Iter last)
-        {
-            if(!start_of_row_)
-                end_row();
-
-            for(; first != last; ++first)
-                write_field(*first);
-
-            end_row();
-        }
-
-        template<typename T>
-        void write_row(const std::initializer_list<T> & data)
-        {
-            write_row(std::begin(data), std::end(data));
-        }
-
-        template<typename Range>
-        void write_row(const Range & data)
-        {
-            write_row(std::begin(data), std::end(data));
-        }
-
-        template<typename ...Args>
-        void write_row(const std::tuple<Args...> & data)
-        {
-            std::apply(&Writer::write_row_v<Args...>, std::tuple_cat(std::tuple(std::ref(*this)), data));
-        }
-
-        template<typename ...Data>
-        void write_row_v(const Data & ...data)
-        {
-            (void)(*this << ... << data);
-            end_row();
-        }
 
         template<typename T>
         void write_field(const T & field)
@@ -932,17 +896,54 @@ namespace csv
             (*output_stream_)<<"\r\n";
             start_of_row_ = true;
         }
-    private:
 
+        template<typename Iter>
+        void write_row(Iter first, Iter last)
+        {
+            if(!start_of_row_)
+                end_row();
+
+            for(; first != last; ++first)
+                write_field(*first);
+
+            end_row();
+        }
+
+        template<typename T>
+        void write_row(const std::initializer_list<T> & data)
+        {
+            write_row(std::begin(data), std::end(data));
+        }
+
+        template<typename Range>
+        void write_row(const Range & data)
+        {
+            write_row(std::begin(data), std::end(data));
+        }
+
+        template<typename ...Data>
+        void write_row_v(const Data & ...data)
+        {
+            (void)(*this << ... << data);
+            end_row();
+        }
+
+        template<typename ...Args>
+        void write_row(const std::tuple<Args...> & data)
+        {
+            std::apply(&Writer::write_row_v<Args...>, std::tuple_cat(std::tuple(std::ref(*this)), data));
+        }
+
+    private:
         template<typename T>
         std::string quote(const T & field)
         {
             std::string field_str = str(field);
 
             std::string ret{quote_};
-            ret.reserve(std::size(field) + 2);
+            ret.reserve(std::size(field_str) + 2);
             bool quoted = false;
-            for(auto c: field)
+            for(auto c: field_str)
             {
                 if(c == quote_)
                 {
@@ -956,7 +957,7 @@ namespace csv
             }
 
             if(!quoted)
-                return field;
+                return field_str;
 
             ret += quote_;
             return ret;
@@ -966,7 +967,7 @@ namespace csv
 
         std::unique_ptr<std::ostream> internal_output_stream_;
         std::ostream * output_stream_;
-        bool start_of_row_ = true;
+        bool start_of_row_ {true};
 
         char delimiter_ {','};
         char quote_ {'"'};
@@ -989,13 +990,13 @@ namespace csv
     public:
         Map_writer_iter(std::ostream & output_stream, const std::vector<Header> & headers, const Default_value & default_val = {},
                 const char delimiter = ',', const char quote = '"'):
-            writer_(std::make_unique<Writer>(output_stream, delimiter, quote)), headers_(headers), default_val_(default_val)
+            writer_{std::make_unique<Writer>(output_stream, delimiter, quote)}, headers_{headers}, default_val_{default_val}
         {
             writer_->write_row(headers);
         }
         Map_writer_iter(const std::string& filename, const std::vector<Header> & headers, const Default_value & default_val = {},
                 const char delimiter = ',', const char quote = '"'):
-            writer_(std::make_unique<Writer>(filename, delimiter, quote)), headers_(headers), default_val_(default_val)
+            writer_{std::make_unique<Writer>(filename, delimiter, quote)}, headers_{headers}, default_val_{default_val}
         {
             writer_->write_row(headers);
         }
@@ -1028,7 +1029,6 @@ namespace csv
             writer_->end_row();
             return *this;
         }
-
     };
 };
 
