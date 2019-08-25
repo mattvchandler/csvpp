@@ -6,7 +6,8 @@
 #include <limits.h>
 
 #include <getopt.h>
-#include <csv.h>
+
+#include "csv.h"
 
 void usage(const char * prog_name)
 {
