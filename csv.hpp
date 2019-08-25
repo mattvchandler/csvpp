@@ -1,4 +1,6 @@
-// Copyright 2018 Matthew Chandler
+/// @file
+/// @brief CSV library
+// Copyright 2019 Matthew Chandler
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -34,26 +36,35 @@
 
 namespace csv
 {
-    class Parse_error: public std::runtime_error
+    class Error: virtual public std::exception
     {
     public:
+        virtual ~Error() = default;
+        const char * what() const throw() override { return msg_.c_str(); }
+    protected:
+        Error() = default;
+        explicit Error(const std::string & msg): msg_{msg} {}
+    private:
+        std::string msg_;
+    };
+
+    struct Parse_error final: virtual public Error
+    {
         Parse_error(const char * msg, int line_no, int col_no):
-            std::runtime_error{"Error parsing CSV at line: " +
+            Error{"Error parsing CSV at line: " +
                 std::to_string(line_no) + ", col: " + std::to_string(col_no) + ": " + msg}
         {}
     };
 
-    class Out_of_range_error: public std::out_of_range
+    struct Out_of_range_error final: virtual public Error
     {
-    public:
-        explicit Out_of_range_error(const char * msg): std::out_of_range{msg} {}
+        explicit Out_of_range_error(const char * msg): Error{msg} {}
     };
 
-    class Type_conversion_error: public std::runtime_error
+    struct Type_conversion_error final: virtual public Error
     {
-    public:
         explicit Type_conversion_error(const std::string & field):
-            std::runtime_error{"Could not convert '" + field + "' to requested type"}
+            Error{"Could not convert '" + field + "' to requested type"}
         {}
     };
 
