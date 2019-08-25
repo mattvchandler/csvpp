@@ -33,13 +33,20 @@
 #include <vector>
 
 #include <cassert>
+#include <cerrno>
+#include <cstring>
 
+/// CSV namespace
 namespace csv
 {
+    /// Error base class
+
+    /// Base class for all library exceptions. Do not use directly
     class Error: virtual public std::exception
     {
     public:
         virtual ~Error() = default;
+        /// @returns exception message
         const char * what() const throw() override { return msg_.c_str(); }
     protected:
         Error() = default;
@@ -48,24 +55,90 @@ namespace csv
         std::string msg_;
     };
 
-    struct Parse_error final: virtual public Error
+    /// Internal error
+
+    /// Thrown when an illegal state occurs
+    struct Internal_error: virtual public Error
     {
-        Parse_error(const char * msg, int line_no, int col_no):
-            Error{"Error parsing CSV at line: " +
-                std::to_string(line_no) + ", col: " + std::to_string(col_no) + ": " + msg}
-        {}
+        /// @param msg Error message
+        explicit Internal_error(const std::string & msg): Error{msg} {}
     };
 
+    /// Parsing error
+
+    /// Thrown when Reader encounters a parsing error
+    class Parse_error final: virtual public Error
+    {
+    public:
+        /// @param type paring error type (ie. quote found inside of unquoted field)
+        /// @param line_no line that the error occured on
+        /// @param col_no column that the error occured on
+        Parse_error(const std::string & type, int line_no, int col_no):
+            Error{"Error parsing CSV at line: " +
+                std::to_string(line_no) + ", col: " + std::to_string(col_no) + ": " + type},
+            type_{type},
+            line_no_{line_no},
+            col_no_{col_no}
+        {}
+
+        /// @returns paring error type (ie. quote found inside of unquoted field)
+        std::string type() const { return type_; }
+        /// @returns line number that the error occured on
+        int line_no() const { return line_no_; }
+        /// @returns column that the error occured on
+        int col_no() const { return col_no_; }
+
+    private:
+        std::string type_;
+        int line_no_;
+        int col_no_;
+    };
+
+    /// Out of range error
+
+    /// Thrown when Reader is read from beyond the end of input
     struct Out_of_range_error final: virtual public Error
     {
-        explicit Out_of_range_error(const char * msg): Error{msg} {}
+        /// @param msg Error message
+        explicit Out_of_range_error(const std::string & msg): Error{msg} {}
     };
 
+    /// Type conversion error
+
+    /// Thrown when Reader fails convert a field to requested type
     struct Type_conversion_error final: virtual public Error
     {
+    public:
+        /// @param field value of field that failed to convert
         explicit Type_conversion_error(const std::string & field):
-            Error{"Could not convert '" + field + "' to requested type"}
+            Error{"Could not convert '" + field + "' to requested type"},
+            field_(field)
         {}
+
+        /// @returns value of field that failed to convert
+        std::string field() const { return field_; }
+    private:
+        std::string field_;
+    };
+
+    /// IO error
+
+    /// Thrown when an IO error occurs
+    class IO_error final: virtual public Error
+    {
+    public:
+        /// @param msg Error message
+        /// @param errno_code errno code
+        explicit IO_error(const std::string & msg, int errno_code):
+            Error{msg + ": " + std::strerror(errno_code)},
+            errno_code_{errno_code}
+        {}
+        /// @returns msg Error message
+        int errno_code() const { return errno_code_; }
+        /// @returns errno_code errno code
+        std::string errno_str() const { return std::strerror(errno_code_); }
+    private:
+        int errno_code_;
     };
 
     namespace detail
@@ -352,7 +425,7 @@ namespace csv
             lenient_{lenient}
         {
             if(!(*internal_input_stream_))
-                throw std::ios_base::failure{"Could not open file: " + filename};
+                throw IO_error("Could not open file '" + filename + "'", errno);
         }
 
         // disambiguation tag
@@ -515,7 +588,7 @@ namespace csv
         {
             int c = input_stream_->get();
             if(input_stream_->bad() && !input_stream_->eof())
-                throw Parse_error("Error reading from stream", line_no_, col_no_);
+                throw IO_error{"Error reading from input", errno};
 
             if(c == '\n')
             {
@@ -651,7 +724,7 @@ namespace csv
                         break;
 
                     default:
-                        throw std::runtime_error{"Illegal state"};
+                        throw Internal_error{"Illegal state"};
                     }
                 }
             }
@@ -856,7 +929,7 @@ namespace csv
             quote_{quote}
         {
             if(!(*internal_output_stream_))
-                throw std::ios_base::failure{"Could not open file: " + filename};
+                throw IO_error("Could not open file '" + filename + "'", errno);
         }
 
         ~Writer()
