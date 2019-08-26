@@ -1249,7 +1249,7 @@ test::Result test_read_mine_cpp_map(const std::string & csv_text, const CSV_data
     }
     catch(csv::Out_of_range_error & e)
     {
-        if(e.what() == std::string{"Too many columns"})
+        if(e.what() == std::string{"Too many fields"})
             return test::skip([](){ std::cout<<"wrong # of cols\n"; });
         else
             throw;
@@ -1323,7 +1323,7 @@ test::Result test_read_mine_cpp_map_as_int(const std::string & csv_text, const C
     }
     catch(const csv::Out_of_range_error &e)
     {
-        if(e.what() == std::string{"Too many columns"})
+        if(e.what() == std::string{"Too many fields"})
             return test::skip([](){ std::cout<<"wrong # of cols\n"; });
         else
             throw;

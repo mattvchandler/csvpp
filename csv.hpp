@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+/// @todo TODO: consistent capitalization in doxygen comments
+
 #ifndef CSV_HPP
 #define CSV_HPP
 
@@ -202,13 +204,19 @@ namespace csv
     }
 
     /// Parses CSV data
+
+    /// Most methods operate on rows, but some read field-by-field. Mixing
+    /// row-wise and field-wise methods is not reccomended, but is possible.
+    /// Row-wise methods will act as if the current position is the start of a
+    /// row, regardless of any fields that have been read from the current row so
+    /// far.
     class Reader
     {
     public:
         /// Represents a single row of CSV data
 
         /// a Row may be obtained from Reader::get_row or Reader::Iterator
-        /// @warning Reader object must not be destroyed during Row lifetime
+        /// @warning Reader object must not be destroyed or read from during Row lifetime
         class Row
         {
         public:
@@ -224,17 +232,18 @@ namespace csv
                 using reference         = const T&;
                 using iterator_category = std::input_iterator_tag;
 
-                /// Empty constuctor
+                /// Empty constructor
 
                 /// Denotes the end of iteration
                 Iterator(): row{nullptr} {}
 
                 /// Creates an iterator from a Row, and parses the first field
+
                 /// @param row row to iterate over.
-                /// @warning row must not be destroyed during iteration
+                /// @warning row must not be destroyed or read from during iteration
                 /// @throws Parse_error if error parsing first field (*only when not parsing in lenient mode*)
                 /// @throws IO_error if error reading CSV data
-                /// @throws Type_conversion_error if error converting to type T
+                /// @throws Type_conversion_error if error converting to type T. Caller may call this again with a different type to try again
                 explicit Iterator(Reader::Row & row): row{&row}
                 {
                     ++*this;
@@ -249,7 +258,7 @@ namespace csv
                 /// parse and iterate to next field
                 /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
                 /// @throws IO_error if error reading CSV data
-                /// @throws Type_conversion_error if error converting to type T
+                /// @throws Type_conversion_error if error converting to type T. Caller may call this again with a different type to try again
                 Iterator & operator++()
                 {
                     assert(row);
@@ -276,12 +285,12 @@ namespace csv
                 }
 
             private:
-                Reader::Row * row;
-                T obj{};
-                bool end_of_row_ = false;
+                Reader::Row * row; ///< Pointer to parent Row object, or \c nullptr if past end of row
+                T obj{}; ///< Storage for current field
+                bool end_of_row_ = false; ///< keeps track of when the Row has hit end-of-row
             };
 
-            /// Helper class for iterating over a Row
+            /// Helper class for iterating over a Row. Use Row::range to obtain
 
             /// @tparam T type to convert fields to. Defaults to std::string
             template<typename T = std::string>
@@ -301,8 +310,8 @@ namespace csv
                 }
             private:
                 friend Row;
-                explicit Range(Row & row):row{row} {}
-                Row & row;
+                explicit Range(Row & row):row{row} {} ///< construct a Range. Only for use by Row::range
+                Row & row; ///< Ref to parent Row object
             };
 
             /// @tparam T type to convert fields to. Defaults to std::string
@@ -335,10 +344,10 @@ namespace csv
             /// Read a single field from the row
 
             /// @tparam T type to convert fields to. Defaults to std::string
-            /// @returns the next field from the row, or an empty object if past the end of the row
+            /// @returns the next field from the row, or a default-initialized object if past the end of the row
             /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
             /// @throws IO_error if error reading CSV data
-            /// @throws Type_conversion_error if error converting to type T
+            /// @throws Type_conversion_error if error converting to type T. Caller may call this again with a different type to try again
             template<typename T = std::string>
             T read_field()
             {
@@ -360,12 +369,11 @@ namespace csv
 
             /// Read a single field from the row
 
-            /// @tparam T type to convert fields to. Defaults to std::string
             /// @param[out] data variable to to write field to
             /// @returns this Row object
             /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
             /// @throws IO_error if error reading CSV data
-            /// @throws Type_conversion_error if error converting to type T
+            /// @throws Type_conversion_error if error converting to type T. Caller may call this again with a different type to try again
             template<typename T>
             Row & operator>>(T & data)
             {
@@ -409,7 +417,7 @@ namespace csv
             /// the remaining elements of the tuple will be default initialized
             /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
             /// @throws IO_error if error reading CSV data
-            /// @throws Type_conversion_error if error converting to specified type
+            /// @throws Type_conversion_error if error converting to specified types
             template <typename ... Args>
             std::tuple<Args...> read_tuple()
             {
@@ -425,7 +433,7 @@ namespace csv
             /// the remaining parameters will be default initialized
             /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
             /// @throws IO_error if error reading CSV data
-            /// @throws Type_conversion_error if error converting to specified type
+            /// @throws Type_conversion_error if error converting to specified types
             template <typename ... Data>
             void read_v(Data & ... data)
             {
@@ -442,20 +450,31 @@ namespace csv
             friend Reader;
 
             /// helper function for read_tuple
+
+            /// uses a std::index_sequence to generate indexes for std::get
+            /// @param t tuple to load data into
             template <typename Tuple, std::size_t ... Is>
             void read_tuple_helper(Tuple & t, std::index_sequence<Is...>)
             {
                 ((*this >> std::get<Is>(t)), ...);
             }
 
+            /// Empty constructor
+
+            /// Used to denote that no rows remain
             Row(): reader_{nullptr} {}
+
+            /// Construct a Row from a Reader
+
+            /// For use by Reader::get_row only
             explicit Row(Reader & reader): reader_{&reader} {}
 
-            Reader * reader_ { nullptr };
-            bool end_of_row_ { false };
-            bool past_end_of_row_ { false };
+            Reader * reader_ { nullptr }; ///< pointer to parent Reader object or nullptr if no rows remain
+            bool end_of_row_ { false }; ///< tracks if the end of the current row has been reacehd
+            bool past_end_of_row_ { false }; ///< tracks if past the end of the row, and prevents reading from the next row
         };
 
+        /// iterates over the Rows in CSV data
         class Iterator
         {
         public:
@@ -465,8 +484,15 @@ namespace csv
             using reference         = const value_type&;
             using iterator_category = std::input_iterator_tag;
 
-            Iterator(): reader_{nullptr}
-            {}
+            /// Empty constructor
+
+            /// Denotes the end of iteration
+            Iterator(): reader_{nullptr} {}
+
+            /// Creates an iterator from a Reader object
+
+            /// @param r Reader object to iterate over
+            /// @warning r must not be destroyed or read from during iteration
             explicit Iterator(Reader & r): reader_{&r}
             {
                 obj = reader_->get_row();
@@ -475,14 +501,22 @@ namespace csv
                     reader_ = nullptr;
             }
 
+            /// @returns current row
             const value_type & operator*() const { return obj; }
+
+            /// @returns current row
+            value_type & operator*() { return obj; }
+
+            /// @returns pointer to current row
             const value_type * operator->() const { return &obj; }
 
-            value_type & operator*() { return obj; }
+            /// @returns pointer to current row
             value_type * operator->() { return &obj; }
 
+            /// iterate to next Row
             Iterator & operator++()
             {
+                // discard any remaining fields
                 while(!obj.end_of_row())
                     obj.read_field();
 
@@ -495,16 +529,24 @@ namespace csv
                 return *this;
             }
 
+            /// Compare to another Reader::Iterator
             bool equals(const Iterator & rhs) const
             {
                 return reader_ == rhs.reader_;
             }
 
         private:
-            Reader * reader_ { nullptr };
-            value_type obj;
+            Reader * reader_ { nullptr }; ///< pointer to parent Reader object or nullptr if no rows remain
+            value_type obj; ///< Storage for the current Row
         };
 
+        /// Open a std::istream for CSV parsing
+
+        /// @param input_stream std::istream to read from
+        /// @param delimiter delimiter character
+        /// @param quote quote character
+        /// @param lenient enable lenient parsing (will attempt to read past syntax errors)
+        /// @warning input_stream must not be destroyed or read from during the lifetime of this Reader
         explicit Reader(std::istream & input_stream,
                 const char delimiter = ',', const char quote = '"',
                 const bool lenient = false):
@@ -514,6 +556,12 @@ namespace csv
             lenient_{lenient}
         {}
 
+        /// Open a file for CSV parsing
+
+        /// @param filename path to a file to parse
+        /// @param delimiter delimiter character
+        /// @param quote quote character
+        /// @param lenient enable lenient parsing (will attempt to read past syntax errors)
         explicit Reader(const std::string & filename,
                 const char delimiter = ',', const char quote = '"',
                 const bool lenient = false):
@@ -527,10 +575,26 @@ namespace csv
                 throw IO_error("Could not open file '" + filename + "'", errno);
         }
 
-        // disambiguation tag
+        /// disambiguation tag type
+
+        /// distinguishes opening a Reader with a filename from opening a Reader
+        /// with a string
         struct input_string_t{};
+
+        /// disambiguation tag
+
+        /// distinguishes opening a Reader with a filename from opening a Reader
+        /// with a string
         static inline constexpr input_string_t input_string{};
 
+        /// Parse CSV from memory
+
+        /// use Reader::input_string to distinguish this constructor from the
+        /// constructor accepting a filename
+        /// @param input_data string containing CSV to parse
+        /// @param delimiter delimiter character
+        /// @param quote quote character
+        /// @param lenient enable lenient parsing (will attempt to read past syntax errors)
         Reader(input_string_t, const std::string & input_data,
                 const char delimiter = ',', const char quote = '"',
                 const bool lenient = false):
@@ -544,29 +608,54 @@ namespace csv
         ~Reader() = default;
 
         Reader(const Reader &) = delete;
-        Reader(Reader &&) = default;
         Reader & operator=(const Reader &) = delete;
+        Reader(Reader &&) = default;
         Reader & operator=(Reader &&) = default;
 
+        /// @returns \c true if the last field in the row has been read
         bool end_of_row() const { return end_of_row_ || eof(); }
+
+        /// @returns \c true if no data remains to be read
         bool eof() const { return state_ == State::eof; }
 
-        void set_delimiter(const char delimiter) { delimiter_ = delimiter; }
-        void set_quote(const char quote) { quote_ = quote; }
-        void set_lenient(const bool lenient) { lenient_ = lenient; }
-
+        /// @returns \c true if there is more data to be read
         operator bool() { return !eof(); }
 
-        auto begin()
+        /// Change the delimiter character
+
+        /// @param delimiter new delimiter char
+        void set_delimiter(const char delimiter) { delimiter_ = delimiter; }
+        /// Change the quote character
+
+        /// @param quote new quote char
+        void set_quote(const char quote) { quote_ = quote; }
+
+        /// Enable / disable lenient parsing
+
+        /// Lenient parsing will attempt to ignore syntax errors in CSV input.
+        /// @param lenient \c true for lenient parsing
+        void set_lenient(const bool lenient) { lenient_ = lenient; }
+
+        /// @returns iterator to first (or current) row
+        Iterator begin()
         {
             return Iterator(*this);
         }
 
+        /// @returns iterator to end of CSV data
         auto end()
         {
             return Iterator();
         }
 
+        /// Read a single field
+
+        /// check end_of_row() to see if this is the last field in the current row
+        /// @tparam T type to convert fields to. Defaults to std::string
+        /// @returns the next field from the row, or a default-initialized object if past the end of the input data
+        /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+        /// @throws IO_error if error reading CSV data
+        /// @throws Type_conversion_error if error converting to type T. Caller may call this again with a different type to try again
         template<typename T = std::string>
         T read_field()
         {
@@ -606,6 +695,14 @@ namespace csv
             }
         }
 
+        /// Read a single field
+
+        /// check end_of_row() to see if this is the last field in the current row
+        /// @param[out] data variable to to write field to
+        /// @returns this Reader object
+        /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+        /// @throws IO_error if error reading CSV data
+        /// @throws Type_conversion_error if error converting to type T. Caller may call this again with a different type to try again
         template<typename T>
         Reader & operator>>(T & data)
         {
@@ -613,6 +710,9 @@ namespace csv
             return * this;
         }
 
+        /// Get the current Row
+
+        /// @returns Row object for the current row
         Row get_row()
         {
             consume_newlines();
@@ -622,6 +722,14 @@ namespace csv
                 return Row{*this};
         }
 
+        /// reads current row into an output iterator
+
+        /// @tparam T type to convert fields to. Defaults to std::string
+        /// @param it an output iterator to receive the row data
+        /// @returns \c false if this is the last row
+        /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+        /// @throws IO_error if error reading CSV data
+        /// @throws Type_conversion_error if error converting to type T
         template <typename T = std::string, typename OutputIter>
         bool read_row(OutputIter it)
         {
@@ -633,6 +741,13 @@ namespace csv
             return true;
         }
 
+        /// reads current row into a std::vector
+
+        /// @tparam T type to convert fields to. Defaults to std::string
+        /// @returns std::vector containing the fields from the row or empty optional if no rows remain
+        /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+        /// @throws IO_error if error reading CSV data
+        /// @throws Type_conversion_error if error converting to type T
         template <typename T = std::string>
         std::optional<std::vector<T>> read_row_vec()
         {
@@ -643,6 +758,16 @@ namespace csv
             return row.read_vec<T>();
         }
 
+        /// reads current row into a tuple
+
+        /// @tparam Args types to convert fields to
+        /// @returns std::tuple containing the fields from the row or empty
+        /// optional if no rows remain. If Args contains more elements than there
+        /// are fields in the row, the remaining elements of the tuple will be
+        /// default initialized
+        /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+        /// @throws IO_error if error reading CSV data
+        /// @throws Type_conversion_error if error converting to specified types
         template <typename ... Args>
         std::optional<std::tuple<Args...>> read_row_tuple()
         {
@@ -653,16 +778,30 @@ namespace csv
             return row.read_tuple<Args...>();
         }
 
+        /// reads fields into a variadic arguments
+
+        /// @warning this may be used to fields from multiple rows at a time.
+        /// Use with caution if the number of fields per row is not known
+        /// beforehand.
+        /// @param[out] data vars to read into.
+        /// if more parameters are passed than there are fields remaining,
+        /// the remaining parameters will be default initialized
+        /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+        /// @throws IO_error if error reading CSV data
+        /// @throws Type_conversion_error if error converting to specified types
         template <typename ... Data>
         void read_row_v(Data & ... data)
         {
-            auto row = get_row();
-            if(!row)
-                return;
-
-            return row.read_v(data...);
+            (void)(*this >> ... >> data);
         }
 
+        /// read entire CSV data into a vector of vectors
+
+        /// @tparam T type to convert fields to. Defaults to std::string
+        /// @returns 2D vector of CSV data.
+        /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+        /// @throws IO_error if error reading CSV data
+        /// @throws Type_conversion_error if error converting to type T
         template <typename T = std::string>
         std::vector<std::vector<T>> read_all()
         {
@@ -679,6 +818,12 @@ namespace csv
         }
 
     private:
+
+        /// Get next character from input
+
+        /// Updates line and column position, and checks for IO error
+        /// @returns next character
+        /// @throws IO_error
         int getc()
         {
             int c = input_stream_->get();
@@ -696,6 +841,10 @@ namespace csv
             return c;
         }
 
+        /// Consume newline characters
+
+        /// Advance stream position until first non-newline character
+        /// @throws IO_error
         void consume_newlines()
         {
             if(state_ != State::consume_newlines)
@@ -719,6 +868,12 @@ namespace csv
             }
         }
 
+        /// Core parsing method
+
+        /// Reads and parses character stream to obtain next field
+        /// @returns next field, or empty string if at EOF
+        /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+        /// @throws IO_error if error reading from stream
         std::string parse()
         {
             consume_newlines();
@@ -819,6 +974,7 @@ namespace csv
                         break;
 
                     default:
+                        // It should not be possible to reach this state
                         throw Internal_error{"Illegal state"};
                     }
                 }
@@ -826,56 +982,88 @@ namespace csv
             return field;
         }
 
+        /// owns an istream created by this Reader (either an ifstream when
+        /// constructed by filename or a istringstream when constructed by input
+        /// string)
         std::unique_ptr<std::istream> internal_input_stream_;
+
+        /// points to input istream. Will point to *internal_input_stream_ if
+        /// constructed by filename or input string, or the istream passed when
+        /// constructed by istream
         std::istream * input_stream_;
 
         char delimiter_ {','};
         char quote_ {'"'};
         bool lenient_ { false };
 
-        std::optional<std::string> conversion_retry_;
+        std::optional<std::string> conversion_retry_; ///< contains last field after type conversion error. Allows retrying conversion
         bool end_of_row_ { false };
 
-        enum class State {read, quote, consume_newlines, eof};
+        /// Parsing states
+        enum class State
+        {
+            read,             ///< Ready to read a character into current field
+            quote,            ///< Checking for escaped quote character or end of quoted field
+            consume_newlines, ///< Discarding any newline characters
+            eof               ///< At end of input stream
+        };
+
+        /// Current parser state
         State state_ { State::consume_newlines };
 
-        unsigned int line_no_ { 1 };
-        unsigned int col_no_ { 0 };
+        unsigned int line_no_ { 1 }; ///< Current line number within input
+        unsigned int col_no_ { 0 };  ///< Current column number within input
     };
 
+    /// Compare two Reader::Iterator objects
     inline bool operator==(const Reader::Iterator & lhs, const Reader::Iterator & rhs)
     {
         return lhs.equals(rhs);
     }
 
+    /// Compare two Reader::Iterator objects
     inline bool operator!=(const Reader::Iterator & lhs, const Reader::Iterator & rhs)
     {
         return !lhs.equals(rhs);
     }
 
+    /// Compare two Reader::Row::Iterator objects
     template <typename T>
     inline bool operator==(const Reader::Row::Iterator<T> & lhs, const Reader::Row::Iterator<T> & rhs)
     {
         return lhs.equals(rhs);
     }
 
+    /// Compare two Reader::Row::Iterator objects
     template <typename T>
     inline bool operator!=(const Reader::Row::Iterator<T> & lhs, const Reader::Row::Iterator<T> & rhs)
     {
         return !lhs.equals(rhs);
     }
 
+    /// Map-based Reader iterator
+
+    /// Iterates through a Reader, returning rows as a std::map.
+    /// Map keys (headers) come from the first row unless specified by the header
+    /// parameter to the constructor. If a row has more fields than the header,
+    /// Out_of_range_error error will be thrown
     template <typename Header = std::string, typename Value = std::string>
     class Map_reader_iter
     {
     private:
+        std::unique_ptr<Reader> reader_; ///< Reader object
+        Value default_val_;              ///< Default value
+        std::vector<Header> headers_;    ///< Headers
+        std::map<Header, Value> obj_;    ///< current row storage
 
-        std::unique_ptr<Reader> reader_;
-        Value default_val_;
-        std::vector<Header> headers_;
-        std::map<Header, Value> obj_;
+        /// Read header row from input (or use headers parameter)
 
-        auto get_header_row(const std::vector<Header> & headers)
+        /// @param headers use this as headers instead of first row
+        /// @returns headers
+        /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+        /// @throws IO_error if error reading CSV data
+        /// @throws Type_conversion_error if error converting to type Header.
+        std::vector<Header> get_header_row(const std::vector<Header> & headers)
         {
             if(!std::empty(headers))
                 return headers;
@@ -891,7 +1079,25 @@ namespace csv
         friend class Map_reader_iter;
 
     public:
+        /// Empty constructor
+
+        /// Denotes the end of iteration
         Map_reader_iter() {}
+
+        /// Open a std::istream for CSV parsing
+
+        /// @param input_stream std::istream to read from
+        /// @param default_val Value to use if a row has fewer fields than the header
+        /// @param headers list of field names to use. Leave blank to use first (header) row
+        /// @param delimiter delimiter character
+        /// @param quote quote character
+        /// @param lenient enable lenient parsing (will attempt to read past syntax errors)
+        /// @warning input_stream must not be destroyed or read from during the lifetime of this Map_reader_iter
+        /// @throws Parse_error if error parsing fields (*only when not parsing in lenient mode*)
+        /// @throws IO_error if error reading CSV data
+        /// @throws Type_conversion_error if error converting 1st row to type
+        /// Header (if headers param not specified), or 1st row to type Value (if
+        /// header param is specified)
         explicit Map_reader_iter(std::istream & input_stream, const Value & default_val = {}, const std::vector<Header> & headers = {},
                 const char delimiter = ',', const char quote = '"',
                 const bool lenient = false):
@@ -902,6 +1108,19 @@ namespace csv
             ++(*this);
         }
 
+        /// Open a file for CSV parsing
+
+        /// @param filename path to a file to parse
+        /// @param default_val Value to use if a row has fewer fields than the header
+        /// @param headers list of field names to use. Leave blank to use first (header) row
+        /// @param delimiter delimiter character
+        /// @param quote quote character
+        /// @param lenient enable lenient parsing (will attempt to read past syntax errors)
+        /// @throws Parse_error if error parsing fields (*only when not parsing in lenient mode*)
+        /// @throws IO_error if error reading CSV data
+        /// @throws Type_conversion_error if error converting 1st row to type
+        /// Header (if headers param not specified), or 1st row to type Value (if
+        /// header param is specified)
         explicit Map_reader_iter(const std::string & filename, const Value & default_val = {}, const std::vector<Header> & headers = {},
                 const char delimiter = ',', const char quote = '"',
                 const bool lenient = false):
@@ -912,6 +1131,21 @@ namespace csv
             ++(*this);
         }
 
+        /// Parse CSV from memory
+
+        /// use Reader::input_string to distinguish this constructor from the
+        /// constructor accepting a filename
+        /// @param input_data string containing CSV to parse
+        /// @param default_val Value to use if a row has fewer fields than the header
+        /// @param headers list of field names to use. Leave blank to use first (header) row
+        /// @param delimiter delimiter character
+        /// @param quote quote character
+        /// @param lenient enable lenient parsing (will attempt to read past syntax errors)
+        /// @throws Parse_error if error parsing fields (*only when not parsing in lenient mode*)
+        /// @throws IO_error if error reading CSV data
+        /// @throws Type_conversion_error if error converting 1st row to type
+        /// Header (if headers param not specified), or 1st row to type Value (if
+        /// header param is specified)
         Map_reader_iter(Reader::input_string_t, const std::string & input_data, const Value & default_val = {}, const std::vector<Header> & headers = {},
                 const char delimiter = ',', const char quote = '"',
                 const bool lenient = false):
@@ -928,15 +1162,28 @@ namespace csv
         using reference         = const value_type&;
         using iterator_category = std::input_iterator_tag;
 
+        /// @returns current row
         const value_type & operator*() const { return obj_; }
-        const value_type * operator->() const { return &obj_; }
-
         value_type & operator*() { return obj_; }
+
+        /// @returns pointer to current row
+        const value_type * operator->() const { return &obj_; }
         value_type * operator->() { return &obj_; }
 
-        typename value_type::mapped_type & operator[](const typename value_type::key_type & key) { return obj_.at(key); }
-        const typename value_type::mapped_type & operator[](const typename value_type::key_type & key) const { return obj_.at(key); }
+        /// Get a field from the current row
 
+        /// this is a shortcut for `map_reader_iter->at(key)`
+        /// @param key header for the desired field
+        /// @returns the requested field
+        /// @throws std::out_or_range if the key is not a valid header
+        const typename value_type::mapped_type & operator[](const typename value_type::key_type & key) const { return obj_.at(key); }
+        typename value_type::mapped_type & operator[](const typename value_type::key_type & key) { return obj_.at(key); }
+
+        /// Iterate to next field
+
+        /// @throws Parse_error if error parsing fields (*only when not parsing in lenient mode*)
+        /// @throws IO_error if error reading CSV data
+        /// @throws Type_conversion_error if error converting fields to Value type
         Map_reader_iter & operator++()
         {
             auto row = reader_->read_row_vec<Value>();
@@ -945,7 +1192,7 @@ namespace csv
             else
             {
                 if(std::size(*row) > std::size(headers_))
-                    throw Out_of_range_error("Too many columns");
+                    throw Out_of_range_error("Too many fields");
 
                 for(std::size_t i = 0; i < std::size(*row); ++i)
                     obj_[headers_[i]] = (*row)[i];
@@ -957,24 +1204,30 @@ namespace csv
             return *this;
         }
 
+        /// Compare to another Map_reader_iter
         template <typename Header2, typename Value2>
         bool equals(const Map_reader_iter<Header2, Value2> & rhs) const
         {
             return reader_ == rhs.reader_;
         }
 
-        auto get_headers() const
+        /// get the headers
+
+        /// @returns headers as vector
+        std::vector<Header> get_headers() const
         {
             return headers_;
         }
     };
 
+    /// compare two Map_reader_iter objects
     template <typename Header1, typename Value1, typename Header2, typename Value2>
     inline bool operator==(const Map_reader_iter<Header1, Value1> & lhs, const Map_reader_iter<Header2, Value2> & rhs)
     {
         return lhs.equals(rhs);
     }
 
+    /// compare two Map_reader_iter objects
     template <typename Header1, typename Value1, typename Header2, typename Value2>
     inline bool operator!=(const Map_reader_iter<Header1, Value1> & lhs, const Map_reader_iter<Header2, Value2> & rhs)
     {
