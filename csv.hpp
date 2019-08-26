@@ -143,6 +143,9 @@ namespace csv
 
     namespace detail
     {
+        // SFINAE types to determine the best way to convert a given type to a std::string
+
+        // does the type support std::to_string?
         template <typename T, typename = void>
         struct has_std_to_string: std::false_type{};
         template <typename T>
@@ -150,6 +153,7 @@ namespace csv
         template <typename T>
         inline constexpr bool has_std_to_string_v = has_std_to_string<T>::value;
 
+        // does the type support a custom to_string?
         template <typename T, typename = void>
         struct has_to_string: std::false_type{};
         template <typename T>
@@ -157,6 +161,7 @@ namespace csv
         template <typename T>
         inline constexpr bool has_to_string_v = has_to_string<T>::value;
 
+        // does the type support conversion via std::ostream::operator>>
         template <typename T, typename = void>
         struct has_ostr: std::false_type{};
         template <typename T>
@@ -165,6 +170,11 @@ namespace csv
         inline constexpr bool has_ostr_v = has_ostr<T>::value;
     };
 
+    /// String conversion
+
+    /// Convert a given type to std::string, using conversion operator, to_string, or std::ostream insertion
+    /// @param t type to convert to std::string
+    /// @returns input converted to std::string
     template <typename T, typename std::enable_if_t<std::is_convertible_v<T, std::string>, int> = 0>
     std::string str(const T & t)
     {
@@ -191,12 +201,20 @@ namespace csv
         return os.str();
     }
 
+    /// Parses CSV data
     class Reader
     {
     public:
+        /// Represents a single row of CSV data
+
+        /// a Row may be obtained from Reader::get_row or Reader::Iterator
+        /// @warning Reader object must not be destroyed during Row lifetime
         class Row
         {
         public:
+            /// Iterates over the fields within a Row
+
+            /// @tparam T type to convert fields to. Defaults to std::string
             template <typename T = std::string> class Iterator
             {
             public:
@@ -206,16 +224,32 @@ namespace csv
                 using reference         = const T&;
                 using iterator_category = std::input_iterator_tag;
 
-                Iterator(): row{nullptr}
-                {}
+                /// Empty constuctor
+
+                /// Denotes the end of iteration
+                Iterator(): row{nullptr} {}
+
+                /// Creates an iterator from a Row, and parses the first field
+                /// @param row row to iterate over.
+                /// @warning row must not be destroyed during iteration
+                /// @throws Parse_error if error parsing first field (*only when not parsing in lenient mode*)
+                /// @throws IO_error if error reading CSV data
+                /// @throws Type_conversion_error if error converting to type T
                 explicit Iterator(Reader::Row & row): row{&row}
                 {
                     ++*this;
                 }
 
+                /// @returns current field
                 const T & operator*() const { return obj; }
+
+                /// @returns pointer to current field
                 const T * operator->() const { return &obj; }
 
+                /// parse and iterate to next field
+                /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+                /// @throws IO_error if error reading CSV data
+                /// @throws Type_conversion_error if error converting to type T
                 Iterator & operator++()
                 {
                     assert(row);
@@ -234,6 +268,8 @@ namespace csv
 
                     return *this;
                 }
+
+                /// Compare to another Reader::Row::Iterator
                 bool equals(const Iterator<T> & rhs) const
                 {
                     return row == rhs.row;
@@ -245,16 +281,21 @@ namespace csv
                 bool end_of_row_ = false;
             };
 
+            /// Helper class for iterating over a Row
+
+            /// @tparam T type to convert fields to. Defaults to std::string
             template<typename T = std::string>
             class Range
             {
             public:
-                auto begin()
+                /// @returns iterator to start of row
+                Row::Iterator<T> begin()
                 {
                     return Row::Iterator<T>{row};
                 }
 
-                auto end()
+                /// @returns iterator to end of row
+                Row::Iterator<T> end()
                 {
                     return Row::Iterator<T>{};
                 }
@@ -264,26 +305,42 @@ namespace csv
                 Row & row;
             };
 
+            /// @tparam T type to convert fields to. Defaults to std::string
+            /// @returns iterator to start of row
             template<typename T = std::string>
-            auto begin()
+            Row::Iterator<T> begin()
             {
                 return Row::Iterator<T>{*this};
             }
 
+            /// @tparam T type to convert fields to. Defaults to std::string
+            /// @returns iterator to end of row
             template<typename T = std::string>
-            auto end()
+            Row::Iterator<T> end()
             {
                 return Row::Iterator<T>{};
             }
 
+            /// Range helper
+
+            /// Useful when iterating over a row and converting to a specific type
+            /// @tparam T type to convert fields to. Defaults to std::string
+            /// @returns a Range object containing begin and end methods corresponding to this Row
             template<typename T = std::string>
-            auto range()
+            Range<T> range()
             {
                 return Range<T>{*this};
             }
 
+            /// Read a single field from the row
+
+            /// @tparam T type to convert fields to. Defaults to std::string
+            /// @returns the next field from the row, or an empty object if past the end of the row
+            /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+            /// @throws IO_error if error reading CSV data
+            /// @throws Type_conversion_error if error converting to type T
             template<typename T = std::string>
-            auto read_field()
+            T read_field()
             {
                 assert(reader_);
 
@@ -301,6 +358,14 @@ namespace csv
                 return field;
             }
 
+            /// Read a single field from the row
+
+            /// @tparam T type to convert fields to. Defaults to std::string
+            /// @param[out] data variable to to write field to
+            /// @returns this Row object
+            /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+            /// @throws IO_error if error reading CSV data
+            /// @throws Type_conversion_error if error converting to type T
             template<typename T>
             Row & operator>>(T & data)
             {
@@ -308,12 +373,26 @@ namespace csv
                 return * this;
             }
 
+            /// reads row into an output iterator
+
+            /// @tparam T type to convert fields to. Defaults to std::string
+            /// @param it an output iterator to receive the row data
+            /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+            /// @throws IO_error if error reading CSV data
+            /// @throws Type_conversion_error if error converting to type T
             template<typename T = std::string, typename OutputIter>
             void read(OutputIter it)
             {
                 std::copy(begin<T>(), end<T>(), it);
             }
 
+            /// reads row into a std::vector
+
+            /// @tparam T type to convert fields to. Defaults to std::string
+            /// @returns std::vector containing the fields from the Row
+            /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+            /// @throws IO_error if error reading CSV data
+            /// @throws Type_conversion_error if error converting to type T
             template<typename T = std::string>
             std::vector<T> read_vec()
             {
@@ -322,6 +401,15 @@ namespace csv
                 return vec;
             }
 
+            /// reads row into a tuple
+
+            /// @tparam Args types to convert fields to
+            /// @returns std::tuple containing the fields from the Row.
+            /// if Args contains more elements than there are fields in the row,
+            /// the remaining elements of the tuple will be default initialized
+            /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+            /// @throws IO_error if error reading CSV data
+            /// @throws Type_conversion_error if error converting to specified type
             template <typename ... Args>
             std::tuple<Args...> read_tuple()
             {
@@ -330,19 +418,30 @@ namespace csv
                 return ret;
             }
 
+            /// reads row into a variadic arguments
+
+            /// @param[out] data vars to read into.
+            /// if more parameters are passed than there are fields in the row,
+            /// the remaining parameters will be default initialized
+            /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+            /// @throws IO_error if error reading CSV data
+            /// @throws Type_conversion_error if error converting to specified type
             template <typename ... Data>
             void read_v(Data & ... data)
             {
                 (void)(*this >> ... >> data);
             }
 
+            /// @returns \c true if the last field in the row has been read
             bool end_of_row() const { return end_of_row_; }
 
+            /// @returns \c true if more fields can be read
             operator bool() { return reader_ && !past_end_of_row_; }
 
         private:
             friend Reader;
 
+            /// helper function for read_tuple
             template <typename Tuple, std::size_t ... Is>
             void read_tuple_helper(Tuple & t, std::index_sequence<Is...>)
             {
@@ -472,7 +571,7 @@ namespace csv
         T read_field()
         {
             if(eof())
-                throw Out_of_range_error("Read past end-of-file");
+                return {};
 
             end_of_row_ = false;
 
@@ -486,9 +585,6 @@ namespace csv
             {
                 field = parse();
             }
-
-            if(eof())
-                return {};
 
             // no conversion needed for strings
             if constexpr(std::is_convertible_v<std::string, T>)
@@ -516,7 +612,6 @@ namespace csv
             data = read_field<T>();
             return * this;
         }
-
 
         Row get_row()
         {
