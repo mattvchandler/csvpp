@@ -20,8 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// @todo TODO: consistent capitalization in doxygen comments
-
 #ifndef CSV_HPP
 #define CSV_HPP
 
@@ -48,7 +46,7 @@ namespace csv
     {
     public:
         virtual ~Error() = default;
-        /// @returns exception message
+        /// @returns Exception message
         const char * what() const throw() override { return msg_.c_str(); }
     protected:
         Error() = default;
@@ -72,9 +70,9 @@ namespace csv
     class Parse_error final: virtual public Error
     {
     public:
-        /// @param type paring error type (ie. quote found inside of unquoted field)
-        /// @param line_no line that the error occured on
-        /// @param col_no column that the error occured on
+        /// @param type Parsing error type (ie. quote found inside of unquoted field)
+        /// @param line_no Line that the error occured on
+        /// @param col_no Column that the error occured on
         Parse_error(const std::string & type, int line_no, int col_no):
             Error{"Error parsing CSV at line: " +
                 std::to_string(line_no) + ", col: " + std::to_string(col_no) + ": " + type},
@@ -83,11 +81,11 @@ namespace csv
             col_no_{col_no}
         {}
 
-        /// @returns paring error type (ie. quote found inside of unquoted field)
+        /// @returns Paring error type (ie. quote found inside of unquoted field)
         std::string type() const { return type_; }
-        /// @returns line number that the error occured on
+        /// @returns Line number that the error occured on
         int line_no() const { return line_no_; }
-        /// @returns column that the error occured on
+        /// @returns Column that the error occured on
         int col_no() const { return col_no_; }
 
     private:
@@ -111,13 +109,13 @@ namespace csv
     struct Type_conversion_error final: virtual public Error
     {
     public:
-        /// @param field value of field that failed to convert
+        /// @param field Value of field that failed to convert
         explicit Type_conversion_error(const std::string & field):
             Error{"Could not convert '" + field + "' to requested type"},
             field_(field)
         {}
 
-        /// @returns value of field that failed to convert
+        /// @returns Value of field that failed to convert
         std::string field() const { return field_; }
     private:
         std::string field_;
@@ -130,14 +128,14 @@ namespace csv
     {
     public:
         /// @param msg Error message
-        /// @param errno_code errno code
+        /// @param errno_code \c errno code
         explicit IO_error(const std::string & msg, int errno_code):
             Error{msg + ": " + std::strerror(errno_code)},
             errno_code_{errno_code}
         {}
-        /// @returns msg Error message
+        /// @returns %Error message
         int errno_code() const { return errno_code_; }
-        /// @returns errno_code errno code
+        /// @returns \c errno code
         std::string errno_str() const { return std::strerror(errno_code_); }
     private:
         int errno_code_;
@@ -147,7 +145,7 @@ namespace csv
     {
         // SFINAE types to determine the best way to convert a given type to a std::string
 
-        // does the type support std::to_string?
+        // Does the type support std::to_string?
         template <typename T, typename = void>
         struct has_std_to_string: std::false_type{};
         template <typename T>
@@ -155,7 +153,7 @@ namespace csv
         template <typename T>
         inline constexpr bool has_std_to_string_v = has_std_to_string<T>::value;
 
-        // does the type support a custom to_string?
+        // Does the type support a custom to_string?
         template <typename T, typename = void>
         struct has_to_string: std::false_type{};
         template <typename T>
@@ -163,7 +161,7 @@ namespace csv
         template <typename T>
         inline constexpr bool has_to_string_v = has_to_string<T>::value;
 
-        // does the type support conversion via std::ostream::operator>>
+        // Does the type support conversion via std::ostream::operator>>
         template <typename T, typename = void>
         struct has_ostr: std::false_type{};
         template <typename T>
@@ -175,8 +173,8 @@ namespace csv
     /// String conversion
 
     /// Convert a given type to std::string, using conversion operator, to_string, or std::ostream insertion
-    /// @param t type to convert to std::string
-    /// @returns input converted to std::string
+    /// @param t Data to convert to std::string
+    /// @returns Input converted to std::string
     template <typename T, typename std::enable_if_t<std::is_convertible_v<T, std::string>, int> = 0>
     std::string str(const T & t)
     {
@@ -205,6 +203,13 @@ namespace csv
 
     /// Parses CSV data
 
+    /// By default, parses according to RFC 4180 rules, and throws a Parse_error
+    /// when given non-conformant input. The field delimiter and quote
+    /// characters may be changed, and there is a lenient parsing option to ignore
+    /// violations.
+    ///
+    /// Blank rows are ignored and skipped over.
+    ///
     /// Most methods operate on rows, but some read field-by-field. Mixing
     /// row-wise and field-wise methods is not recommended, but is possible.
     /// Row-wise methods will act as if the current position is the start of a
@@ -215,14 +220,14 @@ namespace csv
     public:
         /// Represents a single row of CSV data
 
-        /// a Row may be obtained from Reader::get_row or Reader::Iterator
+        /// A Row may be obtained from Reader::get_row or Reader::Iterator
         /// @warning Reader object must not be destroyed or read from during Row lifetime
         class Row
         {
         public:
             /// Iterates over the fields within a Row
 
-            /// @tparam T type to convert fields to. Defaults to std::string
+            /// @tparam T Type to convert fields to. Defaults to std::string
             template <typename T = std::string> class Iterator
             {
             public:
@@ -239,8 +244,8 @@ namespace csv
 
                 /// Creates an iterator from a Row, and parses the first field
 
-                /// @param row row to iterate over.
-                /// @warning row must not be destroyed or read from during iteration
+                /// @param row Row to iterate over.
+                /// @warning \c row must not be destroyed or read from during iteration
                 /// @throws Parse_error if error parsing first field (*only when not parsing in lenient mode*)
                 /// @throws IO_error if error reading CSV data
                 /// @throws Type_conversion_error if error converting to type T. Caller may call this again with a different type to try again
@@ -249,13 +254,14 @@ namespace csv
                     ++*this;
                 }
 
-                /// @returns current field
+                /// @returns Current field
                 const T & operator*() const { return obj; }
 
-                /// @returns pointer to current field
+                /// @returns Pointer to current field
                 const T * operator->() const { return &obj; }
 
-                /// parse and iterate to next field
+                /// Parse and iterate to next field
+
                 /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
                 /// @throws IO_error if error reading CSV data
                 /// @throws Type_conversion_error if error converting to type T. Caller may call this again with a different type to try again
@@ -287,43 +293,43 @@ namespace csv
             private:
                 Reader::Row * row; ///< Pointer to parent Row object, or \c nullptr if past end of row
                 T obj{}; ///< Storage for current field
-                bool end_of_row_ = false; ///< keeps track of when the Row has hit end-of-row
+                bool end_of_row_ = false; ///< Keeps track of when the Row has hit end-of-row
             };
 
             /// Helper class for iterating over a Row. Use Row::range to obtain
 
-            /// @tparam T type to convert fields to. Defaults to std::string
+            /// @tparam T Type to convert fields to. Defaults to std::string
             template<typename T = std::string>
             class Range
             {
             public:
-                /// @returns iterator to start of row
+                /// @returns Iterator to current field in row
                 Row::Iterator<T> begin()
                 {
                     return Row::Iterator<T>{row};
                 }
 
-                /// @returns iterator to end of row
+                /// @returns Iterator to end of row
                 Row::Iterator<T> end()
                 {
                     return Row::Iterator<T>{};
                 }
             private:
                 friend Row;
-                explicit Range(Row & row):row{row} {} ///< construct a Range. Only for use by Row::range
+                explicit Range(Row & row):row{row} {} ///< Construct a Range. Only for use by Row::range
                 Row & row; ///< Ref to parent Row object
             };
 
-            /// @tparam T type to convert fields to. Defaults to std::string
-            /// @returns iterator to start of row
+            /// @tparam T Type to convert fields to. Defaults to std::string
+            /// @returns Iterator to current field in row
             template<typename T = std::string>
             Row::Iterator<T> begin()
             {
                 return Row::Iterator<T>{*this};
             }
 
-            /// @tparam T type to convert fields to. Defaults to std::string
-            /// @returns iterator to end of row
+            /// @tparam T Type to convert fields to. Defaults to std::string
+            /// @returns Iterator to end of row
             template<typename T = std::string>
             Row::Iterator<T> end()
             {
@@ -333,8 +339,8 @@ namespace csv
             /// Range helper
 
             /// Useful when iterating over a row and converting to a specific type
-            /// @tparam T type to convert fields to. Defaults to std::string
-            /// @returns a Range object containing begin and end methods corresponding to this Row
+            /// @tparam T Type to convert fields to. Defaults to std::string
+            /// @returns A Range object containing begin and end methods corresponding to this Row
             template<typename T = std::string>
             Range<T> range()
             {
@@ -343,8 +349,8 @@ namespace csv
 
             /// Read a single field from the row
 
-            /// @tparam T type to convert fields to. Defaults to std::string
-            /// @returns the next field from the row, or a default-initialized object if past the end of the row
+            /// @tparam T Type to convert fields to. Defaults to std::string
+            /// @returns The next field from the row, or a default-initialized object if past the end of the row
             /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
             /// @throws IO_error if error reading CSV data
             /// @throws Type_conversion_error if error converting to type T. Caller may call this again with a different type to try again
@@ -369,8 +375,9 @@ namespace csv
 
             /// Read a single field from the row
 
-            /// @param[out] data variable to to write field to
-            /// @returns this Row object
+            /// @param[out] data Variable to to write field to. Will store a
+            ///                  default initialized object if past the end of the row
+            /// @returns This Row object
             /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
             /// @throws IO_error if error reading CSV data
             /// @throws Type_conversion_error if error converting to type T. Caller may call this again with a different type to try again
@@ -381,9 +388,9 @@ namespace csv
                 return * this;
             }
 
-            /// reads row into an output iterator
+            /// Reads row into an output iterator
 
-            /// @tparam T type to convert fields to. Defaults to std::string
+            /// @tparam T Type to convert fields to. Defaults to std::string
             /// @param it an output iterator to receive the row data
             /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
             /// @throws IO_error if error reading CSV data
@@ -394,9 +401,9 @@ namespace csv
                 std::copy(begin<T>(), end<T>(), it);
             }
 
-            /// reads row into a std::vector
+            /// Reads row into a std::vector
 
-            /// @tparam T type to convert fields to. Defaults to std::string
+            /// @tparam T Type to convert fields to. Defaults to std::string
             /// @returns std::vector containing the fields from the Row
             /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
             /// @throws IO_error if error reading CSV data
@@ -409,11 +416,11 @@ namespace csv
                 return vec;
             }
 
-            /// reads row into a tuple
+            /// Reads row into a tuple
 
             /// @tparam Args types to convert fields to
             /// @returns std::tuple containing the fields from the Row.
-            /// if Args contains more elements than there are fields in the row,
+            /// If Args contains more elements than there are fields in the row,
             /// the remaining elements of the tuple will be default initialized
             /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
             /// @throws IO_error if error reading CSV data
@@ -426,10 +433,10 @@ namespace csv
                 return ret;
             }
 
-            /// reads row into a variadic arguments
+            /// Reads row into variadic arguments
 
-            /// @param[out] data vars to read into.
-            /// if more parameters are passed than there are fields in the row,
+            /// @param[out] data Variables to read into.
+            /// If more parameters are passed than there are fields in the row,
             /// the remaining parameters will be default initialized
             /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
             /// @throws IO_error if error reading CSV data
@@ -449,9 +456,9 @@ namespace csv
         private:
             friend Reader;
 
-            /// helper function for read_tuple
+            /// Helper function for read_tuple
 
-            /// uses a std::index_sequence to generate indexes for std::get
+            /// Uses a std::index_sequence to generate indexes for std::get
             /// @param t tuple to load data into
             template <typename Tuple, std::size_t ... Is>
             void read_tuple_helper(Tuple & t, std::index_sequence<Is...>)
@@ -469,12 +476,12 @@ namespace csv
             /// For use by Reader::get_row only
             explicit Row(Reader & reader): reader_{&reader} {}
 
-            Reader * reader_ { nullptr }; ///< pointer to parent Reader object or nullptr if no rows remain
-            bool end_of_row_ { false }; ///< tracks if the end of the current row has been reacehd
-            bool past_end_of_row_ { false }; ///< tracks if past the end of the row, and prevents reading from the next row
+            Reader * reader_ { nullptr }; ///< Pointer to parent Reader object or nullptr if no rows remain
+            bool end_of_row_ { false }; ///< Tracks if the end of the current row has been reacehd
+            bool past_end_of_row_ { false }; ///< Tracks if past the end of the row, and prevents reading from the next row
         };
 
-        /// iterates over the Rows in CSV data
+        /// Iterates over Rows in CSV data
         class Iterator
         {
         public:
@@ -492,7 +499,7 @@ namespace csv
             /// Creates an iterator from a Reader object
 
             /// @param r Reader object to iterate over
-            /// @warning r must not be destroyed or read from during iteration
+            /// @warning \c r must not be destroyed or read from during iteration
             explicit Iterator(Reader & r): reader_{&r}
             {
                 obj = reader_->get_row();
@@ -501,19 +508,19 @@ namespace csv
                     reader_ = nullptr;
             }
 
-            /// @returns current row
+            /// @returns Current row
             const value_type & operator*() const { return obj; }
 
-            /// @returns current row
+            /// @returns Current row
             value_type & operator*() { return obj; }
 
-            /// @returns pointer to current row
+            /// @returns Pointer to current row
             const value_type * operator->() const { return &obj; }
 
             /// @returns pointer to current row
             value_type * operator->() { return &obj; }
 
-            /// iterate to next Row
+            /// Iterate to next Row
             Iterator & operator++()
             {
                 // discard any remaining fields
@@ -543,10 +550,10 @@ namespace csv
         /// Use a std::istream for CSV parsing
 
         /// @param input_stream std::istream to read from
-        /// @param delimiter delimiter character
-        /// @param quote quote character
-        /// @param lenient enable lenient parsing (will attempt to read past syntax errors)
-        /// @warning input_stream must not be destroyed or read from during the lifetime of this Reader
+        /// @param delimiter Delimiter character
+        /// @param quote Quote character
+        /// @param lenient Enable lenient parsing (will attempt to read past syntax errors)
+        /// @warning \c input_stream must not be destroyed or read from during the lifetime of this Reader
         explicit Reader(std::istream & input_stream,
                 const char delimiter = ',', const char quote = '"',
                 const bool lenient = false):
@@ -558,10 +565,10 @@ namespace csv
 
         /// Open a file for CSV parsing
 
-        /// @param filename path to a file to parse
-        /// @param delimiter delimiter character
-        /// @param quote quote character
-        /// @param lenient enable lenient parsing (will attempt to read past syntax errors)
+        /// @param filename Path to a file to parse
+        /// @param delimiter Delimiter character
+        /// @param quote Quote character
+        /// @param lenient Enable lenient parsing (will attempt to read past syntax errors)
         /// @throws IO_error if there is an error opening the file
         explicit Reader(const std::string & filename,
                 const char delimiter = ',', const char quote = '"',
@@ -576,26 +583,26 @@ namespace csv
                 throw IO_error("Could not open file '" + filename + "'", errno);
         }
 
-        /// disambiguation tag type
+        /// Disambiguation tag type
 
-        /// distinguishes opening a Reader with a filename from opening a Reader
+        /// Distinguishes opening a Reader with a filename from opening a Reader
         /// with a string
         struct input_string_t{};
 
-        /// disambiguation tag
+        /// Disambiguation tag
 
-        /// distinguishes opening a Reader with a filename from opening a Reader
+        /// Distinguishes opening a Reader with a filename from opening a Reader
         /// with a string
         static inline constexpr input_string_t input_string{};
 
         /// Parse CSV from memory
 
-        /// use Reader::input_string to distinguish this constructor from the
+        /// Use Reader::input_string to distinguish this constructor from the
         /// constructor accepting a filename
-        /// @param input_data string containing CSV to parse
-        /// @param delimiter delimiter character
-        /// @param quote quote character
-        /// @param lenient enable lenient parsing (will attempt to read past syntax errors)
+        /// @param input_data \c std::string containing CSV to parse
+        /// @param delimiter Delimiter character
+        /// @param quote Quote character
+        /// @param lenient Enable lenient parsing (will attempt to read past syntax errors)
         Reader(input_string_t, const std::string & input_data,
                 const char delimiter = ',', const char quote = '"',
                 const bool lenient = false):
@@ -624,11 +631,11 @@ namespace csv
 
         /// Change the delimiter character
 
-        /// @param delimiter new delimiter char
+        /// @param delimiter New delimiter char
         void set_delimiter(const char delimiter) { delimiter_ = delimiter; }
         /// Change the quote character
 
-        /// @param quote new quote char
+        /// @param quote New quote char
         void set_quote(const char quote) { quote_ = quote; }
 
         /// Enable / disable lenient parsing
@@ -637,13 +644,13 @@ namespace csv
         /// @param lenient \c true for lenient parsing
         void set_lenient(const bool lenient) { lenient_ = lenient; }
 
-        /// @returns iterator to first (or current) row
+        /// @returns Iterator to current row
         Iterator begin()
         {
             return Iterator(*this);
         }
 
-        /// @returns iterator to end of CSV data
+        /// @returns Iterator to end of CSV data
         auto end()
         {
             return Iterator();
@@ -651,9 +658,9 @@ namespace csv
 
         /// Read a single field
 
-        /// check end_of_row() to see if this is the last field in the current row
-        /// @tparam T type to convert fields to. Defaults to std::string
-        /// @returns the next field from the row, or a default-initialized object if past the end of the input data
+        /// Check end_of_row() to see if this is the last field in the current row
+        /// @tparam T Type to convert fields to. Defaults to std::string
+        /// @returns The next field from the row, or a default-initialized object if past the end of the input data
         /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
         /// @throws IO_error if error reading CSV data
         /// @throws Type_conversion_error if error converting to type T. Caller may call this again with a different type to try again
@@ -698,9 +705,9 @@ namespace csv
 
         /// Read a single field
 
-        /// check end_of_row() to see if this is the last field in the current row
-        /// @param[out] data variable to to write field to
-        /// @returns this Reader object
+        /// Check end_of_row() to see if this is the last field in the current row
+        /// @param[out] data Variable to to write field to
+        /// @returns This Reader object
         /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
         /// @throws IO_error if error reading CSV data
         /// @throws Type_conversion_error if error converting to type T. Caller may call this again with a different type to try again
@@ -723,10 +730,10 @@ namespace csv
                 return Row{*this};
         }
 
-        /// reads current row into an output iterator
+        /// Reads current row into an output iterator
 
-        /// @tparam T type to convert fields to. Defaults to std::string
-        /// @param it an output iterator to receive the row data
+        /// @tparam T Type to convert fields to. Defaults to std::string
+        /// @param it An output iterator to receive the row data
         /// @returns \c false if this is the last row
         /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
         /// @throws IO_error if error reading CSV data
@@ -742,9 +749,9 @@ namespace csv
             return true;
         }
 
-        /// reads current row into a std::vector
+        /// Reads current row into a std::vector
 
-        /// @tparam T type to convert fields to. Defaults to std::string
+        /// @tparam T Type to convert fields to. Defaults to std::string
         /// @returns std::vector containing the fields from the row or empty optional if no rows remain
         /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
         /// @throws IO_error if error reading CSV data
@@ -759,7 +766,7 @@ namespace csv
             return row.read_vec<T>();
         }
 
-        /// reads current row into a tuple
+        /// Reads current row into a tuple
 
         /// @tparam Args types to convert fields to
         /// @returns std::tuple containing the fields from the row or empty
@@ -779,13 +786,13 @@ namespace csv
             return row.read_tuple<Args...>();
         }
 
-        /// reads fields into a variadic arguments
+        /// Reads fields into variadic arguments
 
-        /// @warning this may be used to fields from multiple rows at a time.
+        /// @warning This may be used to fields from multiple rows at a time.
         /// Use with caution if the number of fields per row is not known
         /// beforehand.
-        /// @param[out] data vars to read into.
-        /// if more parameters are passed than there are fields remaining,
+        /// @param[out] data Variables to read into.
+        /// If more parameters are passed than there are fields remaining,
         /// the remaining parameters will be default initialized
         /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
         /// @throws IO_error if error reading CSV data
@@ -796,9 +803,9 @@ namespace csv
             (void)(*this >> ... >> data);
         }
 
-        /// read entire CSV data into a vector of vectors
+        /// Read entire CSV data into a vector of vectors
 
-        /// @tparam T type to convert fields to. Defaults to std::string
+        /// @tparam T Type to convert fields to. Defaults to std::string
         /// @returns 2D vector of CSV data.
         /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
         /// @throws IO_error if error reading CSV data
@@ -823,7 +830,7 @@ namespace csv
         /// Get next character from input
 
         /// Updates line and column position, and checks for IO error
-        /// @returns next character
+        /// @returns Next character
         /// @throws IO_error
         int getc()
         {
@@ -872,7 +879,7 @@ namespace csv
         /// Core parsing method
 
         /// Reads and parses character stream to obtain next field
-        /// @returns next field, or empty string if at EOF
+        /// @returns Next field, or empty string if at EOF
         /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
         /// @throws IO_error if error reading from stream
         std::string parse()
@@ -983,12 +990,12 @@ namespace csv
             return field;
         }
 
-        /// owns an istream created by this Reader (either an ifstream when
+        /// Owns an istream created by this Reader (either an ifstream when
         /// constructed by filename or a istringstream when constructed by input
         /// string)
         std::unique_ptr<std::istream> internal_input_stream_;
 
-        /// points to input istream. Will point to *internal_input_stream_ if
+        /// Points to input istream. Will point to *internal_input_stream_ if
         /// constructed by filename or input string, or the istream passed when
         /// constructed by istream
         std::istream * input_stream_;
@@ -997,7 +1004,7 @@ namespace csv
         char quote_ {'"'};
         bool lenient_ { false };
 
-        std::optional<std::string> conversion_retry_; ///< contains last field after type conversion error. Allows retrying conversion
+        std::optional<std::string> conversion_retry_; ///< Contains last field after type conversion error. Allows retrying conversion
         bool end_of_row_ { false };
 
         /// Parsing states
@@ -1055,12 +1062,13 @@ namespace csv
         std::unique_ptr<Reader> reader_; ///< Reader object
         Value default_val_;              ///< Default value
         std::vector<Header> headers_;    ///< Headers
-        std::map<Header, Value> obj_;    ///< current row storage
+        std::map<Header, Value> obj_;    ///< Current row storage
 
         /// Read header row from input (or use headers parameter)
 
-        /// @param headers use this as headers instead of first row
-        /// @returns headers
+        /// @param headers Use this as headers. Pass an empty vector to use the
+        /// first row of the input as the headers
+        /// @returns Headers
         /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
         /// @throws IO_error if error reading CSV data
         /// @throws Type_conversion_error if error converting to type Header.
@@ -1089,15 +1097,17 @@ namespace csv
 
         /// @param input_stream std::istream to read from
         /// @param default_val Value to use if a row has fewer fields than the header
-        /// @param headers list of field names to use. Leave blank to use first (header) row
-        /// @param delimiter delimiter character
-        /// @param quote quote character
-        /// @param lenient enable lenient parsing (will attempt to read past syntax errors)
-        /// @warning input_stream must not be destroyed or read from during the lifetime of this Map_reader_iter
+        /// @param headers List of field names to use. Pass an empty vector to
+        ///        use first (header) row
+        /// @param delimiter Delimiter character
+        /// @param quote Quote character
+        /// @param lenient Enable lenient parsing (will attempt to read past syntax errors)
+        /// @warning input_stream must not be destroyed or read from during the
+        ///          lifetime of this Map_reader_iter
         /// @throws Parse_error if error parsing fields (*only when not parsing in lenient mode*)
         /// @throws IO_error if error reading CSV data
         /// @throws Type_conversion_error if error converting 1st row to type
-        /// Header (if headers param not specified), or 1st row to type Value (if
+        /// Header (if headers param is empty), or 1st row to type Value (if
         /// header param is specified)
         explicit Map_reader_iter(std::istream & input_stream, const Value & default_val = {}, const std::vector<Header> & headers = {},
                 const char delimiter = ',', const char quote = '"',
@@ -1111,16 +1121,17 @@ namespace csv
 
         /// Open a file for CSV parsing
 
-        /// @param filename path to a file to parse
+        /// @param filename Path to a file to parse
         /// @param default_val Value to use if a row has fewer fields than the header
-        /// @param headers list of field names to use. Leave blank to use first (header) row
-        /// @param delimiter delimiter character
-        /// @param quote quote character
-        /// @param lenient enable lenient parsing (will attempt to read past syntax errors)
+        /// @param headers List of field names to use. Pass an empty vector to
+        ///        use first (header) row
+        /// @param delimiter Delimiter character
+        /// @param quote Quote character
+        /// @param lenient Enable lenient parsing (will attempt to read past syntax errors)
         /// @throws Parse_error if error parsing fields (*only when not parsing in lenient mode*)
         /// @throws IO_error if error reading CSV data
         /// @throws Type_conversion_error if error converting 1st row to type
-        /// Header (if headers param not specified), or 1st row to type Value (if
+        /// Header (if headers param is empty), or 1st row to type Value (if
         /// header param is specified)
         explicit Map_reader_iter(const std::string & filename, const Value & default_val = {}, const std::vector<Header> & headers = {},
                 const char delimiter = ',', const char quote = '"',
@@ -1134,14 +1145,15 @@ namespace csv
 
         /// Parse CSV from memory
 
-        /// use Reader::input_string to distinguish this constructor from the
+        /// Use Reader::input_string to distinguish this constructor from the
         /// constructor accepting a filename
-        /// @param input_data string containing CSV to parse
+        /// @param input_data String containing CSV to parse
         /// @param default_val Value to use if a row has fewer fields than the header
-        /// @param headers list of field names to use. Leave blank to use first (header) row
-        /// @param delimiter delimiter character
-        /// @param quote quote character
-        /// @param lenient enable lenient parsing (will attempt to read past syntax errors)
+        /// @param headers List of field names to use. Pass an empty vector to
+        ///        use first (header) row
+        /// @param delimiter Delimiter character
+        /// @param quote Quote character
+        /// @param lenient Enable lenient parsing (will attempt to read past syntax errors)
         /// @throws Parse_error if error parsing fields (*only when not parsing in lenient mode*)
         /// @throws IO_error if error reading CSV data
         /// @throws Type_conversion_error if error converting 1st row to type
@@ -1163,19 +1175,19 @@ namespace csv
         using reference         = const value_type&;
         using iterator_category = std::input_iterator_tag;
 
-        /// @returns current row
+        /// @returns Current row as a map
         const value_type & operator*() const { return obj_; }
         value_type & operator*() { return obj_; }
 
-        /// @returns pointer to current row
+        /// @returns Pointer to current row map
         const value_type * operator->() const { return &obj_; }
         value_type * operator->() { return &obj_; }
 
         /// Get a field from the current row
 
-        /// this is a shortcut for `map_reader_iter->at(key)`
-        /// @param key header for the desired field
-        /// @returns the requested field
+        /// This is a shortcut for `map_reader_iter->at(key)`
+        /// @param key Header for the desired field
+        /// @returns The requested field
         /// @throws std::out_or_range if the key is not a valid header
         const typename value_type::mapped_type & operator[](const typename value_type::key_type & key) const { return obj_.at(key); }
         typename value_type::mapped_type & operator[](const typename value_type::key_type & key) { return obj_.at(key); }
@@ -1212,16 +1224,16 @@ namespace csv
             return reader_ == rhs.reader_;
         }
 
-        /// get the headers
+        /// Get the headers
 
-        /// @returns headers as vector
+        /// @returns Headers as a vector
         std::vector<Header> get_headers() const
         {
             return headers_;
         }
     };
 
-    /// compare two Map_reader_iter objects
+    /// Compare two Map_reader_iter objects
     template <typename Header1, typename Value1, typename Header2, typename Value2>
     inline bool operator==(const Map_reader_iter<Header1, Value1> & lhs, const Map_reader_iter<Header2, Value2> & rhs)
     {
@@ -1237,7 +1249,7 @@ namespace csv
 
     /// CSV writer
 
-    /// Writes data in CSV format, with correct escaping as needed.
+    /// Writes data in CSV format, with correct escaping as needed, according to RFC 4180 rules.
     /// Allows writing by rows or field-by-field. Mixing these is not
     /// recommended, but is possible. Row-wise methods will append to the row
     /// started by any field-wise methods.
@@ -1258,20 +1270,20 @@ namespace csv
 
             /// Creates an iterator from a Writer object
 
-            /// @warning w must not be destroyed during iteration
+            /// @warning \c w must not be destroyed during iteration
             explicit Iterator(Writer & w): writer_{w} {}
 
-            /// no-op
+            /// No-op
             Iterator & operator*() { return *this; }
-            /// no-op
+            /// No-op
             Iterator & operator++() { return *this; }
-            /// no-op
+            /// No-op
             Iterator & operator++(int) { return *this; }
 
             /// Writes a field to the CSV output
 
-            /// @param field data to write. Type must be convertible to std::string
-            /// either directly, by \c to_string, or by `ostream::operator<<`
+            /// @param field Data to write. Type must be convertible to std::string
+            ///        either directly, by \c to_string, or by `ostream::operator<<`
             /// @throws IO_error if there is an error writing
             template <typename T>
             Iterator & operator=(const T & field)
@@ -1281,15 +1293,15 @@ namespace csv
             }
 
         private:
-            Writer & writer_; ///< ref to parent Writer object
+            Writer & writer_; ///< Ref to parent Writer object
         };
 
         /// Use a std::ostream for CSV output
 
         /// @param output_stream std::ostream to write to
-        /// @param delimiter delimiter character
-        /// @param quote quote character
-        /// @warning output_stream must not be destroyed or written to during the lifetime of this Writer
+        /// @param delimiter Delimiter character
+        /// @param quote Quote character
+        /// @warning \c output_stream must not be destroyed or written to during the lifetime of this Writer
         explicit Writer(std::ostream & output_stream,
                 const char delimiter = ',', const char quote = '"'):
             output_stream_{&output_stream},
@@ -1299,10 +1311,10 @@ namespace csv
 
         /// Open a file for CSV output
 
-        /// @param filename path to file to write to. Any existing file will be overwritten
-        /// @param delimiter delimiter character
-        /// @param quote quote character
-        /// @warning output_stream must not be destroyed or written to during the lifetime of this Writer
+        /// @param filename Path to file to write to. Any existing file will be overwritten
+        /// @param delimiter Delimiter character
+        /// @param quote Quote character
+        /// @warning \c output_stream must not be destroyed or written to during the lifetime of this Writer
         /// @throws IO_error if there is an error opening the file
         explicit Writer(const std::string& filename,
                 const char delimiter = ',', const char quote = '"'):
@@ -1322,7 +1334,7 @@ namespace csv
         {
             if(!start_of_row_)
             {
-                /// try to end the row, but ignore any IO errors
+                // try to end the row, but ignore any IO errors
                 try { end_row(); }
                 catch(const IO_error & e) {}
             }
@@ -1335,7 +1347,7 @@ namespace csv
 
         /// Get iterator
 
-        /// @returns an iterator on this Writer
+        /// @returns An iterator on this Writer
         /// @throws IO_error if there is an error writing
         Iterator iterator()
         {
@@ -1344,16 +1356,16 @@ namespace csv
 
         /// Change the delimiter character
 
-        /// @param delimiter new delimiter char
+        /// @param delimiter New delimiter char
         void set_delimiter(const char delimiter) { delimiter_ = delimiter; }
         /// Change the quote character
 
-        /// @param quote new quote char
+        /// @param quote New quote char
         void set_quote(const char quote) { quote_ = quote; }
 
         /// Writes a field to the CSV output
 
-        /// @param field data to write. Type must be convertible to std::string
+        /// @param field Data to write. Type must be convertible to std::string
         /// either directly, by \c to_string, or by `ostream::operator<<`
         /// @throws IO_error if there is an error writing
         template<typename T>
@@ -1375,7 +1387,7 @@ namespace csv
 
         /// Writes a field to the CSV output
 
-        /// @param field data to write. Type must be convertible to std::string
+        /// @param field Data to write. Type must be convertible to std::string
         /// either directly, by \c to_string, or by `ostream::operator<<`
         /// @throws IO_error if there is an error writing
         template<typename T>
@@ -1388,7 +1400,7 @@ namespace csv
         /// Apply a stream manipulator to the CSV output
 
         /// Currently only csv::end_row is supported
-        /// @param manip stream manipulator to apply
+        /// @param manip Stream manipulator to apply
         Writer & operator<<(Writer & (*manip)(Writer &))
         {
             manip(*this);
@@ -1407,10 +1419,10 @@ namespace csv
         }
 
         /// Write a row from iterators
-        /// @param first iterator to start of data to write. dereferenced type
+        /// @param first Iterator to start of data to write. Dereferenced type
         /// must be convertible to std::string either directly, by \c to_string,
         /// or by `ostream::operator<<`
-        /// @param last iterator to end of data to write
+        /// @param last Iterator to end of data to write
         /// @throws IO_error if there is an error writing
         template<typename Iter>
         void write_row(Iter first, Iter last)
@@ -1441,7 +1453,7 @@ namespace csv
         /// least input iterators. Most STL containers, such as std::vector will
         /// work. The ranges type must be convertible to std::string either
         /// directly, by \c to_string, or by `ostream::operator<<`
-        /// @param data range of fields to write
+        /// @param data %Range of fields to write
         /// @throws IO_error if there is an error writing
         template<typename Range>
         void write_row(const Range & data)
@@ -1449,9 +1461,9 @@ namespace csv
             write_row(std::begin(data), std::end(data));
         }
 
-        /// Write a row from the given parameters
+        /// Write a row from the given variadic parameters
 
-        /// @param data fields to write. Each must be convertible to std::string
+        /// @param data Fields to write. Each must be convertible to std::string
         /// either directly, by \c to_string, or by `ostream::operator<<`
         /// @throws IO_error if there is an error writing
         template<typename ...Data>
@@ -1463,7 +1475,7 @@ namespace csv
 
         /// Write a row from a tuple
 
-        /// @param data tuple of fields to write. Each must be convertible to
+        /// @param data tuple of fields to write. Each element must be convertible to
         /// std::string either directly, by \c to_string, or by
         /// `ostream::operator<<`
         /// @throws IO_error if there is an error writing
@@ -1476,9 +1488,9 @@ namespace csv
     private:
         /// Quote a field, if quotation is needed
 
-        /// @oaram field field to quote. Must be convertible to std::string by
+        /// @oaram field Field to quote. Must be convertible to std::string by
         /// csv::str
-        /// @returns field as a std::string, quoted if necessary
+        /// @returns \c field as a std::string, quoted if necessary
         template<typename T>
         std::string quote(const T & field)
         {
@@ -1509,10 +1521,10 @@ namespace csv
 
         friend Writer &end_row(Writer & w);
 
-        /// owns an ofstream created by this Reader when constructed by filename
+        /// Owns an ofstream created by this Reader when constructed by filename
         std::unique_ptr<std::ostream> internal_output_stream_;
 
-        /// points to output ostream. Will point to *internal_output_stream_ if
+        /// Points to output ostream. Will point to *internal_output_stream_ if
         /// constructed by filename or the ostream passed when constructed by
         /// ostream
         std::ostream * output_stream_;
@@ -1524,7 +1536,7 @@ namespace csv
 
     /// End row stream manipulator for Writer
 
-    /// ends the current row, as in: `writer << field << csv::end_row; `
+    /// Ends the current row, as in: `writer << field << csv::end_row; `
     /// @throws IO_error if there is an error writing
     inline Writer & end_row(Writer & w)
     {
@@ -1547,11 +1559,11 @@ namespace csv
         /// Use a std::ostream for CSV output
 
         /// @param output_stream std::ostream to write to
-        /// @param headers field headers to use. This specifies the header row and order
+        /// @param headers Field headers to use. This specifies the header row and order
         /// @param default_val Default value to write to a field if not specified in row input
-        /// @param delimiter delimiter character
-        /// @param quote quote character
-        /// @warning output_stream must not be destroyed or written to during the lifetime of this Writer
+        /// @param delimiter Delimiter character
+        /// @param quote Quote character
+        /// @warning \c output_stream must not be destroyed or written to during the lifetime of this Writer
         Map_writer_iter(std::ostream & output_stream, const std::vector<Header> & headers, const Default_value & default_val = {},
                 const char delimiter = ',', const char quote = '"'):
             writer_{std::make_unique<Writer>(output_stream, delimiter, quote)}, headers_{headers}, default_val_{default_val}
@@ -1561,12 +1573,12 @@ namespace csv
 
         /// Open a file for CSV output
 
-        /// @param filename path to file to write to. Any existing file will be overwritten
-        /// @param headers field headers to use. This specifies the header row and order
+        /// @param filename Path to file to write to. Any existing file will be overwritten
+        /// @param headers Field headers to use. This specifies the header row and order
         /// @param default_val Default value to write to a field if not specified in row input
-        /// @param delimiter delimiter character
-        /// @param quote quote character
-        /// @warning output_stream must not be destroyed or written to during the lifetime of this Writer
+        /// @param delimiter Delimiter character
+        /// @param quote Quote character
+        /// @warning \c output_stream must not be destroyed or written to during the lifetime of this Writer
         /// @throws IO_error if there is an error opening the file
         Map_writer_iter(const std::string& filename, const std::vector<Header> & headers, const Default_value & default_val = {},
                 const char delimiter = ',', const char quote = '"'):
@@ -1581,11 +1593,11 @@ namespace csv
         using reference         = void;
         using iterator_category = std::output_iterator_tag;
 
-        /// no-op
+        /// No-op
         Map_writer_iter & operator*() { return *this; }
-        /// no-op
+        /// No-op
         Map_writer_iter & operator++() { return *this; }
-        /// no-op
+        /// No-op
         Map_writer_iter & operator++(int) { return *this; }
 
         /// Write a row
