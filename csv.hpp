@@ -206,7 +206,7 @@ namespace csv
     /// Parses CSV data
 
     /// Most methods operate on rows, but some read field-by-field. Mixing
-    /// row-wise and field-wise methods is not reccomended, but is possible.
+    /// row-wise and field-wise methods is not recommended, but is possible.
     /// Row-wise methods will act as if the current position is the start of a
     /// row, regardless of any fields that have been read from the current row so
     /// far.
@@ -540,7 +540,7 @@ namespace csv
             value_type obj; ///< Storage for the current Row
         };
 
-        /// Open a std::istream for CSV parsing
+        /// Use a std::istream for CSV parsing
 
         /// @param input_stream std::istream to read from
         /// @param delimiter delimiter character
@@ -562,6 +562,7 @@ namespace csv
         /// @param delimiter delimiter character
         /// @param quote quote character
         /// @param lenient enable lenient parsing (will attempt to read past syntax errors)
+        /// @throws IO_error if there is an error opening the file
         explicit Reader(const std::string & filename,
                 const char delimiter = ',', const char quote = '"',
                 const bool lenient = false):
@@ -1234,9 +1235,18 @@ namespace csv
         return !lhs.equals(rhs);
     }
 
+    /// CSV writer
+
+    /// Writes data in CSV format, with correct escaping as needed.
+    /// Allows writing by rows or field-by-field. Mixing these is not
+    /// recommended, but is possible. Row-wise methods will append to the row
+    /// started by any field-wise methods.
     class Writer
     {
     public:
+        /// Output iterator for writing CSV data field-by-field
+
+        /// This iterator has no mechanism for ending a row. Use Writer::end_row instead
         class Iterator
         {
         public:
@@ -1246,29 +1256,54 @@ namespace csv
             using reference         = void;
             using iterator_category = std::output_iterator_tag;
 
-            explicit Iterator(Writer & w): writer_{&w} {}
+            /// Creates an iterator from a Writer object
 
+            /// @warning w must not be destroyed during iteration
+            explicit Iterator(Writer & w): writer_{w} {}
+
+            /// no-op
             Iterator & operator*() { return *this; }
+            /// no-op
             Iterator & operator++() { return *this; }
+            /// no-op
             Iterator & operator++(int) { return *this; }
 
+            /// Writes a field to the CSV output
+
+            /// @param field data to write. Type must be convertible to std::string
+            /// either directly, by \c to_string, or by `ostream::operator<<`
+            /// @throws IO_error if there is an error writing
             template <typename T>
-            Iterator & operator=(const T & value)
+            Iterator & operator=(const T & field)
             {
-                writer_->write_field(value);
+                writer_.write_field(field);
                 return *this;
             }
 
         private:
-            Writer * writer_;
+            Writer & writer_; ///< ref to parent Writer object
         };
 
+        /// Use a std::ostream for CSV output
+
+        /// @param output_stream std::ostream to write to
+        /// @param delimiter delimiter character
+        /// @param quote quote character
+        /// @warning output_stream must not be destroyed or written to during the lifetime of this Writer
         explicit Writer(std::ostream & output_stream,
                 const char delimiter = ',', const char quote = '"'):
             output_stream_{&output_stream},
             delimiter_{delimiter},
             quote_{quote}
         {}
+
+        /// Open a file for CSV output
+
+        /// @param filename path to file to write to. Any existing file will be overwritten
+        /// @param delimiter delimiter character
+        /// @param quote quote character
+        /// @warning output_stream must not be destroyed or written to during the lifetime of this Writer
+        /// @throws IO_error if there is an error opening the file
         explicit Writer(const std::string& filename,
                 const char delimiter = ',', const char quote = '"'):
             internal_output_stream_{std::make_unique<std::ofstream>(filename, std::ios::binary)},
@@ -1280,10 +1315,17 @@ namespace csv
                 throw IO_error("Could not open file '" + filename + "'", errno);
         }
 
+        /// Destructor
+
+        /// Writes a final newline sequence if needed to close current row
         ~Writer()
         {
             if(!start_of_row_)
-                end_row();
+            {
+                /// try to end the row, but ignore any IO errors
+                try { end_row(); }
+                catch(const IO_error & e) {}
+            }
         }
 
         Writer(const Writer &) = delete;
@@ -1291,25 +1333,51 @@ namespace csv
         Writer & operator=(const Writer &) = delete;
         Writer & operator=(Writer &&) = default;
 
+        /// Get iterator
+
+        /// @returns an iterator on this Writer
+        /// @throws IO_error if there is an error writing
         Iterator iterator()
         {
             return Iterator(*this);
         }
 
+        /// Change the delimiter character
+
+        /// @param delimiter new delimiter char
         void set_delimiter(const char delimiter) { delimiter_ = delimiter; }
+        /// Change the quote character
+
+        /// @param quote new quote char
         void set_quote(const char quote) { quote_ = quote; }
 
+        /// Writes a field to the CSV output
+
+        /// @param field data to write. Type must be convertible to std::string
+        /// either directly, by \c to_string, or by `ostream::operator<<`
+        /// @throws IO_error if there is an error writing
         template<typename T>
         void write_field(const T & field)
         {
             if(!start_of_row_)
+            {
                 (*output_stream_)<<delimiter_;
+                if(output_stream_->bad())
+                    throw IO_error{"Error writing to output", errno};
+            }
 
             (*output_stream_)<<quote(field);
+            if(output_stream_->bad())
+                throw IO_error{"Error writing to output", errno};
 
             start_of_row_ = false;
         }
 
+        /// Writes a field to the CSV output
+
+        /// @param field data to write. Type must be convertible to std::string
+        /// either directly, by \c to_string, or by `ostream::operator<<`
+        /// @throws IO_error if there is an error writing
         template<typename T>
         Writer & operator<<(const T & field)
         {
@@ -1317,18 +1385,33 @@ namespace csv
             return *this;
         }
 
+        /// Apply a stream manipulator to the CSV output
+
+        /// Currently only csv::end_row is supported
+        /// @param manip stream manipulator to apply
         Writer & operator<<(Writer & (*manip)(Writer &))
         {
             manip(*this);
             return *this;
         }
 
+        /// End the current row
+
+        /// @throws IO_error if there is an error writing
         void end_row()
         {
             (*output_stream_)<<"\r\n";
+            if(output_stream_->bad())
+                throw IO_error{"Error writing to output", errno};
             start_of_row_ = true;
         }
 
+        /// Write a row from iterators
+        /// @param first iterator to start of data to write. dereferenced type
+        /// must be convertible to std::string either directly, by \c to_string,
+        /// or by `ostream::operator<<`
+        /// @param last iterator to end of data to write
+        /// @throws IO_error if there is an error writing
         template<typename Iter>
         void write_row(Iter first, Iter last)
         {
@@ -1341,18 +1424,36 @@ namespace csv
             end_row();
         }
 
+        /// Write a row from an initializer_list
+        /// @tparam T Type of data. Must be convertible to std::string either
+        /// directly, by \c to_string, or by `ostream::operator<<`
+        /// @param data list of fields to write
+        /// @throws IO_error if there is an error writing
         template<typename T>
         void write_row(const std::initializer_list<T> & data)
         {
             write_row(std::begin(data), std::end(data));
         }
 
+        /// Write a row from a range
+
+        /// A range in this context must support std::begin and std::end as at
+        /// least input iterators. Most STL containers, such as std::vector will
+        /// work. The ranges type must be convertible to std::string either
+        /// directly, by \c to_string, or by `ostream::operator<<`
+        /// @param data range of fields to write
+        /// @throws IO_error if there is an error writing
         template<typename Range>
         void write_row(const Range & data)
         {
             write_row(std::begin(data), std::end(data));
         }
 
+        /// Write a row from the given parameters
+
+        /// @param data fields to write. Each must be convertible to std::string
+        /// either directly, by \c to_string, or by `ostream::operator<<`
+        /// @throws IO_error if there is an error writing
         template<typename ...Data>
         void write_row_v(const Data & ...data)
         {
@@ -1360,6 +1461,12 @@ namespace csv
             end_row();
         }
 
+        /// Write a row from a tuple
+
+        /// @param data tuple of fields to write. Each must be convertible to
+        /// std::string either directly, by \c to_string, or by
+        /// `ostream::operator<<`
+        /// @throws IO_error if there is an error writing
         template<typename ...Args>
         void write_row(const std::tuple<Args...> & data)
         {
@@ -1367,6 +1474,11 @@ namespace csv
         }
 
     private:
+        /// Quote a field, if quotation is needed
+
+        /// @oaram field field to quote. Must be convertible to std::string by
+        /// csv::str
+        /// @returns field as a std::string, quoted if necessary
         template<typename T>
         std::string quote(const T & field)
         {
@@ -1397,35 +1509,65 @@ namespace csv
 
         friend Writer &end_row(Writer & w);
 
+        /// owns an ofstream created by this Reader when constructed by filename
         std::unique_ptr<std::ostream> internal_output_stream_;
+
+        /// points to output ostream. Will point to *internal_output_stream_ if
+        /// constructed by filename or the ostream passed when constructed by
+        /// ostream
         std::ostream * output_stream_;
-        bool start_of_row_ {true};
+        bool start_of_row_ {true}; ///< for keeping track if when a row needs to be ended
 
         char delimiter_ {','};
         char quote_ {'"'};
     };
 
+    /// End row stream manipulator for Writer
+
+    /// ends the current row, as in: `writer << field << csv::end_row; `
+    /// @throws IO_error if there is an error writing
     inline Writer & end_row(Writer & w)
     {
         w.end_row();
         return w;
     }
 
+    /// Map-based Writer iterator
+
+    /// Output iterator accepting a std::map to write as a CSV row
     template <typename Header, typename Default_value = std::string>
     class Map_writer_iter
     {
     private:
-        std::unique_ptr<Writer> writer_;
-        std::vector<Header> headers_;
-        Default_value default_val_;
+        std::unique_ptr<Writer> writer_; ///< Writer object
+        std::vector<Header> headers_;    ///< Headers
+        Default_value default_val_;      ///< Default value
 
     public:
+        /// Use a std::ostream for CSV output
+
+        /// @param output_stream std::ostream to write to
+        /// @param headers field headers to use. This specifies the header row and order
+        /// @param default_val Default value to write to a field if not specified in row input
+        /// @param delimiter delimiter character
+        /// @param quote quote character
+        /// @warning output_stream must not be destroyed or written to during the lifetime of this Writer
         Map_writer_iter(std::ostream & output_stream, const std::vector<Header> & headers, const Default_value & default_val = {},
                 const char delimiter = ',', const char quote = '"'):
             writer_{std::make_unique<Writer>(output_stream, delimiter, quote)}, headers_{headers}, default_val_{default_val}
         {
             writer_->write_row(headers);
         }
+
+        /// Open a file for CSV output
+
+        /// @param filename path to file to write to. Any existing file will be overwritten
+        /// @param headers field headers to use. This specifies the header row and order
+        /// @param default_val Default value to write to a field if not specified in row input
+        /// @param delimiter delimiter character
+        /// @param quote quote character
+        /// @warning output_stream must not be destroyed or written to during the lifetime of this Writer
+        /// @throws IO_error if there is an error opening the file
         Map_writer_iter(const std::string& filename, const std::vector<Header> & headers, const Default_value & default_val = {},
                 const char delimiter = ',', const char quote = '"'):
             writer_{std::make_unique<Writer>(filename, delimiter, quote)}, headers_{headers}, default_val_{default_val}
@@ -1439,10 +1581,20 @@ namespace csv
         using reference         = void;
         using iterator_category = std::output_iterator_tag;
 
+        /// no-op
         Map_writer_iter & operator*() { return *this; }
+        /// no-op
         Map_writer_iter & operator++() { return *this; }
+        /// no-op
         Map_writer_iter & operator++(int) { return *this; }
 
+        /// Write a row
+
+        /// @param row std::map containing header to field pairs. If row
+        /// contains keys not in the specified header, the associated values will
+        /// be ignored. If the map is missing headers, their values will be filled
+        /// with default_val
+        /// @throws IO_error if there is an error writing
         template <typename K, typename T, typename std::enable_if_t<std::is_convertible_v<Header, K>, int> = 0>
         Map_writer_iter & operator=(const std::map<K, T> & row)
         {
