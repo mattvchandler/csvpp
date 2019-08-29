@@ -718,6 +718,23 @@ namespace csv
             return * this;
         }
 
+        /// Reads fields into variadic arguments
+
+        /// @warning This may be used to fields from multiple rows at a time.
+        /// Use with caution if the number of fields per row is not known
+        /// beforehand.
+        /// @param[out] data Variables to read into.
+        /// If more parameters are passed than there are fields remaining,
+        /// the remaining parameters will be default initialized
+        /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
+        /// @throws IO_error if error reading CSV data
+        /// @throws Type_conversion_error if error converting to specified types
+        template <typename ... Data>
+        void read_v(Data & ... data)
+        {
+            (void)(*this >> ... >> data);
+        }
+
         /// Get the current Row
 
         /// @returns Row object for the current row
@@ -784,23 +801,6 @@ namespace csv
                 return {};
 
             return row.read_tuple<Args...>();
-        }
-
-        /// Reads fields into variadic arguments
-
-        /// @warning This may be used to fields from multiple rows at a time.
-        /// Use with caution if the number of fields per row is not known
-        /// beforehand.
-        /// @param[out] data Variables to read into.
-        /// If more parameters are passed than there are fields remaining,
-        /// the remaining parameters will be default initialized
-        /// @throws Parse_error if error parsing field (*only when not parsing in lenient mode*)
-        /// @throws IO_error if error reading CSV data
-        /// @throws Type_conversion_error if error converting to specified types
-        template <typename ... Data>
-        void read_row_v(Data & ... data)
-        {
-            (void)(*this >> ... >> data);
         }
 
         /// Read entire CSV data into a vector of vectors

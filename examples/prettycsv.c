@@ -176,19 +176,19 @@ int main(int argc, char ** argv)
     CSV_reader_set_quote(input, quote);
     CSV_reader_set_lenient(input, lenient);
 
-    vector * data = vector_init(sizeof(CSV_record *), (void(*)(void*))CSV_record_free);
+    vector * data = vector_init(sizeof(CSV_row *), (void(*)(void*))CSV_row_free);
     vector * col_size = vector_init(sizeof(int), NULL);
 
     int ret_val = EXIT_SUCCESS;
 
-    CSV_record * row;
-    while((row = CSV_reader_read_record(input)))
+    CSV_row * row;
+    while((row = CSV_reader_read_row(input)))
     {
         vector_append(data, &row);
 
-        for(size_t i = 0; i < CSV_record_size(row); ++i)
+        for(size_t i = 0; i < CSV_row_size(row); ++i)
         {
-            const char * field = CSV_record_get(row, i);
+            const char * field = CSV_row_get(row, i);
             int field_size = strlen(field);
 
             if(i == vector_size(col_size))
@@ -206,13 +206,13 @@ int main(int argc, char ** argv)
     {
         for(size_t i = 0; i < vector_size(data); ++i)
         {
-            row = *(CSV_record **)vector_at(data, i);
-            for(size_t j = 0; j < CSV_record_size(row); ++j)
+            row = *(CSV_row **)vector_at(data, i);
+            for(size_t j = 0; j < CSV_row_size(row); ++j)
             {
                 if(j != 0)
                     printf(" | ");
 
-                printf("%-*s", *(int*)vector_at(col_size, j), CSV_record_get(row, j));
+                printf("%-*s", *(int*)vector_at(col_size, j), CSV_row_get(row, j));
             }
             putchar('\n');
         }

@@ -35,7 +35,7 @@ typedef enum {
     CSV_EOF,                     // reached end of file
     CSV_PARSE_ERROR,             // parsing error. see CSV_reader_get_error_msg for details
     CSV_IO_ERROR,                // IO error
-    CSV_TOO_MANY_FIELDS_WARNING, // more fields exist in one record than will fit in given storage. Non fatal
+    CSV_TOO_MANY_FIELDS_WARNING, // more fields exist in one row than will fit in given storage. Non fatal
     CSV_INTERNAL_ERROR           // Illegal reader / writer state reached
 } CSV_status;
 
@@ -46,22 +46,22 @@ typedef struct CSV_reader CSV_reader;
 typedef struct CSV_writer CSV_writer;
 
 // dynamic array of strings structure for convenience
-typedef struct CSV_record CSV_record;
+typedef struct CSV_row CSV_row;
 
 // strdup implementation, in case it's not implemented in string.h
 char * CSV_strdup(const char * src);
 
-CSV_record * CSV_record_init(void);
-void CSV_record_free(CSV_record * rec);
+CSV_row * CSV_row_init(void);
+void CSV_row_free(CSV_row * rec);
 
-// take ownership of field and append it to the record
-void CSV_record_append(CSV_record * rec, char * field);
+// take ownership of field and append it to the row
+void CSV_row_append(CSV_row * rec, char * field);
 
-size_t CSV_record_size(const CSV_record * rec);
-const char * CSV_record_get(const CSV_record * rec, size_t i);
+size_t CSV_row_size(const CSV_row * rec);
+const char * CSV_row_get(const CSV_row * rec, size_t i);
 
-// get access to char ** within CSV_record (useful for passing to other interfaces)
-const char * const * CSV_record_arr(const CSV_record * rec);
+// get access to char ** within CSV_row (useful for passing to other interfaces)
+const char * const * CSV_row_arr(const CSV_row * rec);
 
 // create a new CSV reader object parsing from a file
 CSV_reader * CSV_reader_init_from_filename(const char * filename);
@@ -88,23 +88,23 @@ void CSV_reader_set_lenient(CSV_reader * reader, const bool lenient);
 // end_of_row_out will be set true if this is the last field in a row
 char * CSV_reader_read_field(CSV_reader * reader);
 
-// read the current record from the CSV file and advance to the next
-// returns null on error, otherwise caller should free the return value with CSV_record_free
-CSV_record * CSV_reader_read_record(CSV_reader * reader);
+// variadic read. pass char **'s followed by NULL. caller will own all char *'s returned
+// discards any fields remaining until the end of the row
+// returns CSV_OK on successful read or other error code on failure
+CSV_status CSV_reader_read_v(CSV_reader * reader, ...);
 
-// read a record into an array of fields. if fields is null, this will allocate it (and pass ownership to the caller),
+
+// read the current row from the CSV file and advance to the next
+// returns null on error, otherwise caller should free the return value with CSV_row_free
+CSV_row * CSV_reader_read_row(CSV_reader * reader);
+
+// read a row into an array of fields. if fields is null, this will allocate it (and pass ownership to the caller),
 // and return the final size into num_fields
 // otherwise, will overwrite fields contents with strings (owned by caller) up to the limit specified in num_fields.
 // will discard any fields remaining until the end of the row
 // returns CSV_OK on successful read, CSV_TOO_MANY_FIELDS_WARNING fields is not null and there are more fields than num_fields
 // or other error code on failure
-CSV_status CSV_reader_read_record_ptr(CSV_reader * reader, char *** fields, size_t * num_fields);
-
-// variadic read. pass char **'s followed by NULL. caller will own all char *'s returned
-// discards any fields remaining until the end of the row
-// returns CSV_OK on successful read, CSV_TOO_MANY_FIELDS_WARNING fields than passed in
-// or other error code on failure
-CSV_status CSV_reader_read_record_v(CSV_reader * reader, ...);
+CSV_status CSV_reader_read_row_ptr(CSV_reader * reader, char *** fields, size_t * num_fields);
 
 bool CSV_reader_eof(const CSV_reader * reader);
 bool CSV_reader_end_of_row(const CSV_reader * reader);
@@ -133,17 +133,17 @@ void CSV_writer_set_quote(CSV_writer * writer, const char quote);
 // end the current row (for use w/ CSV_writer_write_field)
 CSV_status CSV_writer_end_row(CSV_writer * writer);
 
-// write a single field. Use CSV_writer_end_row to move to the next record
+// write a single field. Use CSV_writer_end_row to move to the next row
 CSV_status CSV_writer_write_field(CSV_writer * writer, const char * field);
 
-// write a CSV_record object
-CSV_status CSV_writer_write_record(CSV_writer * writer, const CSV_record * fields);
+// write a CSV_row object
+CSV_status CSV_writer_write_row(CSV_writer * writer, const CSV_row * fields);
 
-// write an array of strings as a record
-CSV_status CSV_writer_write_record_ptr(CSV_writer * writer, const char *const * fields, const size_t num_fields);
+// write an array of strings as a row
+CSV_status CSV_writer_write_row_ptr(CSV_writer * writer, const char *const * fields, const size_t num_fields);
 
-// write const char * arguments as a record. last argument should be NULL
-CSV_status CSV_writer_write_record_v(CSV_writer * writer, ...);
+// write const char * arguments as a row. last argument should be NULL
+CSV_status CSV_writer_write_row_v(CSV_writer * writer, ...);
 
 // get the string output (when initialized w/ CSV_writer_init_to_str, otherwise returns NULL)
 const char * CSV_writer_get_str(CSV_writer * writer);

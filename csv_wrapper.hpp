@@ -73,7 +73,7 @@ public:
     bool eof() const { return CSV_reader_eof(csv_r); }
 
     // make the interface more C++ friendly
-    std::optional<std::vector<std::string>> read_record() const
+    std::optional<std::vector<std::string>> read_row() const
     {
         std::vector<std::string> rec;
 
@@ -162,7 +162,7 @@ public:
     std::string get_str() { return std::string{ CSV_writer_get_str(csv_w) }; }
 
     // make the interface more C++ friendly
-    void write_record(const std::vector<std::string> & fields) const
+    void write_row(const std::vector<std::string> & fields) const
     {
         for(auto &i: fields)
         {

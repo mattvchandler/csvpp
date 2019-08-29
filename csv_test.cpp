@@ -249,7 +249,7 @@ test::Result test_read_mine_c_field(const std::string & csv_text, const CSV_data
     return common_read_return(csv_text, expected_data, data);
 }
 
-test::Result test_read_mine_c_record(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_mine_c_row(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
@@ -263,11 +263,11 @@ test::Result test_read_mine_c_record(const std::string & csv_text, const CSV_dat
 
     while(true)
     {
-        auto rec = CSV_reader_read_record(r);
+        auto rec = CSV_reader_read_row(r);
         if(rec)
         {
-            data.emplace_back(CSV_record_arr(rec), CSV_record_arr(rec) + CSV_record_size(rec));
-            CSV_record_free(rec);
+            data.emplace_back(CSV_row_arr(rec), CSV_row_arr(rec) + CSV_row_size(rec));
+            CSV_row_free(rec);
         }
 
         else if(CSV_reader_eof(r))
@@ -325,7 +325,7 @@ test::Result test_read_mine_c_ptr(const std::string & csv_text, const CSV_data &
                 std::free(i);
         };
 
-        auto status = CSV_reader_read_record_ptr(r, &rec_data, &num_fields);
+        auto status = CSV_reader_read_row_ptr(r, &rec_data, &num_fields);
         if(status == CSV_OK)
         {
             data.emplace_back(std::begin(rec), std::begin(rec) + num_fields);
@@ -379,7 +379,7 @@ test::Result test_read_mine_c_ptr_dyn(const std::string & csv_text, const CSV_da
     {
         char ** rec = NULL;
         std::size_t num_fields = 0;
-        auto status = CSV_reader_read_record_ptr(r, &rec, &num_fields);
+        auto status = CSV_reader_read_row_ptr(r, &rec, &num_fields);
         if(status == CSV_OK)
         {
             data.emplace_back(rec, rec + num_fields);
@@ -428,14 +428,14 @@ test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_d
 
     CSV_data parsed_data;
 
-    // pre-parse the data (using the same logic as read_record)
+    // pre-parse the data (using the same logic as read_row)
     while(true)
     {
-        auto rec = CSV_reader_read_record(r);
+        auto rec = CSV_reader_read_row(r);
         if(rec)
         {
-            parsed_data.emplace_back(CSV_record_arr(rec), CSV_record_arr(rec) + CSV_record_size(rec));
-            CSV_record_free(rec);
+            parsed_data.emplace_back(CSV_row_arr(rec), CSV_row_arr(rec) + CSV_row_size(rec));
+            CSV_row_free(rec);
         }
 
         else if(CSV_reader_eof(r))
@@ -491,22 +491,22 @@ test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_d
         switch(expected_size)
         {
         case 0:
-            status = CSV_reader_read_record_v(r, NULL);
+            status = CSV_reader_read_v(r, NULL);
             break;
         case 1:
-            status = CSV_reader_read_record_v(r, &row[0], NULL);
+            status = CSV_reader_read_v(r, &row[0], NULL);
             break;
         case 2:
-            status = CSV_reader_read_record_v(r, &row[0], &row[1], NULL);
+            status = CSV_reader_read_v(r, &row[0], &row[1], NULL);
             break;
         case 3:
-            status = CSV_reader_read_record_v(r, &row[0], &row[1], &row[2], NULL);
+            status = CSV_reader_read_v(r, &row[0], &row[1], &row[2], NULL);
             break;
         case 4:
-            status = CSV_reader_read_record_v(r, &row[0], &row[1], &row[2], &row[3], NULL);
+            status = CSV_reader_read_v(r, &row[0], &row[1], &row[2], &row[3], NULL);
             break;
         case 5:
-            status = CSV_reader_read_record_v(r, &row[0], &row[1], &row[2], &row[3], &row[4], NULL);
+            status = CSV_reader_read_v(r, &row[0], &row[1], &row[2], &row[3], &row[4], NULL);
             break;
         }
         if(status != CSV_OK)
@@ -545,13 +545,13 @@ test::Result test_read_mine_c_wrapper(const std::string & csv_text, const CSV_da
     csv_r.set_lenient(lenient);
     CSV_data data;
 
-    decltype(csv_r.read_record()) record;
+    decltype(csv_r.read_row()) row;
     try
     {
-        while((record = csv_r.read_record()))
+        while((row = csv_r.read_row()))
         {
-            if(!std::empty(*record))
-                data.emplace_back(std::move(*record));
+            if(!std::empty(*row))
+                data.emplace_back(std::move(*row));
         }
     }
     catch(CSV_wrapper_parse_error &)
@@ -1346,22 +1346,22 @@ test::Result test_read_mine_cpp_variadic(const std::string & csv_text, const CSV
                 switch(std::size(row))
                 {
                 case 0:
-                    r.read_row_v();
+                    r.read_v();
                     break;
                 case 1:
-                    r.read_row_v(row[0]);
+                    r.read_v(row[0]);
                     break;
                 case 2:
-                    r.read_row_v(row[0], row[1]);
+                    r.read_v(row[0], row[1]);
                     break;
                 case 3:
-                    r.read_row_v(row[0], row[1], row[2]);
+                    r.read_v(row[0], row[1], row[2]);
                     break;
                 case 4:
-                    r.read_row_v(row[0], row[1], row[2], row[3]);
+                    r.read_v(row[0], row[1], row[2], row[3]);
                     break;
                 case 5:
-                    r.read_row_v(row[0], row[1], row[2], row[3], row[4]);
+                    r.read_v(row[0], row[1], row[2], row[3], row[4]);
                     break;
                 default:
                     return test::skip();
@@ -1624,7 +1624,7 @@ test::Result test_write_mine_c_field(const std::string & expected_text, const CS
     return common_write_return(data, expected_text, output);
 }
 
-test::Result test_write_mine_c_record(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_mine_c_row(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     CSV_writer * w = CSV_writer_init_to_str();
     if(!w)
@@ -1635,26 +1635,26 @@ test::Result test_write_mine_c_record(const std::string & expected_text, const C
 
     for(const auto & row: data)
     {
-        auto rec = CSV_record_init();
+        auto rec = CSV_row_init();
         if(!rec)
         {
             CSV_writer_free(w);
-            throw std::runtime_error{"Could not init CSV_record"};
+            throw std::runtime_error{"Could not init CSV_row"};
         }
         for(auto & i: row)
         {
             auto field = CSV_strdup(i.c_str());
-            CSV_record_append(rec, field);
+            CSV_row_append(rec, field);
         }
 
-        if(CSV_writer_write_record(w, rec) != CSV_OK)
+        if(CSV_writer_write_row(w, rec) != CSV_OK)
         {
             CSV_writer_free(w);
-            CSV_record_free(rec);
+            CSV_row_free(rec);
             throw std::runtime_error{"error writing CSV"};
         }
 
-        CSV_record_free(rec);
+        CSV_row_free(rec);
     }
     auto output = std::string{ CSV_writer_get_str(w) };
     CSV_writer_free(w);
@@ -1677,7 +1677,7 @@ test::Result test_write_mine_c_ptr(const std::string & expected_text, const CSV_
         for(const auto & col: row)
             col_c_strs.push_back(col.c_str());
 
-        if(CSV_writer_write_record_ptr(w, col_c_strs.data(), row.size()) != CSV_OK)
+        if(CSV_writer_write_row_ptr(w, col_c_strs.data(), row.size()) != CSV_OK)
         {
             CSV_writer_free(w);
             throw std::runtime_error{"error writing CSV"};
@@ -1705,22 +1705,22 @@ test::Result test_write_mine_c_variadic(const std::string & expected_text, const
         switch(std::size(row))
         {
         case 0:
-            status = CSV_writer_write_record_v(w, NULL);
+            status = CSV_writer_write_row_v(w, NULL);
             break;
         case 1:
-            status = CSV_writer_write_record_v(w, row[0].c_str(), NULL);
+            status = CSV_writer_write_row_v(w, row[0].c_str(), NULL);
             break;
         case 2:
-            status = CSV_writer_write_record_v(w, row[0].c_str(), row[1].c_str(), NULL);
+            status = CSV_writer_write_row_v(w, row[0].c_str(), row[1].c_str(), NULL);
             break;
         case 3:
-            status = CSV_writer_write_record_v(w, row[0].c_str(), row[1].c_str(), row[2].c_str(), NULL);
+            status = CSV_writer_write_row_v(w, row[0].c_str(), row[1].c_str(), row[2].c_str(), NULL);
             break;
         case 4:
-            status = CSV_writer_write_record_v(w, row[0].c_str(), row[1].c_str(), row[2].c_str(), row[3].c_str(), NULL);
+            status = CSV_writer_write_row_v(w, row[0].c_str(), row[1].c_str(), row[2].c_str(), row[3].c_str(), NULL);
             break;
         case 5:
-            status = CSV_writer_write_record_v(w, row[0].c_str(), row[1].c_str(), row[2].c_str(), row[3].c_str(), row[4].c_str(), NULL);
+            status = CSV_writer_write_row_v(w, row[0].c_str(), row[1].c_str(), row[2].c_str(), row[3].c_str(), row[4].c_str(), NULL);
             break;
         default:
             CSV_writer_free(w);
@@ -1745,7 +1745,7 @@ test::Result test_write_mine_c_wrapper(const std::string & expected_text, const 
     w.set_quote(quote);
 
     for(const auto & row: data)
-        w.write_record(row);
+        w.write_row(row);
 
     return common_write_return(data, expected_text, w.get_str());
 }
@@ -2155,7 +2155,7 @@ int main(int, char *[])
         #endif
         #ifdef CSV_ENABLE_C_CSV
         test_read_mine_c_field,
-        test_read_mine_c_record,
+        test_read_mine_c_row,
         test_read_mine_c_ptr,
         test_read_mine_c_ptr_dyn,
         test_read_mine_c_variadic,
@@ -2197,7 +2197,7 @@ int main(int, char *[])
     test::Test<const std::string, const CSV_data&, const char, const char> test_write{
         #ifdef CSV_ENABLE_C_CSV
         test_write_mine_c_field,
-        test_write_mine_c_record,
+        test_write_mine_c_row,
         test_write_mine_c_ptr,
         test_write_mine_c_variadic,
         test_write_mine_c_wrapper,
