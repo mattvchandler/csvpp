@@ -297,17 +297,24 @@ void CSV_reader_set_error(CSV_reader * reader, CSV_status error, const char * ms
 
     reader->error_ = error;
 
-    if(append_line_and_col)
+    free(reader->error_message_);
+    if(!msg)
     {
-        const char * format =  "%s at line: %u, col: %u";
-        int err_msg_size = snprintf(NULL, 0, format, msg, reader->line_no_, reader->col_no_);
-        reader->error_message_ = (char *)realloc(reader->error_message_, sizeof(char) * (err_msg_size + 1));
-        sprintf(reader->error_message_, format, msg, reader->line_no_, reader->col_no_);
+        reader->error_message_ = NULL;
     }
     else
     {
-        free(reader->error_message_);
-        reader->error_message_ = CSV_strdup(msg);
+        if(append_line_and_col)
+        {
+            const char * format =  "%s at line: %u, col: %u";
+            int err_msg_size = snprintf(NULL, 0, format, msg, reader->line_no_, reader->col_no_);
+            reader->error_message_ = (char *)malloc(sizeof(char) * (err_msg_size + 1));
+            sprintf(reader->error_message_, format, msg, reader->line_no_, reader->col_no_);
+        }
+        else
+        {
+            reader->error_message_ = CSV_strdup(msg);
+        }
     }
 }
 
@@ -416,10 +423,18 @@ char * CSV_reader_parse(CSV_reader * reader)
     if(!reader)
         return NULL;
 
+    // fail if we've encountered an error
+    if(reader->error_ != CSV_OK)
+    {
+        // check for and clear any warnings
+        if(reader->error_ == CSV_TOO_MANY_FIELDS_WARNING)
+            CSV_reader_set_error(reader, CSV_OK, NULL, false);
+        else
+            return NULL;
+    }
     CSV_reader_consume_newlines(reader);
 
-    if(reader->error_ != CSV_OK &&
-       reader->error_ != CSV_TOO_MANY_FIELDS_WARNING)
+    if(reader->error_ != CSV_OK)
         return NULL;
 
     bool quoted = false;
