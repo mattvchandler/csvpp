@@ -1,5 +1,6 @@
 /// @file
-/// @brief CSV library
+/// @brief C++ CSV library
+
 // Copyright 2019 Matthew Chandler
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -36,9 +37,16 @@
 #include <cerrno>
 #include <cstring>
 
-/// CSV namespace
+/// @defgroup cpp C++ library
+
+/// CSV library namespace
+
+/// @ingroup cpp
 namespace csv
 {
+    /// @addtogroup cpp
+    /// @{
+
     /// Error base class
 
     /// Base class for all library exceptions. Do not use directly
@@ -620,10 +628,14 @@ namespace csv
         Reader(Reader &&) = default;
         Reader & operator=(Reader &&) = default;
 
+        /// Check for end of input
+
         /// @returns \c true if the last field in the row has been read
         bool end_of_row() const { return end_of_row_ || eof(); }
 
-        /// @returns \c true if no data remains to be read
+        /// Check for end of row
+
+        /// @returns \c true if no fields remain in the current row
         bool eof() const { return state_ == State::eof; }
 
         /// @returns \c true if there is more data to be read
@@ -631,11 +643,11 @@ namespace csv
 
         /// Change the delimiter character
 
-        /// @param delimiter New delimiter char
+        /// @param delimiter New delimiter character
         void set_delimiter(const char delimiter) { delimiter_ = delimiter; }
         /// Change the quote character
 
-        /// @param quote New quote char
+        /// @param quote New quote character
         void set_quote(const char quote) { quote_ = quote; }
 
         /// Enable / disable lenient parsing
@@ -1000,12 +1012,12 @@ namespace csv
         /// constructed by istream
         std::istream * input_stream_;
 
-        char delimiter_ {','};
-        char quote_ {'"'};
-        bool lenient_ { false };
+        char delimiter_ {','};   ///< Delimiter character
+        char quote_ {'"'};       ///< Quote character
+        bool lenient_ { false }; ///< Lenient parsing enabled / disabled
 
         std::optional<std::string> conversion_retry_; ///< Contains last field after type conversion error. Allows retrying conversion
-        bool end_of_row_ { false };
+        bool end_of_row_ { false }; ///< \c true if parsing is at the end of a row
 
         /// Parsing states
         enum class State
@@ -1356,11 +1368,12 @@ namespace csv
 
         /// Change the delimiter character
 
-        /// @param delimiter New delimiter char
+        /// @param delimiter New delimiter character
         void set_delimiter(const char delimiter) { delimiter_ = delimiter; }
+
         /// Change the quote character
 
-        /// @param quote New quote char
+        /// @param quote New quote character
         void set_quote(const char quote) { quote_ = quote; }
 
         /// Writes a field to the CSV output
@@ -1626,6 +1639,7 @@ namespace csv
             return *this;
         }
     };
+    /// @} // end doxygen group
 };
 
 #endif // CSV_HPP
