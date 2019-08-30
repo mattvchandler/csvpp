@@ -64,7 +64,7 @@ struct CSV_writer
         FILE * file_;
         CSV_string * str_;
     };
-    enum {CSV_DEST_FILE, CSV_DEST_STR} dest_;
+    enum {CSV_DEST_FILENAME, CSV_DEST_FILE, CSV_DEST_STR} dest_;
 
     char delimiter_;
     char quote_;
@@ -734,6 +734,18 @@ CSV_writer * CSV_writer_init_from_filename(const char * filename)
 
     CSV_writer * writer = CSV_writer_init_common();
 
+    writer->dest_ = CSV_DEST_FILENAME;
+    writer->file_ = file;
+
+    return writer;
+}
+
+CSV_writer * CSV_writer_init_from_file(FILE * file)
+{
+    if(!file)
+        return NULL;
+    CSV_writer * writer = CSV_writer_init_common();
+
     writer->dest_ = CSV_DEST_FILE;
     writer->file_ = file;
 
@@ -758,8 +770,10 @@ void CSV_writer_free(CSV_writer * writer)
 
     switch(writer->dest_)
     {
-    case CSV_DEST_FILE:
+    case CSV_DEST_FILENAME:
         fclose(writer->file_);
+        break;
+    case CSV_DEST_FILE:
         break;
     case CSV_DEST_STR:
         CSV_string_free(writer->str_);
@@ -786,6 +800,7 @@ CSV_status CSV_writer_putc(CSV_writer * writer, const char c)
 {
     switch(writer->dest_)
     {
+    case CSV_DEST_FILENAME:
     case CSV_DEST_FILE:
         fputc(c, writer->file_);
         if(ferror(writer->file_))

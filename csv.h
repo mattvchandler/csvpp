@@ -118,6 +118,9 @@ CSV_status CSV_reader_get_error(const CSV_reader * reader);
 // create a new CSV writer object writing to a file
 CSV_writer * CSV_writer_init_from_filename(const char * filename);
 
+// Create a new CSV_writer object writing to a FILE *
+CSV_writer * CSV_writer_init_from_file(FILE * file);
+
 // create a new CSV writer object writing to a string
 CSV_writer * CSV_writer_init_to_str(void);
 
