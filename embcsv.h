@@ -142,12 +142,14 @@ typedef enum
 /// Parse a character
 
 /// @param c Character to parse
-/// @param[out] field_out Pointer to const char *, in which will be stored:
+/// @param[out] field_out Pointer to string, in which will be stored:
 /// * NULL if no field has been parsed. (call returned #EMBCSV_INCOMPLETE or #EMBCSV_PARSE_ERROR)
-/// * The parsed field if a field has been parsed (call returned #EMBCSV_FIELD or #EMBCSV_END_OF_ROW)
+/// * The parsed field if a field has been parsed (call returned #EMBCSV_FIELD or #EMBCSV_END_OF_ROW).
+/// This string is owned by the EMBCSV_reader. Do not free this value. Contents will change
+/// on next call to EMBCSV_reader_parse_char(), so copy if needed
 /// @returns Result of parsing as an #EMBCSV_result
 /// @ingroup emb
-EMBCSV_result EMBCSV_reader_parse_char(EMBCSV_reader * r, int c, char ** field_out);
+EMBCSV_result EMBCSV_reader_parse_char(EMBCSV_reader * r, int c, const char ** field_out);
 
 #ifdef __cplusplus
 }

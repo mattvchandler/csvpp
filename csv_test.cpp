@@ -160,7 +160,7 @@ test::Result test_read_embedded(const std::string & csv_text, const CSV_data & e
     bool new_row = true;
     for(const char * c = csv_text.c_str();; ++c)
     {
-        char * field = nullptr;
+        const char * field = nullptr;
         switch(EMBCSV_reader_parse_char(r, *c, &field))
         {
             case EMBCSV_INCOMPLETE:

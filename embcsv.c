@@ -79,7 +79,7 @@ void EMBCSV_reader_pushc(EMBCSV_reader * r, char c)
     r->field[r->field_size++] = c;
 }
 
-EMBCSV_result EMBCSV_reader_parse_char(EMBCSV_reader * r, int c, char ** field_out)
+EMBCSV_result EMBCSV_reader_parse_char(EMBCSV_reader * r, int c, const char ** field_out)
 {
     *field_out = NULL;
 
