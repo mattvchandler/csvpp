@@ -91,7 +91,7 @@ int main(int argc, char * argv[])
         std::cerr << e.what() << '\n';
         return 1;
     }
-    catch(const std::ios_base::failure & e)
+    catch(const csv::IO_error & e)
     {
         std::cout << "I/O error: " << e.what()<<'\n';
         return 1;
