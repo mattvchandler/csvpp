@@ -180,7 +180,7 @@ namespace csv
 
     /// String conversion
 
-    /// Convert a given type to std::string, using conversion operator, to_string, or std::ostream insertion
+    /// Convert a given type to std::string, using conversion, to_string, or std::ostream insertion
     /// @param t Data to convert to std::string
     /// @returns Input converted to std::string
     template <typename T, typename std::enable_if_t<std::is_convertible_v<T, std::string>, int> = 0>
@@ -207,6 +207,12 @@ namespace csv
         std::ostringstream os;
         os<<t;
         return os.str();
+    }
+
+    // special conversion for char using std::string's initializer list ctor
+    std::string str(char c)
+    {
+        return {c};
     }
 
     /// Parses CSV data
