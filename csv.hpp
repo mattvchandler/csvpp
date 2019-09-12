@@ -254,7 +254,7 @@ namespace csv
                 /// Empty constructor
 
                 /// Denotes the end of iteration
-                Iterator(): row{nullptr} {}
+                Iterator(): row_{nullptr} {}
 
                 /// Creates an iterator from a Row, and parses the first field
 
@@ -263,16 +263,16 @@ namespace csv
                 /// @throws Parse_error if error parsing first field (*only when not parsing in lenient mode*)
                 /// @throws IO_error if error reading CSV data
                 /// @throws Type_conversion_error if error converting to type T. Caller may call this again with a different type to try again
-                explicit Iterator(Reader::Row & row): row{&row}
+                explicit Iterator(Reader::Row & row): row_{&row}
                 {
                     ++*this;
                 }
 
                 /// @returns Current field
-                const T & operator*() const { return obj; }
+                const T & operator*() const { return obj_; }
 
                 /// @returns Pointer to current field
-                const T * operator->() const { return &obj; }
+                const T * operator->() const { return &obj_; }
 
                 /// Parse and iterate to next field
 
@@ -281,17 +281,17 @@ namespace csv
                 /// @throws Type_conversion_error if error converting to type T. Caller may call this again with a different type to try again
                 Iterator & operator++()
                 {
-                    assert(row);
+                    assert(row_);
 
                     if(end_of_row_)
                     {
-                        row = nullptr;
+                        row_ = nullptr;
                     }
                     else
                     {
-                        obj = row->read_field<T>();
+                        obj_ = row_->read_field<T>();
 
-                        if(row->end_of_row())
+                        if(row_->end_of_row())
                             end_of_row_ = true;
                     }
 
@@ -301,12 +301,12 @@ namespace csv
                 /// Compare to another Reader::Row::Iterator
                 bool equals(const Iterator<T> & rhs) const
                 {
-                    return row == rhs.row;
+                    return row_ == rhs.row_;
                 }
 
             private:
-                Reader::Row * row; ///< Pointer to parent Row object, or \c nullptr if past end of row
-                T obj{}; ///< Storage for current field
+                Reader::Row * row_; ///< Pointer to parent Row object, or \c nullptr if past end of row
+                T obj_{}; ///< Storage for current field
                 bool end_of_row_ = false; ///< Keeps track of when the Row has hit end-of-row
             };
 
@@ -320,7 +320,7 @@ namespace csv
                 /// @returns Iterator to current field in row
                 Row::Iterator<T> begin()
                 {
-                    return Row::Iterator<T>{row};
+                    return Row::Iterator<T>{row_};
                 }
 
                 /// @returns Iterator to end of row
@@ -330,8 +330,8 @@ namespace csv
                 }
             private:
                 friend Row;
-                explicit Range(Row & row):row{row} {} ///< Construct a Range. Only for use by Row::range
-                Row & row; ///< Ref to parent Row object
+                explicit Range(Row & row):row_{row} {} ///< Construct a Range. Only for use by Row::range
+                Row & row_; ///< Ref to parent Row object
             };
 
             /// @tparam T Type to convert fields to. Defaults to std::string
@@ -516,33 +516,33 @@ namespace csv
             /// @warning \c r must not be destroyed or read from during iteration
             explicit Iterator(Reader & r): reader_{&r}
             {
-                obj = reader_->get_row();
+                obj_ = reader_->get_row();
 
                 if(!*reader_)
                     reader_ = nullptr;
             }
 
             /// @returns Current row
-            const value_type & operator*() const { return obj; }
+            const value_type & operator*() const { return obj_; }
 
             /// @returns Current row
-            value_type & operator*() { return obj; }
+            value_type & operator*() { return obj_; }
 
             /// @returns Pointer to current row
-            const value_type * operator->() const { return &obj; }
+            const value_type * operator->() const { return &obj_; }
 
             /// @returns pointer to current row
-            value_type * operator->() { return &obj; }
+            value_type * operator->() { return &obj_; }
 
             /// Iterate to next Row
             Iterator & operator++()
             {
                 // discard any remaining fields
-                while(!obj.end_of_row())
-                    obj.read_field();
+                while(!obj_.end_of_row())
+                    obj_.read_field();
 
                 assert(reader_);
-                obj = reader_->get_row();
+                obj_ = reader_->get_row();
 
                 if(!*reader_)
                     reader_ = nullptr;
@@ -558,7 +558,7 @@ namespace csv
 
         private:
             Reader * reader_ { nullptr }; ///< pointer to parent Reader object or nullptr if no rows remain
-            value_type obj; ///< Storage for the current Row
+            value_type obj_; ///< Storage for the current Row
         };
 
         /// Use a std::istream for CSV parsing
