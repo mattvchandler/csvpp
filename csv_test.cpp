@@ -2012,6 +2012,63 @@ test::Result test_write_mine_cpp_map(const std::string & expected_text, const CS
 }
 
 #endif
+char * csv_quote(const char * text, const char delimiter, const char quote)
+{
+    size_t char_count = strlen(text);
+    int quoted = 0;
+
+    const char * c;
+    for(c = text; *c; ++c)
+    {
+        if(*c == delimiter || *c == '\r' || *c == '\n')
+            quoted = 1;
+        else if(*c == quote)
+        {
+            quoted = 1;
+            ++char_count;
+        }
+    }
+
+    if(!quoted)
+        return strdup(text);
+
+    char * quoted_text = (char *)malloc(char_count + 3); // null and 2 quotes
+    char * q = quoted_text;
+    *q++ = quote;
+    for(c = text; *c; ++c)
+    {
+        *q++ = *c;
+        if(*c == quote)
+            *q++ = *c;
+    }
+    *q++ = quote;
+    *q = '\0';
+
+    return quoted_text;
+}
+
+test::Result test_write_qd(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+{
+    std::ostringstream oss;
+    for(auto &row: data)
+    {
+        bool first_col = true;
+        for(auto & col: row)
+        {
+            if(!first_col)
+                oss<<delimiter;
+            first_col = false;
+
+            auto quoted = csv_quote(col.c_str(), delimiter, quote);
+
+            oss<<quoted;
+            free(quoted);
+        }
+        oss<<"\r\n";
+    }
+
+    return common_write_return(data, expected_text, oss.str());
+}
 
 // helper to run a test for each combination of delimiter and quote char
 template<typename Test>
@@ -2220,6 +2277,7 @@ int main(int, char *[])
         test_write_mine_cpp_tuple,
         test_write_mine_cpp_map,
         #endif
+        test_write_qd
     };
 
     // create a bound function obj for test_read & test_write's pass & fail methods
