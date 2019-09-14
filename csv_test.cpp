@@ -675,7 +675,6 @@ test::Result test_read_tinycsv_expanded(const std::string & csv_text, const CSV_
 
     return common_read_return(csv_text, expected_data, data);
 }
-}
 #endif
 
 #ifdef CSV_ENABLE_PYTHON
