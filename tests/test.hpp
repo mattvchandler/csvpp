@@ -76,6 +76,9 @@ namespace test
     {
     public:
         explicit Test(const std::initializer_list<std::function<Result(Args...)>> & cases): test_cases{cases} {}
+        explicit Test(const std::vector<std::function<Result(Args...)>> & cases): test_cases{cases} {}
+        template <typename Input_iter>
+        Test(Input_iter begin, Input_iter end): test_cases(begin, end) {}
 
         bool test_pass(const std::string_view & title, Args ...args)
         {

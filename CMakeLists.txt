@@ -38,19 +38,26 @@ if(CSV_ENABLE_ALL)
 endif()
 
 add_executable(csv_test)
-target_sources(csv_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/csv_test.cpp)
+target_sources(csv_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/tests/csv_test.cpp)
 
 if(CSV_ENABLE_CPP_CSV)
+    target_sources(csv_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/tests/cpp_test.cpp)
     target_compile_definitions(csv_test PUBLIC "-DCSV_ENABLE_CPP_CSV")
 endif()
 
 if(CSV_ENABLE_C_CSV)
-    target_sources(csv_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/csv.c)
+    target_sources(csv_test PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/csv.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/c_test.cpp
+        )
     target_compile_definitions(csv_test PUBLIC "-DCSV_ENABLE_C_CSV")
 endif()
 
 if(CSV_ENABLE_EMBCSV)
-    target_sources(csv_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/embcsv.c)
+    target_sources(csv_test PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/embcsv.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/embcsv_test.cpp
+        )
     target_compile_definitions(csv_test PUBLIC "-DCSV_ENABLE_EMBCSV")
 
     option(CSV_EMBCSV_NO_MALLOC "Disable malloc in embedded CSV" OFF)
@@ -100,6 +107,7 @@ if(CSV_ENABLE_TINYCSV)
     endif()
 
     target_sources(csv_test PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/tinycsv_test.cpp
         ${PROJECT_BINARY_DIR}/tinycsv_parse.cpp
         ${PROJECT_BINARY_DIR}/tinycsv_expanded_parse.cpp
         )
@@ -108,6 +116,7 @@ if(CSV_ENABLE_TINYCSV)
 endif()
 
 if(CSV_ENABLE_LIBCSV)
+    target_sources(csv_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/tests/libcsv_test.cpp)
     target_compile_definitions(csv_test PUBLIC "-DCSV_ENABLE_LIBCSV")
     target_link_libraries(csv_test csv)
 endif()
@@ -116,6 +125,7 @@ if(CSV_ENABLE_PYTHON)
     find_package(pybind11 REQUIRED)
     include_directories(pybind11test ${PYBIND11_INCLUDE_DIRS})
 
+    target_sources(csv_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/tests/python_test.cpp)
     target_compile_definitions(csv_test PUBLIC "-DCSV_ENABLE_PYTHON")
     target_link_libraries(csv_test pybind11::embed)
 endif()
