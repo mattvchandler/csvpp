@@ -99,9 +99,14 @@ namespace test
         {
             return num_ran == num_passed;
         }
+
+        std::size_t get_num_registered() const { return std::size(test_cases); }
         std::size_t get_num_passed() const { return num_passed; }
         std::size_t get_num_ran() const { return num_ran; }
         std::size_t get_num_skipped() const { return num_skipped; }
+
+        std::size_t size() const { return std::size(test_cases); }
+        bool empty() const { return std::empty(test_cases); }
 
     private:
 
