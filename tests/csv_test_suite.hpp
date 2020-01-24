@@ -95,6 +95,8 @@ public:
         std::cout<<'}';
     };
 
+    explicit CSV_test_suite(bool skip_quotes = false): skip_quotes_{skip_quotes} {}
+
     using Read_test_fun = std::function<test::Result(const std::string&, const CSV_data&, const char, const char, const bool)>;
     using Write_test_fun = std::function<test::Result(const std::string&, const CSV_data&, const char, const char)>;
 
@@ -344,41 +346,45 @@ public:
 private:
     // helper to run a test for each combination of delimiter and quote char
     template<typename Test>
-    static void test_quotes(Test test, const std::string & title, const std::string & csv_text, const CSV_data& data, const bool lenient = false)
+    void test_quotes(Test test, const std::string & title, const std::string & csv_text, const CSV_data& data, const bool lenient = false) const
     {
         test(title, csv_text, data, ',', '"', lenient);
 
-        std::string modified_csv_text = std::regex_replace(csv_text, std::regex(","), "|");
-        CSV_data modified_data = data;
-        for(auto & row: modified_data)
-            for(auto & col: row)
-                col = std::regex_replace(col, std::regex{","}, "|");
+        if(!skip_quotes_)
+        {
+            std::string modified_csv_text = std::regex_replace(csv_text, std::regex(","), "|");
+            CSV_data modified_data = data;
+            for(auto & row: modified_data)
+                for(auto & col: row)
+                    col = std::regex_replace(col, std::regex{","}, "|");
 
-        test(title + " w/ pipe delimiter", modified_csv_text, modified_data, '|', '"', lenient);
+            test(title + " w/ pipe delimiter", modified_csv_text, modified_data, '|', '"', lenient);
 
-        modified_csv_text = std::regex_replace(csv_text, std::regex("\""), "'");
-        modified_data = data;
-        for(auto & row: modified_data)
-            for(auto & col: row)
-                col = std::regex_replace(col, std::regex{"\""}, "'");
+            modified_csv_text = std::regex_replace(csv_text, std::regex("\""), "'");
+            modified_data = data;
+            for(auto & row: modified_data)
+                for(auto & col: row)
+                    col = std::regex_replace(col, std::regex{"\""}, "'");
 
-        test(title + " w/ single quote", modified_csv_text, modified_data, ',', '\'', lenient);
+            test(title + " w/ single quote", modified_csv_text, modified_data, ',', '\'', lenient);
 
-        modified_csv_text = std::regex_replace(csv_text, std::regex(","), "|");
-        modified_csv_text = std::regex_replace(modified_csv_text, std::regex("\""), "'");
-        modified_data = data;
-        for(auto & row: modified_data)
-            for(auto & col: row)
-            {
-                col = std::regex_replace(col, std::regex{","}, "|");
-                col = std::regex_replace(col, std::regex{"\""}, "'");
-            }
+            modified_csv_text = std::regex_replace(csv_text, std::regex(","), "|");
+            modified_csv_text = std::regex_replace(modified_csv_text, std::regex("\""), "'");
+            modified_data = data;
+            for(auto & row: modified_data)
+                for(auto & col: row)
+                {
+                    col = std::regex_replace(col, std::regex{","}, "|");
+                    col = std::regex_replace(col, std::regex{"\""}, "'");
+                }
 
-        test(title + " w/ pipe delimiter & single quote", modified_csv_text, modified_data, '|', '\'', lenient);
+            test(title + " w/ pipe delimiter & single quote", modified_csv_text, modified_data, '|', '\'', lenient);
+        }
     }
 
     std::vector<Read_test_fun> read_tests_;
     std::vector<Write_test_fun> write_tests_;
+    bool skip_quotes_ = false;
 };
 
 #endif // CSV_TEST_SUITE_HPP
