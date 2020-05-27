@@ -65,7 +65,7 @@ enum {CSV_RECORD_ALLOC = 8};
 
 /// @returns New CSV_string. Free with CSV_string_free
 /// @ingroup c_str
-CSV_string * CSV_string_init(void)
+static CSV_string * CSV_string_init(void)
 {
     CSV_string * str = (CSV_string *) malloc(sizeof(CSV_string));
 
@@ -79,7 +79,7 @@ CSV_string * CSV_string_init(void)
 /// Free a CSV_string
 
 /// @ingroup c_str
-void CSV_string_free(CSV_string * str)
+static void CSV_string_free(CSV_string * str)
 {
     if(!str)
         return;
@@ -94,7 +94,7 @@ void CSV_string_free(CSV_string * str)
 /// @returns Null-terminated string.
 ///          This is owned by the CSV_string, so do not free
 /// @ingroup c_str
-const char * CSV_string_null_terminate(CSV_string * str)
+static const char * CSV_string_null_terminate(CSV_string * str)
 {
     if(!str)
         return NULL;
@@ -115,7 +115,7 @@ const char * CSV_string_null_terminate(CSV_string * str)
 /// Extract the internal string data (null-terminated) and free the CSV_string object
 /// @returns Null-terminated string. Caller must free with \c free
 /// @ingroup c_str
-char * CSV_string_steal(CSV_string * str)
+static char * CSV_string_steal(CSV_string * str)
 {
     if(!str)
         return NULL;
@@ -131,7 +131,7 @@ char * CSV_string_steal(CSV_string * str)
 
 /// @param c Character to append
 /// @ingroup c_str
-void CSV_string_append(CSV_string * str, const char c)
+static void CSV_string_append(CSV_string * str, const char c)
 {
     if(!str)
         return;
@@ -256,7 +256,7 @@ struct CSV_reader
 /// Initializes state and default settings
 /// @returns CSV_reader without an input source set
 /// @ingroup c_reader
-CSV_reader * CSV_reader_init_common(void)
+static CSV_reader * CSV_reader_init_common(void)
 {
     CSV_reader * reader = (CSV_reader *)malloc(sizeof(CSV_reader));
 
@@ -284,7 +284,7 @@ CSV_reader * CSV_reader_init_common(void)
 /// @param msg Message associated with the status, or NULL to clear stored message
 /// @param append_line_and_col Append the line and column number to the message
 /// @ingroup c_reader
-void CSV_reader_set_status(CSV_reader * reader, CSV_status error, const char * msg, bool append_line_and_col)
+static void CSV_reader_set_status(CSV_reader * reader, CSV_status error, const char * msg, bool append_line_and_col)
 {
     if(!reader)
         return;
@@ -317,7 +317,7 @@ void CSV_reader_set_status(CSV_reader * reader, CSV_status error, const char * m
 /// Updates line and column position, and checks for IO error
 /// @returns Next character
 /// @ingroup c_reader
-int CSV_reader_getc(CSV_reader * reader)
+static int CSV_reader_getc(CSV_reader * reader)
 {
     if(!reader)
         return '\0';
@@ -354,7 +354,7 @@ int CSV_reader_getc(CSV_reader * reader)
 
 /// Advance position until first non-newline character
 /// @ingroup c_reader
-void CSV_reader_consume_newlines(CSV_reader * reader)
+static void CSV_reader_consume_newlines(CSV_reader * reader)
 {
     if(!reader || reader->state_ != CSV_STATE_CONSUME_NEWLINES)
         return;
@@ -396,7 +396,7 @@ void CSV_reader_consume_newlines(CSV_reader * reader)
 /// Reads and parses character stream to obtain next field
 /// @returns Next field, or NULL if at EOF or other error occurred
 /// @ingroup c_reader
-char * CSV_reader_parse(CSV_reader * reader)
+static char * CSV_reader_parse(CSV_reader * reader)
 {
     if(!reader)
         return NULL;
@@ -784,7 +784,7 @@ struct CSV_writer
 /// Initializes state and default settings
 /// @returns CSV_writer without an output source set
 /// @ingroup c_writer
-CSV_writer * CSV_writer_init_common(void)
+static CSV_writer * CSV_writer_init_common(void)
 {
     CSV_writer * writer = (CSV_writer *)malloc(sizeof(CSV_writer));
     writer->delimiter_ = ',';
@@ -802,7 +802,7 @@ CSV_writer * CSV_writer_init_common(void)
 /// @returns #CSV_OK if successful
 /// @returns #CSV_IO_ERROR if an error occurs while writing
 /// @ingroup c_writer
-CSV_status CSV_writer_putc(CSV_writer * writer, const char c)
+static CSV_status CSV_writer_putc(CSV_writer * writer, const char c)
 {
     switch(writer->dest_)
     {
