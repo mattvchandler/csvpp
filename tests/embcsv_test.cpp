@@ -1,6 +1,6 @@
 #include "embcsv_test.hpp"
 
-#include "../embcsv.h"
+#include "embcsv.h"
 
 test::Result test_read_embedded(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {

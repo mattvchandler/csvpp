@@ -1,16 +1,17 @@
-add_executable(csv_test)
-target_include_directories(csv_test PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../)
-target_sources(csv_test PUBLIC
-    ${CMAKE_CURRENT_LIST_DIR}/csv_test.cpp
-    $<$<BOOL:${CSV_ENABLE_CPP_CSV}>:${CMAKE_CURRENT_LIST_DIR}/cpp_test.cpp>
-    $<$<BOOL:${CSV_ENABLE_C_CSV}>:${CMAKE_CURRENT_LIST_DIR}/c_test.cpp>
-    $<$<BOOL:${CSV_ENABLE_EMBCSV}>:${CMAKE_CURRENT_LIST_DIR}/embcsv_test.cpp>
+add_executable(csv_test
+    csv_test.cpp
+    $<$<BOOL:${CSV_ENABLE_CPP_CSV}>:cpp_test.cpp>
+    $<$<BOOL:${CSV_ENABLE_C_CSV}>:c_test.cpp>
+    $<$<BOOL:${CSV_ENABLE_EMBCSV}>:embcsv_test.cpp>
     )
-target_link_libraries(csv_test
+target_compile_features(csv_test PUBLIC cxx_std_17)
+set_target_properties(csv_test PROPERTIES CXX_EXTENSIONS OFF)
+target_compile_options(csv_test PRIVATE -Wall -Wextra)
+target_link_libraries(csv_test PUBLIC
     $<$<BOOL:${CSV_ENABLE_C_CSV}>:csv>
     $<$<BOOL:${CSV_ENABLE_EMBCSV}>:embcsv>
     )
-target_compile_definitions(csv_test PUBLIC
+target_compile_definitions(csv_test PRIVATE
     $<$<BOOL:${CSV_ENABLE_CPP_CSV}>:CSV_ENABLE_CPP_CSV>
     $<$<BOOL:${CSV_ENABLE_C_CSV}>:CSV_ENABLE_C_CSV>
     $<$<BOOL:${CSV_ENABLE_EMBCSV}>:CSV_ENABLE_EMBCSV>
