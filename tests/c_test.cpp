@@ -1,7 +1,6 @@
 #include "c_test.hpp"
 
 #include "../csv.h"
-#include "../csv_wrapper.hpp"
 
 test::Result test_read_mine_c_field(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
@@ -342,31 +341,6 @@ test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_d
     return CSV_test_suite::common_read_return(csv_text, expected_data, data);
 }
 
-test::Result test_read_mine_c_wrapper(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
-{
-    CSV_reader_wrapper csv_r{CSV_reader_wrapper::input_string, csv_text};
-    csv_r.set_delimiter(delimiter);
-    csv_r.set_quote(quote);
-    csv_r.set_lenient(lenient);
-    CSV_data data;
-
-    decltype(csv_r.read_row()) row;
-    try
-    {
-        while((row = csv_r.read_row()))
-        {
-            if(!std::empty(*row))
-                data.emplace_back(std::move(*row));
-        }
-    }
-    catch(CSV_wrapper_parse_error &)
-    {
-        return test::error();
-    }
-
-    return CSV_test_suite::common_read_return(csv_text, expected_data, data);
-}
-
 test::Result test_write_mine_c_field(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     CSV_writer * w = CSV_writer_init_to_str();
@@ -512,18 +486,6 @@ test::Result test_write_mine_c_variadic(const std::string & expected_text, const
     return CSV_test_suite::common_write_return(data, expected_text, output);
 }
 
-test::Result test_write_mine_c_wrapper(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
-{
-    CSV_writer_wrapper w;
-    w.set_delimiter(delimiter);
-    w.set_quote(quote);
-
-    for(const auto & row: data)
-        w.write_row(row);
-
-    return CSV_test_suite::common_write_return(data, expected_text, w.get_str());
-}
-
 void C_test::register_tests(CSV_test_suite & tests) const
 {
     tests.register_read_test(test_read_mine_c_field);
@@ -531,11 +493,9 @@ void C_test::register_tests(CSV_test_suite & tests) const
     tests.register_read_test(test_read_mine_c_ptr);
     tests.register_read_test(test_read_mine_c_ptr_dyn);
     tests.register_read_test(test_read_mine_c_variadic);
-    tests.register_read_test(test_read_mine_c_wrapper);
 
     tests.register_write_test(test_write_mine_c_field);
     tests.register_write_test(test_write_mine_c_row);
     tests.register_write_test(test_write_mine_c_ptr);
     tests.register_write_test(test_write_mine_c_variadic);
-    tests.register_write_test(test_write_mine_c_wrapper);
 }
