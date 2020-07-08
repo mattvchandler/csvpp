@@ -35,7 +35,7 @@
 /// due to the null-terminator.
 ///
 /// EMBCSV_NO_MALLOC also changes the init function to accept an EMBCSV_reader
-/// to initialized rather than allocating a new one
+/// to initialize rather than allocating a new one
 
 #ifndef EMBCSV_H
 #define EMBCSV_H
