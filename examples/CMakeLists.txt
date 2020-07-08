@@ -1,13 +1,10 @@
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
-
 if(CSV_ENABLE_CPP_CSV)
     add_executable(prettycsv prettycsv.cpp)
     target_include_directories(prettycsv PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../)
 endif()
 
 if(CSV_ENABLE_C_CSV)
-    add_executable(prettycsv_c
-                   prettycsv.c
-                   ../csv.c)
+    add_executable(prettycsv_c prettycsv.c)
+    target_link_libraries(prettycsv_c csv)
     target_include_directories(prettycsv_c PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../)
 endif()
