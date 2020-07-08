@@ -1,7 +1,7 @@
 #include<string>//Tiny CSV pretty-print
 #include<vector>//Matthew Chandler
 #include<cstdio>//mattvchandler@gmail
-#define E feof(f)//©2019 by MIT license
+#define E feof(f)//©2020 by MIT license
 #define G c=getc(f);//build w/ c++17
 #define Z size()//./tinycsv foo.csv
 using namespace std;using I=int;using S=
