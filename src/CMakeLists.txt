@@ -15,11 +15,6 @@ if(CSVPP_ENABLE_CPP)
             RUNTIME DESTINATION bin/csvpp
             PUBLIC_HEADER DESTINATION include/csvpp
             )
-
-        configure_file(${CMAKE_CURRENT_LIST_DIR}/../${PROJECT_NAME}.pc.in
-            ${CMAKE_CURRENT_BINARY_DIR}/../${PROJECT_NAME}.pc
-            @ONLY)
-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/../${PROJECT_NAME}.pc" DESTINATION "share/pkgconfig")
 endif()
 
 if(CSVPP_ENABLE_C)
@@ -40,11 +35,6 @@ if(CSVPP_ENABLE_C)
             RUNTIME DESTINATION bin/csvpp
             PUBLIC_HEADER DESTINATION include/csvpp
             )
-
-        configure_file(${CMAKE_CURRENT_LIST_DIR}/../${PROJECT_NAME}-c.pc.in
-            ${CMAKE_CURRENT_BINARY_DIR}/../${PROJECT_NAME}-c.pc
-            @ONLY)
-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/../${PROJECT_NAME}-c.pc" DESTINATION "share/pkgconfig")
 endif()
 
 if(CSVPP_ENABLE_EMBEDDED)
@@ -65,11 +55,6 @@ if(CSVPP_ENABLE_EMBEDDED)
             RUNTIME DESTINATION bin/csvpp
             PUBLIC_HEADER DESTINATION include/csvpp
             )
-
-        configure_file(${CMAKE_CURRENT_LIST_DIR}/../${PROJECT_NAME}-embcsv.pc.in
-            ${CMAKE_CURRENT_BINARY_DIR}/../${PROJECT_NAME}-embcsv.pc
-            @ONLY)
-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/../${PROJECT_NAME}-embcsv.pc" DESTINATION "share/pkgconfig")
 endif()
 
 install(EXPORT csvTargets
