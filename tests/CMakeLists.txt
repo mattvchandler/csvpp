@@ -8,6 +8,7 @@ target_compile_features(csv_test PUBLIC cxx_std_17)
 set_target_properties(csv_test PROPERTIES CXX_EXTENSIONS OFF)
 target_compile_options(csv_test PRIVATE -Wall -Wextra)
 target_link_libraries(csv_test PUBLIC
+    $<$<BOOL:${CSV_ENABLE_CPP_CSV}>:csvpp>
     $<$<BOOL:${CSV_ENABLE_C_CSV}>:csv>
     $<$<BOOL:${CSV_ENABLE_EMBCSV}>:embcsv>
     )

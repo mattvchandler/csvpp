@@ -1,15 +1,12 @@
-cmake_minimum_required (VERSION 3.8...3.15)
+cmake_minimum_required (VERSION 3.9...3.15)
 if(${CMAKE_VERSION} VERSION_LESS 3.12)
     cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
 endif()
 
-project(csv VERSION 1.0.0 LANGUAGES CXX C)
+project(CSV VERSION 1.0.0 LANGUAGES CXX C)
+set(PROJECT_DESCRIPTION "CSV parsing / writing library")
 
-set(TITLE "CSV")
 set(AUTHOR "Matthew Chandler <tardarsauce@gmail.com>")
-set(COPYRIGHT "2020 Matthew Chandler")
-set(SUMMARY "CSV parsing / writing library")
-set(WEBSITE "http://github.com/mattvchandler/${PROJECT_NAME}")
 
 set(default_build_type "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -20,7 +17,6 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
     "Debug" "Release")
 endif()
-
 
 option(CSV_ENABLE_CPP_CSV "Enable testing of c++ csv library" ON)
 option(CSV_ENABLE_C_CSV "Enable generation and testing of c csv_library" OFF)
@@ -46,6 +42,7 @@ if(CSV_ENABLE_EXAMPLES)
 endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    option(BUILD_TESTING "" OFF)
     include(CTest)
     if(BUILD_TESTING)
         add_subdirectory(tests)
@@ -53,59 +50,39 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
     find_package(Doxygen)
     if(DOXYGEN_FOUND)
-        option(CSV_GEN_DOCS "Generate 'doc' target" ON)
         option(CSV_INTERNAL_DOCS "Generate documentation for private/internal methods, members, and functions" OFF)
 
-        file(GENERATE OUTPUT ${PROJECT_BINARY_DIR}/doxygen_gen.cmake CONTENT
-            "set(PROJECT_NAME \"${PROJECT_NAME}\")
-            set(TITLE \"${TITLE}\")
-            set(SUMMARY \"${SUMMARY}\")
-            set(PROJECT_VERSION \"${PROJECT_VERSION}\")
-            set(CMAKE_CURRENT_SOURCE_DIR  \"${CMAKE_CURRENT_SOURCE_DIR}\")
-            set(CSV_INTERNAL_DOCS \"${CSV_INTERNAL_DOCS}\")
-
-            set(CSV_DOC_INPUT_FILES \"$<$<BOOL:${CSV_ENABLE_CPP_CSV}>:\\\"${CMAKE_CURRENT_SOURCE_DIR}/include/csv.hpp\\\"> \\
-                                    $<$<BOOL:${CSV_ENABLE_C_CSV}>:\\\"${CMAKE_CURRENT_SOURCE_DIR}/include/csv.h\\\" \\\"${CMAKE_CURRENT_SOURCE_DIR}/src/csv.c\\\"> \\
-                                    $<$<BOOL:${CSV_ENABLE_EMBCSV}>:\\\"${CMAKE_CURRENT_SOURCE_DIR}/include/embcsv.h\\\" \\\"${CMAKE_CURRENT_SOURCE_DIR}/src/embcsv.c\\\">\")
-
+        set(CSV_DOXYGEN_SRCS README.md)
+        if(CSV_ENABLE_CPP_CSV)
+            list(APPEND CSV_DOXYGEN_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/include/csv.hpp")
+        endif()
+        if(CSV_ENABLE_C_CSV)
+            list(APPEND CSV_DOXYGEN_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/include/csv.h")
             if(CSV_INTERNAL_DOCS)
-                set(CSV_EXTRACT_INTERNAL_DOCS \"YES\")
-                set(CSV_NO_EXTRACT_INTERNAL_DOCS \"NO\")
-                set(CSV_DOC_ENABLED_SECTIONS \"INTERNAL\")
-            else()
-                set(CSV_EXTRACT_INTERNAL_DOCS \"NO\")
-                set(CSV_NO_EXTRACT_INTERNAL_DOCS \"YES\")
-                set(CSV_DOC_ENABLED_SECTIONS \"\")
+                list(APPEND CSV_DOXYGEN_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/src/csv.c")
             endif()
+        endif()
+        if(CSV_ENABLE_EMBCSV)
+            list(APPEND CSV_DOXYGEN_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/include/embcsv.h")
+            if(CSV_INTERNAL_DOCS)
+                list(APPEND CSV_DOXYGEN_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/src/embcsv.c")
+            endif()
+            if(CSV_EMBCSV_NO_MALLOC)
+                set(DOXYGEN_PREDEFINED "EMBCSV_NO_MALLOC=1")
+            endif()
+        endif()
 
-            set(CSV_DOC_PREDEFINED \"$<$<AND:$<BOOL:${CSV_ENABLE_EMBCSV}>,$<BOOL:${CSV_EMBCSV_NO_MALLOC}>>:EMBCSV_NO_MALLOC=1>\")
+        if(CSV_INTERNAL_DOCS)
+            set(DOXYGEN_EXTRACT_PRIVATE "YES")
+            set(DOXYGEN_PRIV_VIRTUAL "YES")
+            set(DOXYGEN_EXTRACT_PACKAGE "YES")
+            set(DOXYGEN_INTERNAL_DOCS "YES")
+            set(DOXYGEN_ENABLED_SECTIONS "INTERNAL")
+        endif()
 
-            configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
-                ${PROJECT_BINARY_DIR}/Doxyfile)
-            ")
+        set(DOXYGEN_USE_MDFILE_AS_MAINPAGE README.md)
 
-        add_custom_command(
-            OUTPUT ${PROJECT_BINARY_DIR}/Doxyfile
-            COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/doxygen_gen.cmake
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
-
-        add_custom_command(
-            OUTPUT ${PROJECT_BINARY_DIR}/doc/html/index.html
-            COMMAND ${DOXYGEN_EXECUTABLE} ${PROJECT_BINARY_DIR}/Doxyfile
-            WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
-            DEPENDS ${PROJECT_BINARY_DIR}/Doxyfile
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/README.md
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include/csv.h
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include/csv.hpp
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include/embcsv.h
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/csv.c
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/embcsv.c
-            COMMENT "Generating documentation with Doxygen")
-
-        add_custom_target(doc DEPENDS ${PROJECT_BINARY_DIR}/doc/html/index.html)
-
-        set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES doc)
+        doxygen_add_docs(doc ${CSV_DOXYGEN_SRCS})
     endif()
 endif()
 
@@ -115,19 +92,6 @@ write_basic_package_version_file(
     VERSION ${PACKAGE_VERSION}
     COMPATIBILITY AnyNewerVersion
     )
-install(TARGETS csvpp csv embcsv
-        EXPORT csvTargets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
-        PUBLIC_HEADER DESTINATION include
-        )
-
-install(EXPORT csvTargets
-    FILE csvConfig.cmake
-        NAMESPACE csv::
-        DESTINATION lib/cmake/csv
-        )
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/csvVersion.cmake"
         DESTINATION lib/cmake/csv)

@@ -6,7 +6,15 @@ if(CSV_ENABLE_CPP_CSV)
                                      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/../include/>
                                      $<INSTALL_INTERFACE:include>
                                      )
-    set_target_properties(csvpp PROPERTIES PUBLIC_HEADER include/csv.hpp)
+    set_target_properties(csvpp PROPERTIES PUBLIC_HEADER ../include/csv.hpp)
+
+    install(TARGETS csvpp
+            EXPORT csvTargets
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib
+            RUNTIME DESTINATION bin
+            PUBLIC_HEADER DESTINATION include
+            )
 endif()
 
 if(CSV_ENABLE_C_CSV)
@@ -19,7 +27,14 @@ if(CSV_ENABLE_C_CSV)
                                    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/../include/>
                                    $<INSTALL_INTERFACE:include>
                                    )
-    set_target_properties(csv PROPERTIES PUBLIC_HEADER include/csv.h)
+    set_target_properties(csv PROPERTIES PUBLIC_HEADER ../include/csv.h)
+    install(TARGETS csv
+            EXPORT csvTargets
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib
+            RUNTIME DESTINATION bin
+            PUBLIC_HEADER DESTINATION include
+            )
 endif()
 
 if(CSV_ENABLE_EMBCSV)
@@ -32,5 +47,18 @@ if(CSV_ENABLE_EMBCSV)
                                       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/../include/>
                                       $<INSTALL_INTERFACE:include>
                                       )
-    set_target_properties(embcsv PROPERTIES PUBLIC_HEADER include/embcsv.h)
+    set_target_properties(embcsv PROPERTIES PUBLIC_HEADER ../include/embcsv.h)
+    install(TARGETS embcsv
+            EXPORT csvTargets
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib
+            RUNTIME DESTINATION bin
+            PUBLIC_HEADER DESTINATION include
+            )
 endif()
+
+install(EXPORT csvTargets
+    FILE csvConfig.cmake
+        NAMESPACE csv::
+        DESTINATION lib/cmake/csv
+        )
