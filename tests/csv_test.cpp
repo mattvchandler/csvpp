@@ -48,5 +48,5 @@ int main(int, char *[])
     tests.register_tests(Cpp_test{});
     #endif
 
-    tests.run_tests();
+    return tests.run_tests() ? EXIT_SUCCESS : EXIT_FAILURE;
 }

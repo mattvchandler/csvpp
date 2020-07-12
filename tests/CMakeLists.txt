@@ -17,3 +17,5 @@ target_compile_definitions(csv_test PRIVATE
     $<$<BOOL:${CSV_ENABLE_EMBCSV}>:CSV_ENABLE_EMBCSV>
     $<$<BOOL:${CSV_EMBCSV_NO_MALLOC}>:EMBCSV_NO_MALLOC>
     )
+
+add_test(NAME csv_test COMMAND csv_test)
