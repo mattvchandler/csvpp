@@ -24,7 +24,7 @@
 
 #include <cxxopts.hpp>
 
-#include "csv.hpp"
+#include "csvpp/csv.hpp"
 
 std::optional<std::tuple<std::string, char, char, bool>> parse_args(int argc, char * argv[])
 {

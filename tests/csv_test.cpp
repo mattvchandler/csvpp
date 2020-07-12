@@ -18,16 +18,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifdef CSV_ENABLE_C_CSV
+#ifdef CSVPP_ENABLE_CPP
+#include "cpp_test.hpp"
+#endif
+
+#ifdef CSVPP_ENABLE_C
 #include "c_test.hpp"
 #endif
 
-#ifdef CSV_ENABLE_EMBCSV
+#ifdef CSVPP_ENABLE_EMBEDDED
 #include "embcsv_test.hpp"
-#endif
-
-#ifdef CSV_ENABLE_CPP_CSV
-#include "cpp_test.hpp"
 #endif
 
 #include "csv_test_suite.hpp"
@@ -36,15 +36,15 @@ int main(int, char *[])
 {
     CSV_test_suite tests;
 
-    #ifdef CSV_ENABLE_EMBCSV
+    #ifdef CSVPP_ENABLE_EMBEDDED
     tests.register_tests(Embcsv_test{});
     #endif
 
-    #ifdef CSV_ENABLE_C_CSV
+    #ifdef CSVPP_ENABLE_C
     tests.register_tests(C_test{});
     #endif
 
-    #ifdef CSV_ENABLE_CPP_CSV
+    #ifdef CSVPP_ENABLE_CPP
     tests.register_tests(Cpp_test{});
     #endif
 

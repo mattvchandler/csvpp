@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "csv.h"
+#include "csvpp/csv.h"
 
 /// @cond INTERNAL
 

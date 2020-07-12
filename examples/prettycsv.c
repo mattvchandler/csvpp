@@ -27,7 +27,7 @@
 
 #include <getopt.h>
 
-#include "csv.h"
+#include "csvpp/csv.h"
 
 void usage(const char * prog_name)
 {
