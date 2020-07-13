@@ -1,3 +1,3 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$classcsv_1_1Reader_1_1Iterator.html" title="Iterates over Rows in CSV data." alt="" coords="5,5,160,32"/>
+<area shape="rect" id="node1" href="$classcsv_1_1Reader_1_1Row_1_1Iterator.html" title="Iterates over the fields within a Row." alt="" coords="5,5,233,32"/>
 </map>

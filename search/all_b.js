@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['parse_5ferror_107',['Parse_error',['../classcsv_1_1Parse__error.html',1,'csv::Parse_error'],['../classcsv_1_1Parse__error.html#af25d2de2bf3afa0e418818543cdd1155',1,'csv::Parse_error::Parse_error()']]]
+  ['quote_103',['quote',['../structEMBCSV__reader.html#ae7406a90731f26c340985985c0816449',1,'EMBCSV_reader']]],
+  ['quoted_104',['quoted',['../structEMBCSV__reader.html#adfdc87b215e51873d05f9e2bfe7970e6',1,'EMBCSV_reader']]]
 ];

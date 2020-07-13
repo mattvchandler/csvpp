@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.17"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>csvpp: TODO</title>
+<title>csvpp: csvpp</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -64,12 +64,262 @@ $(function() {
 
 <div class="PageDoc"><div class="header">
   <div class="headertitle">
-<div class="title">TODO </div>  </div>
+<div class="title">csvpp </div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p>Readme </p>
-</div></div><!-- PageDoc -->
+<div class="textblock"><h2><a class="anchor" id="autotoc_md1"></a>
+&lt;a href="https://github.com/mattvchandler/csvpp"&gt;csvpp on Github&lt;/a&gt;</h2>
+<h2><a class="anchor" id="autotoc_md2"></a>
+&lt;a href="https://mattvchandler.github.io/csvpp/index.html"&gt;API Documentation&lt;/a&gt;</h2>
+<p>csvpp is a collection of RFC 4180 compliant CSV readers and writers. All 3 modules are totally independent of each other, so feel free to use whichever best suits you application</p>
+<h1><a class="anchor" id="autotoc_md3"></a>
+csv.hpp - A c++ header-only library</h1>
+<h3><a class="anchor" id="autotoc_md4"></a>
+Reader</h3>
+<ul>
+<li>Read in rows of data as std::vectors or std::tuples, a stream, field-by-field, iterators, or with variadic argmuents</li>
+<li>Template type conversion available for all of the above (when reading a vector, the whole row will be converted to the same type)</li>
+</ul>
+<p>Some example usages:</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &lt;csvpp/csh.hpp&gt;</span></div>
+<div class="line"> </div>
+<div class="line">…</div>
+<div class="line"> </div>
+<div class="line">std::ifstream mycsv_file{<span class="stringliteral">&quot;mycsv.csv&quot;</span>};</div>
+<div class="line"><a class="code" href="classcsv_1_1Reader.html">csv::Reader</a> mycsv{mycsv_file}; <span class="comment">// open a std::istream</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordflow">for</span>(<span class="keyword">auto</span> &amp;&amp; row: mycsv) <span class="comment">// row is a csv::Row object</span></div>
+<div class="line">{</div>
+<div class="line">    <span class="keywordflow">for</span>(<span class="keyword">auto</span> &amp;&amp; column: row) <span class="comment">// column is a std::string. To get another type,</span></div>
+<div class="line">                             <span class="comment">// use Row::Range. For example:</span></div>
+<div class="line">                             <span class="comment">// for(auto &amp;&amp; column: row.range&lt;int&gt;())</span></div>
+<div class="line">    {</div>
+<div class="line">        <span class="comment">// process columns</span></div>
+<div class="line">    }</div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">/******************************************************************************/</span></div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="classcsv_1_1Reader.html">csv::Reader</a> mycsv2{<span class="stringliteral">&quot;mycsv2.csv&quot;</span>}; <span class="comment">// open by filename</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">auto</span> all_data = mycsv2.<a class="code" href="classcsv_1_1Reader.html#ab0de1aeffb012082858d39dfcbfaee7f">read_all</a>&lt;<span class="keywordtype">int</span>&gt;(); <span class="comment">// returns a std::vector&lt;std::vector&lt;T&gt;&gt;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="comment">/******************************************************************************/</span></div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="classcsv_1_1Reader.html">csv::Reader</a> mycsv3{<a class="code" href="classcsv_1_1Reader.html#aa16a7c9a322ae5a7425a6f1961c0eff3">csv::Reader::input_string</a>, <span class="stringliteral">&quot;A,B,C\nD,E,F\nG,H,I&quot;</span>}; <span class="comment">// read from a string</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">char</span> a;</div>
+<div class="line">std::string b;</div>
+<div class="line">My_type c; <span class="comment">// can auto-convert any type that has an std::ostream &amp; operator&gt;&gt;(std::ostream &amp;)</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">auto</span> row = mycsv3.get_row();</div>
+<div class="line">row &gt;&gt; a &gt;&gt; b &gt;&gt; c;</div>
+<div class="line"> </div>
+<div class="line">…</div>
+<div class="line"> </div>
+<div class="line">row = mycsv3.get_row();</div>
+<div class="line">row.read_v(a, b, c);</div>
+<div class="line"> </div>
+<div class="line">…</div>
+<div class="line"> </div>
+<div class="line">row = mycsv3.get_row();</div>
+<div class="line"><span class="keyword">auto</span> row_tuple = row.read_tuple&lt;char, std::string, My_type&gt;();</div>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md5"></a>
+Writer</h2>
+<ul>
+<li>Write data as vectors, tuples, a stream, field-by-field, iterators, or variadicaly</li>
+</ul>
+<p>Some example usages:</p>
+<div class="fragment"><div class="line">std::ofstream mycsv_file{<span class="stringliteral">&quot;mycsv.csv&quot;</span>};</div>
+<div class="line"><a class="code" href="classcsv_1_1Writer.html">csv::Writer</a> mycsv{mycsv_file};</div>
+<div class="line"> </div>
+<div class="line">std::vector row = …;</div>
+<div class="line">mycsv.<a class="code" href="classcsv_1_1Writer.html#a0d7134cbf42ddbc9b891f2e3cb82616a">write_row</a>(std::begin(row), std::end(row));</div>
+<div class="line">mycsv.write_row(row); <span class="comment">// ranges supported too</span></div>
+<div class="line"> </div>
+<div class="line"><span class="comment">/******************************************************************************/</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> field1 = …;</div>
+<div class="line">std::string field2 = …;</div>
+<div class="line">My_type field 3 = …<span class="stringliteral">&quot;;</span></div>
+<div class="line"><span class="stringliteral"></span> </div>
+<div class="line"><span class="stringliteral">mycsv &lt;&lt; field1 &lt;&lt; field2 &lt;&lt; field3 &lt;&lt; csv::end_row;</span></div>
+<div class="line"><span class="stringliteral"></span> </div>
+<div class="line"><span class="stringliteral">mycsv_write_row_v(field1, field2, field3);</span></div>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md6"></a>
+Map_reader_iter / Map_writer_iter</h2>
+<ul>
+<li>Read / Write rows as std::maps with column headers as keys Some example usages:</li>
+</ul>
+<div class="fragment"><div class="line"><a class="code" href="classcsv_1_1Map__reader__iter.html">csv::Map_reader_iter</a> mycsv{<a class="code" href="classcsv_1_1Reader.html#aa16a7c9a322ae5a7425a6f1961c0eff3">csv::Reader::input_string</a>, <span class="stringliteral">&quot;Col1,Col2,Col3\nA,B,C&quot;</span>};</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordflow">for</span>(<span class="keyword">auto</span> &amp;&amp; row: mycsv)</div>
+<div class="line">{</div>
+<div class="line">    assert(row[<span class="stringliteral">&quot;Col1&quot;</span>] == <span class="stringliteral">&quot;A&quot;</span>);</div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="classcsv_1_1Map__writer__iter.html">csv::Map_writer_iter&lt;std::string, int&gt;</a> mycsv2{<span class="stringliteral">&quot;mycsv.csv&quot;</span>, {<span class="stringliteral">&quot;Col1, &quot;</span>Col2<span class="stringliteral">&quot;, Col3&quot;</span>}};</div>
+<div class="line">std::map&lt;std::string, int&gt; row;</div>
+<div class="line">row[<span class="stringliteral">&quot;Col1&quot;</span>] = 1;</div>
+<div class="line">row[<span class="stringliteral">&quot;Col2&quot;</span>] = 2;</div>
+<div class="line">row[<span class="stringliteral">&quot;Col3&quot;</span>] = 3;</div>
+<div class="line">*mycsv++ = row;</div>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md7"></a>
+csv.h - A C CSV library</h1>
+<h2><a class="anchor" id="autotoc_md8"></a>
+CSV_reader</h2>
+<p>Some example usages:</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="csv_8h.html">csvpp/csv.h</a>&gt;</span></div>
+<div class="line"> </div>
+<div class="line">…</div>
+<div class="line"> </div>
+<div class="line">CSV_reader * mycsv = <a class="code" href="group__c__reader.html#ga4d597547fbce81c11ea7d4e17d8c55e3">CSV_reader_init_from_filename</a>(<span class="stringliteral">&quot;mycsv.csv&quot;</span>);</div>
+<div class="line">CSV_row * row = NULL;</div>
+<div class="line"><span class="keywordflow">while</span>((row = <a class="code" href="group__c__reader.html#gad47fef7d1aac6d82c32be6e051c067af">CSV_reader_read_row</a>(mycsv))</div>
+<div class="line">{</div>
+<div class="line">    <span class="keywordtype">size_t</span> num_fields = <a class="code" href="group__c__row.html#ga144da13782997d898ffab4e754ec5ca6">CSV_row_size</a>(row);</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordflow">if</span>(num_fields &gt;= 1)</div>
+<div class="line">    {</div>
+<div class="line">        <span class="keywordtype">char</span> * field = NULL;</div>
+<div class="line">        <a class="code" href="group__c.html#ga70ccbc5c87f86eb8fcf7b24c26abaea3">CSV_strdup</a>(field, CSV_row.get(row, 0));</div>
+<div class="line"> </div>
+<div class="line">        <span class="comment">// Process field;</span></div>
+<div class="line">        free(field);</div>
+<div class="line">    }</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// get read-only array of strings for the row:</span></div>
+<div class="line">    <span class="keyword">const</span> <span class="keywordtype">char</span> * <span class="keyword">const</span> * arr = <a class="code" href="group__c__row.html#gadc180396e8a6271a8898e6dfd8005394">CSV_row_arr</a>(row);</div>
+<div class="line">    my_process_row(row);</div>
+<div class="line"> </div>
+<div class="line">    <a class="code" href="group__c__row.html#ga6f661ab3e82c0d9636b623f6c6685eed">CSV_row_free</a>(row);</div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="group__c__reader.html#ga610ed74a48c3b3c6c6a279e820e7a9d4">CSV_reader_free</a>(mycsv);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">/******************************************************************************/</span></div>
+<div class="line"> </div>
+<div class="line">CSV_reader * mycsv2 = CSV_reader_init_from_string(<span class="stringliteral">&quot;A,B,C\nD,E,F\n&quot;</span>);</div>
+<div class="line">CSV_row * row = NULL;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordflow">while</span>(1)</div>
+<div class="line">{</div>
+<div class="line">    <span class="keywordtype">char</span> * field = <a class="code" href="group__c__reader.html#ga33f79716fd442cc5ef9989ed2b368a12">CSV_reader_read_field</a>(mycsv2);</div>
+<div class="line">    <span class="keywordflow">if</span>(!field)</div>
+<div class="line">    {</div>
+<div class="line">        <span class="keywordflow">if</span>(<a class="code" href="group__c__reader.html#gabe8390712c5e91755d5ce1d9df912aa6">CSV_reader_get_error</a>() != <a class="code" href="group__c.html#ggadbd27e8e27f0cd00dcbc3151d6cd8f5da567701f72f291cd5ed3e1c3834ec7a3e">CSV_EOF</a>)</div>
+<div class="line">            fprintf(stderr, <span class="stringliteral">&quot;Error: %s\n&quot;</span>, <a class="code" href="group__c__reader.html#ga374d4c119648c1bb09822615dc49af5d">CSV_reader_get_error_msg</a>())</div>
+<div class="line">        break;</div>
+<div class="line">    }</div>
+<div class="line">    if(CSV_end_of_row())</div>
+<div class="line">        my_process_end_of_row();</div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="group__c__reader.html#ga610ed74a48c3b3c6c6a279e820e7a9d4">CSV_reader_free</a>(mycsv2);</div>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md9"></a>
+CSV_writer</h2>
+<p>Some example usages:</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="csv_8h.html">csvpp/csv.h</a>&gt;</span></div>
+<div class="line"> </div>
+<div class="line">…</div>
+<div class="line"> </div>
+<div class="line">CSV_writer * mycsv = <a class="code" href="group__c__writer.html#ga1b21a314a126d1c6bddcb6bb6ae908dd">CSV_writer_init_from_filename</a>(<span class="stringliteral">&quot;mycsv.csv&quot;</span>);</div>
+<div class="line"> </div>
+<div class="line">CSV_row * row = <a class="code" href="group__c__row.html#gad01c481de269475ef1e7bc784c13ea37">CSV_row_init</a>();</div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="group__c__row.html#gae8244e6a474d906c666fb168ffe42ccc">CSV_row_append</a>(row, <span class="stringliteral">&quot;field1&quot;</span>);</div>
+<div class="line"><a class="code" href="group__c__row.html#gae8244e6a474d906c666fb168ffe42ccc">CSV_row_append</a>(row, <span class="stringliteral">&quot;field2&quot;</span>);</div>
+<div class="line"><a class="code" href="group__c__row.html#gae8244e6a474d906c666fb168ffe42ccc">CSV_row_append</a>(row, <span class="stringliteral">&quot;field3&quot;</span>);</div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="group__c__writer.html#ga4d3fa9e0ea6ec3178385173e684e0f4e">CSV_writer_write_row</a>(mycsv, row);</div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="group__c__row.html#ga6f661ab3e82c0d9636b623f6c6685eed">CSV_row_free</a>(row);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">/******************************************************************************/</span></div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="group__c__writer.html#ga3bbe4b05c3150ab9b44d619fac6a5ae3">CSV_writer_write_row_v</a>(<span class="stringliteral">&quot;A&quot;</span>, <span class="stringliteral">&quot;B&quot;</span>, <span class="stringliteral">&quot;C&quot;</span>, NULL);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">/******************************************************************************/</span></div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="group__c__writer.html#gac7ed2b3fbd9fd9a3516f2a5c40512bf1">CSV_writer_write_field</a>(mycsv, <span class="stringliteral">&quot;D&quot;</span>);</div>
+<div class="line"><a class="code" href="group__c__writer.html#gac7ed2b3fbd9fd9a3516f2a5c40512bf1">CSV_writer_write_field</a>(mycsv, <span class="stringliteral">&quot;E&quot;</span>);</div>
+<div class="line"><a class="code" href="group__c__writer.html#gac7ed2b3fbd9fd9a3516f2a5c40512bf1">CSV_writer_write_field</a>(mycsv, <span class="stringliteral">&quot;F&quot;</span>);</div>
+<div class="line"><a class="code" href="group__c__writer.html#ga1eec1955fbd4852a024a3fdedad86336">CSV_writer_end_row</a>(mycsv);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">/******************************************************************************/</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">char</span> * data[10];</div>
+<div class="line">…</div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="group__c__writer.html#ga193bbec6dda9904563f28a6b8c038196">CSV_writer_write_row_ptr</a>(mycsv, data, 10);</div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="group__c__writer.html#ga999d62eeba652eceac83abf3eb94dd26">CSV_writer_free</a>(mycsv);</div>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md10"></a>
+embcsv.h - A stripped-down CSV reader ideal for embedded environments</h1>
+<ul>
+<li>Allows reading input character-by-character, so unbuffered input may be read</li>
+<li>Compile with EMBCSV_NO_MALLOC to prevent heap memory allocation</li>
+</ul>
+<p>Some example usages:</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="embcsv_8h.html">csvpp/embcsv.h</a>&gt;</span></div>
+<div class="line"> </div>
+<div class="line">…</div>
+<div class="line"> </div>
+<div class="line"><a class="code" href="structEMBCSV__reader.html">EMBCSV_reader</a> * mycsv = <a class="code" href="group__emb.html#ga7a640d62d6e44f618ddfe463a38e13d8">EMBCSV_reader_init</a>();</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordflow">while</span>(1)</div>
+<div class="line">{</div>
+<div class="line">    <span class="keywordtype">char</span> c = my_wait_for_serial_byte();</div>
+<div class="line">    <span class="keywordtype">char</span> * field_out = NULL;</div>
+<div class="line">    <a class="code" href="group__emb.html#gab7f03991c068204bd55ed509ad70e58c">EMBCSV_result</a> r = <a class="code" href="group__emb.html#gae661ee8acbbfe6bcbcb7c7fc8fba1115">EMBCSV_reader_parse_char</a>(mycsv, c, &amp;field_out);</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordflow">if</span>(r == <a class="code" href="group__emb.html#ggab7f03991c068204bd55ed509ad70e58ca19dcfd64d0dadf9071817c838c45ec08">EMBCSV_PARSE_ERROR</a>)</div>
+<div class="line">        my_handle_error();</div>
+<div class="line">    <span class="keywordflow">else</span> <span class="keywordflow">if</span>(r == <a class="code" href="group__emb.html#ggab7f03991c068204bd55ed509ad70e58ca7fb61fb882d69fabfcc678b988b55f40">EMBCSV_FIELD</a> || r == <a class="code" href="group__emb.html#ggab7f03991c068204bd55ed509ad70e58ca5115c4fd666bcd35cb87e672296a0897">EMBCSV_END_OF_ROW</a>)</div>
+<div class="line">    {</div>
+<div class="line">        my_process_field(field);</div>
+<div class="line">        <span class="keywordflow">if</span>(r == <a class="code" href="group__emb.html#ggab7f03991c068204bd55ed509ad70e58ca5115c4fd666bcd35cb87e672296a0897">EMBCSV_END_OF_ROW</a>)</div>
+<div class="line">            my_process_end_of_row();</div>
+<div class="line">    }</div>
+<div class="line">}</div>
+</div><!-- fragment --> </div></div><!-- PageDoc -->
 </div><!-- contents -->
+<div class="ttc" id="agroup__c__reader_html_ga4d597547fbce81c11ea7d4e17d8c55e3"><div class="ttname"><a href="group__c__reader.html#ga4d597547fbce81c11ea7d4e17d8c55e3">CSV_reader_init_from_filename</a></div><div class="ttdeci">CSV_reader * CSV_reader_init_from_filename(const char *filename)</div><div class="ttdoc">Create a new CSV_reader object parsing from a file.</div></div>
+<div class="ttc" id="agroup__c__row_html_ga144da13782997d898ffab4e754ec5ca6"><div class="ttname"><a href="group__c__row.html#ga144da13782997d898ffab4e754ec5ca6">CSV_row_size</a></div><div class="ttdeci">size_t CSV_row_size(const CSV_row *rec)</div><div class="ttdoc">Get CSV_Record array size.</div></div>
+<div class="ttc" id="agroup__c__row_html_gadc180396e8a6271a8898e6dfd8005394"><div class="ttname"><a href="group__c__row.html#gadc180396e8a6271a8898e6dfd8005394">CSV_row_arr</a></div><div class="ttdeci">const char *const * CSV_row_arr(const CSV_row *rec)</div><div class="ttdoc">CSV_row array access.</div></div>
+<div class="ttc" id="agroup__emb_html_ggab7f03991c068204bd55ed509ad70e58ca5115c4fd666bcd35cb87e672296a0897"><div class="ttname"><a href="group__emb.html#ggab7f03991c068204bd55ed509ad70e58ca5115c4fd666bcd35cb87e672296a0897">EMBCSV_END_OF_ROW</a></div><div class="ttdeci">@ EMBCSV_END_OF_ROW</div><div class="ttdoc">A field has been parsed, and parsing has reached the end of a row.</div><div class="ttdef"><b>Definition:</b> embcsv.h:94</div></div>
+<div class="ttc" id="agroup__c__writer_html_ga193bbec6dda9904563f28a6b8c038196"><div class="ttname"><a href="group__c__writer.html#ga193bbec6dda9904563f28a6b8c038196">CSV_writer_write_row_ptr</a></div><div class="ttdeci">CSV_status CSV_writer_write_row_ptr(CSV_writer *writer, const char *const *fields, const size_t num_fields)</div><div class="ttdoc">Write an array of strings as a row.</div></div>
+<div class="ttc" id="agroup__c_html_ga70ccbc5c87f86eb8fcf7b24c26abaea3"><div class="ttname"><a href="group__c.html#ga70ccbc5c87f86eb8fcf7b24c26abaea3">CSV_strdup</a></div><div class="ttdeci">char * CSV_strdup(const char *src)</div><div class="ttdoc">strdup implementation, in case it's not implemented in string.h</div></div>
+<div class="ttc" id="agroup__c__reader_html_gad47fef7d1aac6d82c32be6e051c067af"><div class="ttname"><a href="group__c__reader.html#gad47fef7d1aac6d82c32be6e051c067af">CSV_reader_read_row</a></div><div class="ttdeci">CSV_row * CSV_reader_read_row(CSV_reader *reader)</div><div class="ttdoc">Read the current row from the CSV file and advance to the next.</div></div>
+<div class="ttc" id="agroup__c__reader_html_ga33f79716fd442cc5ef9989ed2b368a12"><div class="ttname"><a href="group__c__reader.html#ga33f79716fd442cc5ef9989ed2b368a12">CSV_reader_read_field</a></div><div class="ttdeci">char * CSV_reader_read_field(CSV_reader *reader)</div><div class="ttdoc">Read a single field.</div></div>
+<div class="ttc" id="agroup__emb_html_ga7a640d62d6e44f618ddfe463a38e13d8"><div class="ttname"><a href="group__emb.html#ga7a640d62d6e44f618ddfe463a38e13d8">EMBCSV_reader_init</a></div><div class="ttdeci">EMBCSV_reader * EMBCSV_reader_init(void)</div><div class="ttdoc">Create a new EMBCSV_reader with default settings.</div></div>
+<div class="ttc" id="agroup__c_html_ggadbd27e8e27f0cd00dcbc3151d6cd8f5da567701f72f291cd5ed3e1c3834ec7a3e"><div class="ttname"><a href="group__c.html#ggadbd27e8e27f0cd00dcbc3151d6cd8f5da567701f72f291cd5ed3e1c3834ec7a3e">CSV_EOF</a></div><div class="ttdeci">@ CSV_EOF</div><div class="ttdoc">Reached end of file.</div><div class="ttdef"><b>Definition:</b> csv.h:45</div></div>
+<div class="ttc" id="agroup__emb_html_ggab7f03991c068204bd55ed509ad70e58ca7fb61fb882d69fabfcc678b988b55f40"><div class="ttname"><a href="group__emb.html#ggab7f03991c068204bd55ed509ad70e58ca7fb61fb882d69fabfcc678b988b55f40">EMBCSV_FIELD</a></div><div class="ttdeci">@ EMBCSV_FIELD</div><div class="ttdoc">A field has been parsed.</div><div class="ttdef"><b>Definition:</b> embcsv.h:93</div></div>
+<div class="ttc" id="aclasscsv_1_1Reader_html_ab0de1aeffb012082858d39dfcbfaee7f"><div class="ttname"><a href="classcsv_1_1Reader.html#ab0de1aeffb012082858d39dfcbfaee7f">csv::Reader::read_all</a></div><div class="ttdeci">std::vector&lt; std::vector&lt; T &gt; &gt; read_all()</div><div class="ttdoc">Read entire CSV data into a vector of vectors.</div><div class="ttdef"><b>Definition:</b> csv.hpp:832</div></div>
+<div class="ttc" id="acsv_8h_html"><div class="ttname"><a href="csv_8h.html">csv.h</a></div><div class="ttdoc">C CSV library.</div></div>
+<div class="ttc" id="agroup__emb_html_ggab7f03991c068204bd55ed509ad70e58ca19dcfd64d0dadf9071817c838c45ec08"><div class="ttname"><a href="group__emb.html#ggab7f03991c068204bd55ed509ad70e58ca19dcfd64d0dadf9071817c838c45ec08">EMBCSV_PARSE_ERROR</a></div><div class="ttdeci">@ EMBCSV_PARSE_ERROR</div><div class="ttdoc">Syntax error found in input.</div><div class="ttdef"><b>Definition:</b> embcsv.h:95</div></div>
+<div class="ttc" id="aembcsv_8h_html"><div class="ttname"><a href="embcsv_8h.html">embcsv.h</a></div><div class="ttdoc">CSV library for embedded environments.</div></div>
+<div class="ttc" id="aclasscsv_1_1Map__reader__iter_html"><div class="ttname"><a href="classcsv_1_1Map__reader__iter.html">csv::Map_reader_iter</a></div><div class="ttdoc">Map-based Reader iterator.</div><div class="ttdef"><b>Definition:</b> csv.hpp:1077</div></div>
+<div class="ttc" id="agroup__c__writer_html_ga1eec1955fbd4852a024a3fdedad86336"><div class="ttname"><a href="group__c__writer.html#ga1eec1955fbd4852a024a3fdedad86336">CSV_writer_end_row</a></div><div class="ttdeci">CSV_status CSV_writer_end_row(CSV_writer *writer)</div><div class="ttdoc">End the current row.</div></div>
+<div class="ttc" id="agroup__c__reader_html_ga610ed74a48c3b3c6c6a279e820e7a9d4"><div class="ttname"><a href="group__c__reader.html#ga610ed74a48c3b3c6c6a279e820e7a9d4">CSV_reader_free</a></div><div class="ttdeci">void CSV_reader_free(CSV_reader *reader)</div><div class="ttdoc">Free a CSV_reader object.</div></div>
+<div class="ttc" id="agroup__c__reader_html_ga374d4c119648c1bb09822615dc49af5d"><div class="ttname"><a href="group__c__reader.html#ga374d4c119648c1bb09822615dc49af5d">CSV_reader_get_error_msg</a></div><div class="ttdeci">const char * CSV_reader_get_error_msg(const CSV_reader *reader)</div><div class="ttdoc">Get message for last error.</div></div>
+<div class="ttc" id="agroup__c__writer_html_gac7ed2b3fbd9fd9a3516f2a5c40512bf1"><div class="ttname"><a href="group__c__writer.html#gac7ed2b3fbd9fd9a3516f2a5c40512bf1">CSV_writer_write_field</a></div><div class="ttdeci">CSV_status CSV_writer_write_field(CSV_writer *writer, const char *field)</div><div class="ttdoc">Write a single field.</div></div>
+<div class="ttc" id="agroup__c__reader_html_gabe8390712c5e91755d5ce1d9df912aa6"><div class="ttname"><a href="group__c__reader.html#gabe8390712c5e91755d5ce1d9df912aa6">CSV_reader_get_error</a></div><div class="ttdeci">CSV_status CSV_reader_get_error(const CSV_reader *reader)</div><div class="ttdoc">Get error code for last error.</div></div>
+<div class="ttc" id="agroup__c__writer_html_ga3bbe4b05c3150ab9b44d619fac6a5ae3"><div class="ttname"><a href="group__c__writer.html#ga3bbe4b05c3150ab9b44d619fac6a5ae3">CSV_writer_write_row_v</a></div><div class="ttdeci">CSV_status CSV_writer_write_row_v(CSV_writer *writer,...)</div><div class="ttdoc">Write a row from the given variadic parameters.</div></div>
+<div class="ttc" id="aclasscsv_1_1Writer_html"><div class="ttname"><a href="classcsv_1_1Writer.html">csv::Writer</a></div><div class="ttdoc">CSV writer.</div><div class="ttdef"><b>Definition:</b> csv.hpp:1274</div></div>
+<div class="ttc" id="agroup__c__row_html_gad01c481de269475ef1e7bc784c13ea37"><div class="ttname"><a href="group__c__row.html#gad01c481de269475ef1e7bc784c13ea37">CSV_row_init</a></div><div class="ttdeci">CSV_row * CSV_row_init(void)</div><div class="ttdoc">Create a new CSV_row.</div></div>
+<div class="ttc" id="astructEMBCSV__reader_html"><div class="ttname"><a href="structEMBCSV__reader.html">EMBCSV_reader</a></div><div class="ttdef"><b>Definition:</b> embcsv.h:59</div></div>
+<div class="ttc" id="agroup__c__writer_html_ga4d3fa9e0ea6ec3178385173e684e0f4e"><div class="ttname"><a href="group__c__writer.html#ga4d3fa9e0ea6ec3178385173e684e0f4e">CSV_writer_write_row</a></div><div class="ttdeci">CSV_status CSV_writer_write_row(CSV_writer *writer, const CSV_row *fields)</div><div class="ttdoc">Write a CSV_row.</div></div>
+<div class="ttc" id="agroup__c__writer_html_ga999d62eeba652eceac83abf3eb94dd26"><div class="ttname"><a href="group__c__writer.html#ga999d62eeba652eceac83abf3eb94dd26">CSV_writer_free</a></div><div class="ttdeci">void CSV_writer_free(CSV_writer *writer)</div><div class="ttdoc">Free a CSV_writer object.</div></div>
+<div class="ttc" id="aclasscsv_1_1Writer_html_a0d7134cbf42ddbc9b891f2e3cb82616a"><div class="ttname"><a href="classcsv_1_1Writer.html#a0d7134cbf42ddbc9b891f2e3cb82616a">csv::Writer::write_row</a></div><div class="ttdeci">void write_row(Iter first, Iter last)</div><div class="ttdef"><b>Definition:</b> csv.hpp:1447</div></div>
+<div class="ttc" id="aclasscsv_1_1Reader_html"><div class="ttname"><a href="classcsv_1_1Reader.html">csv::Reader</a></div><div class="ttdoc">Parses CSV data.</div><div class="ttdef"><b>Definition:</b> csv.hpp:232</div></div>
+<div class="ttc" id="agroup__emb_html_gab7f03991c068204bd55ed509ad70e58c"><div class="ttname"><a href="group__emb.html#gab7f03991c068204bd55ed509ad70e58c">EMBCSV_result</a></div><div class="ttdeci">EMBCSV_result</div><div class="ttdoc">Parser result type.</div><div class="ttdef"><b>Definition:</b> embcsv.h:90</div></div>
+<div class="ttc" id="aclasscsv_1_1Reader_html_aa16a7c9a322ae5a7425a6f1961c0eff3"><div class="ttname"><a href="classcsv_1_1Reader.html#aa16a7c9a322ae5a7425a6f1961c0eff3">csv::Reader::input_string</a></div><div class="ttdeci">static constexpr input_string_t input_string</div><div class="ttdoc">Disambiguation tag.</div><div class="ttdef"><b>Definition:</b> csv.hpp:610</div></div>
+<div class="ttc" id="agroup__c__writer_html_ga1b21a314a126d1c6bddcb6bb6ae908dd"><div class="ttname"><a href="group__c__writer.html#ga1b21a314a126d1c6bddcb6bb6ae908dd">CSV_writer_init_from_filename</a></div><div class="ttdeci">CSV_writer * CSV_writer_init_from_filename(const char *filename)</div><div class="ttdoc">Create a new CSV_writer object writing to a file.</div></div>
+<div class="ttc" id="agroup__c__row_html_gae8244e6a474d906c666fb168ffe42ccc"><div class="ttname"><a href="group__c__row.html#gae8244e6a474d906c666fb168ffe42ccc">CSV_row_append</a></div><div class="ttdeci">void CSV_row_append(CSV_row *rec, char *field)</div><div class="ttdoc">Append a new field.</div></div>
+<div class="ttc" id="aclasscsv_1_1Map__writer__iter_html"><div class="ttname"><a href="classcsv_1_1Map__writer__iter.html">csv::Map_writer_iter</a></div><div class="ttdoc">Map-based Writer iterator.</div><div class="ttdef"><b>Definition:</b> csv.hpp:1570</div></div>
+<div class="ttc" id="agroup__emb_html_gae661ee8acbbfe6bcbcb7c7fc8fba1115"><div class="ttname"><a href="group__emb.html#gae661ee8acbbfe6bcbcb7c7fc8fba1115">EMBCSV_reader_parse_char</a></div><div class="ttdeci">EMBCSV_result EMBCSV_reader_parse_char(EMBCSV_reader *r, int c, const char **field_out)</div><div class="ttdoc">Parse a character.</div></div>
+<div class="ttc" id="agroup__c__row_html_ga6f661ab3e82c0d9636b623f6c6685eed"><div class="ttname"><a href="group__c__row.html#ga6f661ab3e82c0d9636b623f6c6685eed">CSV_row_free</a></div><div class="ttdeci">void CSV_row_free(CSV_row *rec)</div><div class="ttdoc">Free a CSV_row.</div></div>
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
 Generated by &#160;<a href="http://www.doxygen.org/index.html">

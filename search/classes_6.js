@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['parse_5ferror_151',['Parse_error',['../classcsv_1_1Parse__error.html',1,'csv']]]
+  ['type_5fconversion_5ferror_143',['Type_conversion_error',['../structcsv_1_1Type__conversion__error.html',1,'csv']]]
 ];

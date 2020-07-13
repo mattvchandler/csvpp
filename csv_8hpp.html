@@ -70,8 +70,7 @@ $(function() {
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#namespaces">Namespaces</a> &#124;
-<a href="#func-members">Functions</a> &#124;
-<a href="#var-members">Variables</a>  </div>
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
 <div class="title">csv.hpp File Reference</div>  </div>
 </div><!--header-->
@@ -131,18 +130,6 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classcsv_1_1IO__error.html">csv::IO_error</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">IO error.  <a href="classcsv_1_1IO__error.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structcsv_1_1detail_1_1has__std__to__string.html">csv::detail::has_std_to_string&lt; T, typename &gt;</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structcsv_1_1detail_1_1has__std__to__string_3_01T_00_01std_1_1void__t_3_01decltype_07std_1_1to__f1f756e94d2d8afde632db71632bcbc1.html">csv::detail::has_std_to_string&lt; T, std::void_t&lt; decltype(std::to_string(std::declval&lt; T &gt;()))&gt; &gt;</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structcsv_1_1detail_1_1has__to__string.html">csv::detail::has_to_string&lt; T, typename &gt;</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structcsv_1_1detail_1_1has__to__string_3_01T_00_01std_1_1void__t_3_01decltype_07to__string_07std4c08f6fc2ada678d9cd6a72f0362012f.html">csv::detail::has_to_string&lt; T, std::void_t&lt; decltype(to_string(std::declval&lt; T &gt;()))&gt; &gt;</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structcsv_1_1detail_1_1has__ostr.html">csv::detail::has_ostr&lt; T, typename &gt;</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structcsv_1_1detail_1_1has__ostr_3_01T_00_01std_1_1void__t_3_01decltype_07std_1_1declval_3_01std3abd21ce08d58eb68cab7051104eb005.html">csv::detail::declval&lt; std::ostringstream &amp; &gt;()&lt;&lt; std::declval&lt; T &gt;())&gt; &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classcsv_1_1Reader.html">csv::Reader</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parses CSV data.  <a href="classcsv_1_1Reader.html#details">More...</a><br /></td></tr>
@@ -221,21 +208,6 @@ template&lt;typename Header1 , typename Value1 , typename Header2 , typename Val
 <tr class="memitem:ga4924a703979639b1250e99ee96e3b8c7"><td class="memItemLeft" align="right" valign="top">Writer &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__cpp.html#ga4924a703979639b1250e99ee96e3b8c7">csv::end_row</a> (Writer &amp;w)</td></tr>
 <tr class="memdesc:ga4924a703979639b1250e99ee96e3b8c7"><td class="mdescLeft">&#160;</td><td class="mdescRight">End row stream manipulator for <a class="el" href="classcsv_1_1Writer.html" title="CSV writer.">Writer</a>.  <a href="group__cpp.html#ga4924a703979639b1250e99ee96e3b8c7">More...</a><br /></td></tr>
 <tr class="separator:ga4924a703979639b1250e99ee96e3b8c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
-Variables</h2></td></tr>
-<tr class="memitem:a50ef10457df9b06ab5d8ab2f37a10ad9"><td class="memTemplParams" colspan="2"><a id="a50ef10457df9b06ab5d8ab2f37a10ad9"></a>
-template&lt;typename T &gt; </td></tr>
-<tr class="memitem:a50ef10457df9b06ab5d8ab2f37a10ad9"><td class="memTemplItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memTemplItemRight" valign="bottom"><b>csv::detail::has_std_to_string_v</b> = has_std_to_string&lt;T&gt;::value</td></tr>
-<tr class="separator:a50ef10457df9b06ab5d8ab2f37a10ad9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a04b96b7d39bc37f55346b9f1452ea0c2"><td class="memTemplParams" colspan="2"><a id="a04b96b7d39bc37f55346b9f1452ea0c2"></a>
-template&lt;typename T &gt; </td></tr>
-<tr class="memitem:a04b96b7d39bc37f55346b9f1452ea0c2"><td class="memTemplItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memTemplItemRight" valign="bottom"><b>csv::detail::has_to_string_v</b> = has_to_string&lt;T&gt;::value</td></tr>
-<tr class="separator:a04b96b7d39bc37f55346b9f1452ea0c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7781cf81716972e855bc80f80e9f36bc"><td class="memTemplParams" colspan="2"><a id="a7781cf81716972e855bc80f80e9f36bc"></a>
-template&lt;typename T &gt; </td></tr>
-<tr class="memitem:a7781cf81716972e855bc80f80e9f36bc"><td class="memTemplItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memTemplItemRight" valign="bottom"><b>csv::detail::has_ostr_v</b> = has_ostr&lt;T&gt;::value</td></tr>
-<tr class="separator:a7781cf81716972e855bc80f80e9f36bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>C++ CSV library. </p>
