@@ -1187,7 +1187,7 @@ namespace csv
             ++(*this);
         }
 
-        using value_type        = decltype(obj_);
+        using value_type        = std::map<Header, Value>;
         using difference_type   = std::ptrdiff_t;
         using pointer           = const value_type*;
         using reference         = const value_type&;

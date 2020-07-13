@@ -77,6 +77,8 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
             set(DOXYGEN_EXTRACT_PACKAGE "YES")
             set(DOXYGEN_INTERNAL_DOCS "YES")
             set(DOXYGEN_ENABLED_SECTIONS "INTERNAL")
+        else()
+            set(DOXYGEN_EXCLUDE_SYMBOLS "detail")
         endif()
 
         set(DOXYGEN_USE_MDFILE_AS_MAINPAGE README.md)
