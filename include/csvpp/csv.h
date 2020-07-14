@@ -255,7 +255,6 @@ CSV_status CSV_reader_get_error(const CSV_reader * reader);
 /// Allows writing by rows or field-by-field. Mixing these is not
 /// recommended, but is possible. Row-wise methods will append to the row
 /// started by any field-wise methods.
-/// @ingroup c_writer
 
 /// @ingroup c_writer
 typedef struct CSV_writer CSV_writer;

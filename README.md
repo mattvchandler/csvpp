@@ -1,8 +1,8 @@
 # csvpp
 
-### [csvpp on Github](https://github.com/mattvchandler/csvpp)
+[csvpp on Github](https://github.com/mattvchandler/csvpp)
 
-### [API Documentation](https://mattvchandler.github.io/csvpp/index.html)
+[API Documentation](https://mattvchandler.github.io/csvpp/index.html)
 
 csvpp is a collection of RFC 4180 compliant CSV readers and writers. All 3
 modules are totally independent of each other, so feel free to use whichever
@@ -10,7 +10,7 @@ best suits you application
 
 ## csv.hpp - A c++ header-only library
 
-#### Reader
+### Reader
 * Read in rows of data as std::vectors or std::tuples, a stream, field-by-field,
 iterators, or with variadic argmuents
 * Template type conversion available for all of the above (when reading a
@@ -288,7 +288,7 @@ Build options
    target
 * `-DBUILD_TESTING=1` - Enable tests
 
-#### Including libraries in your project
+### Including libraries in your project
 
 If installed, pkg-config and CMake files will be installed.
 
@@ -322,10 +322,10 @@ target_link_libraries(myproj … csvpp::csv) # for C library
 target_link_libraries(myproj … csvpp::embcsv) # for embedded C library
 ```
 
-#### Testing
+### Testing
 
 To run test suite, generate with `-DBUILD_TESTING=1` and `make test`
 
-#### Documentation
+### Documentation
 
 Documentation can be built with doxygen (if installed). `make doc`

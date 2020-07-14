@@ -51,7 +51,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     if(DOXYGEN_FOUND)
         option(CSVPP_INTERNAL_DOCS "Generate documentation for private/internal methods, members, and functions" OFF)
 
-        set(CSVPP_DOXYGEN_SRCS README.md)
+        set(CSVPP_DOXYGEN_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
         if(CSVPP_ENABLE_CPP)
             list(APPEND CSVPP_DOXYGEN_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/include/csvpp/csv.hpp")
         endif()
@@ -81,7 +81,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
             set(DOXYGEN_EXCLUDE_SYMBOLS "detail")
         endif()
 
-        set(DOXYGEN_USE_MDFILE_AS_MAINPAGE README.md)
+        set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 
         doxygen_add_docs(doc ${CSVPP_DOXYGEN_SRCS})
     endif()
