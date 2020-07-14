@@ -282,7 +282,81 @@ embcsv.h - A stripped-down CSV reader ideal for embedded environments</h1>
 <div class="line">            my_process_end_of_row();</div>
 <div class="line">    }</div>
 <div class="line">}</div>
-</div><!-- fragment --> </div></div><!-- PageDoc -->
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md11"></a>
+Compiling &amp; Installation</h1>
+<p>Requirements:</p><ul>
+<li>CMake</li>
+<li>A C++ compiler with C++17 support</li>
+<li>A C compiler with C11 support</li>
+<li>No external libraries required!</li>
+</ul>
+<p>Installation is not strictly required. You can directly include the relevant files into your own project:</p>
+<ul>
+<li>C++ library<ul>
+<li><a class="el" href="csv_8hpp.html" title="C++ CSV library.">include/csvpp/csv.hpp</a></li>
+</ul>
+</li>
+<li>C library<ul>
+<li><a class="el" href="csv_8h.html" title="C CSV library.">include/csvpp/csv.h</a></li>
+<li>src/csv.c</li>
+</ul>
+</li>
+<li>Embedded C library<ul>
+<li><a class="el" href="embcsv_8h.html" title="CSV library for embedded environments.">include/csvpp/embcsv.h</a></li>
+<li>src/embcsv.c</li>
+</ul>
+</li>
+</ul>
+<p>To build and install:</p>
+<div class="fragment"><div class="line">mkdir build</div>
+<div class="line">cd build</div>
+<div class="line">cmake .. &lt;build option arguments&gt;</div>
+<div class="line">make</div>
+<div class="line"> </div>
+<div class="line"># installation</div>
+<div class="line">make install</div>
+<div class="line"># OR</div>
+<div class="line">cpack</div>
+</div><!-- fragment --><p>Build options</p>
+<ul>
+<li><code>-DCSVPP_ENABLE_CPP=1</code> - Enable C++ library. Enabled by default</li>
+<li><code>-DCSVPP_ENABLE_C=1</code> - Enable C library.</li>
+<li><code>-DCSVPP_ENABLE_EMBEDDED=1</code> - Enable embedded C library.</li>
+<li><code>-DCSVPP_ENABLE_ALL=1</code> - Enable all libraries</li>
+<li><code>-DCSVPP_EMBEDDED_NO_MALLOC=1</code> - Disable heap allocation for embedded library</li>
+<li><code>-DCSVPP_ENABLE_EXAMPLES=1</code> - Enable example utility programs</li>
+<li><code>-DCSVPP_INTERNAL_DOCS=1</code> - Include private method documentation for doc target</li>
+<li><code>-DBUILD_TESTING=1</code> - Enable tests</li>
+</ul>
+<h3><a class="anchor" id="autotoc_md12"></a>
+Including libraries in your project</h3>
+<p>If installed, pkg-config and CMake files will be installed.</p>
+<p>To include libraries with pkg-config:</p>
+<ul>
+<li>C++ library <code>pkg-config --cflags csvpp</code></li>
+<li>C library <code>pkg-config --cflags --libs csvpp-c</code></li>
+<li>Embedded C library <code>pkg-config --cflags --libs csvpp-embcsv</code></li>
+</ul>
+<p>To include libraries with CMake:</p>
+<div class="fragment"><div class="line">find_package(csvpp)</div>
+<div class="line"> </div>
+<div class="line">add_executable(myproj …)</div>
+<div class="line">target_link_libraries(myproj … csvpp::csvpp) # for C++ library</div>
+<div class="line">target_link_libraries(myproj … csvpp::csv) # for C library</div>
+<div class="line">target_link_libraries(myproj … csvpp::embcsv) # for embedded C library</div>
+</div><!-- fragment --><p>Or, if you have included the csvpp as a submodule of your project:</p>
+<div class="fragment"><div class="line">add_subdirectory(csvpp)</div>
+<div class="line">add_executable(myproj …)</div>
+<div class="line">target_link_libraries(myproj … csvpp::csvpp) # for C++ library</div>
+<div class="line">target_link_libraries(myproj … csvpp::csv) # for C library</div>
+<div class="line">target_link_libraries(myproj … csvpp::embcsv) # for embedded C library</div>
+</div><!-- fragment --><h3><a class="anchor" id="autotoc_md13"></a>
+Testing</h3>
+<p>To run test suite, generate with <code>-DBUILD_TESTING=1</code> and <code>make test</code></p>
+<h3><a class="anchor" id="autotoc_md14"></a>
+Documentation</h3>
+<p>Documentation can be built with doxygen (if installed). <code>make doc</code> </p>
+</div></div><!-- PageDoc -->
 </div><!-- contents -->
 <div class="ttc" id="agroup__c__reader_html_ga4d597547fbce81c11ea7d4e17d8c55e3"><div class="ttname"><a href="group__c__reader.html#ga4d597547fbce81c11ea7d4e17d8c55e3">CSV_reader_init_from_filename</a></div><div class="ttdeci">CSV_reader * CSV_reader_init_from_filename(const char *filename)</div><div class="ttdoc">Create a new CSV_reader object parsing from a file.</div></div>
 <div class="ttc" id="agroup__c__row_html_ga144da13782997d898ffab4e754ec5ca6"><div class="ttname"><a href="group__c__row.html#ga144da13782997d898ffab4e754ec5ca6">CSV_row_size</a></div><div class="ttdeci">size_t CSV_row_size(const CSV_row *rec)</div><div class="ttdoc">Get CSV_Record array size.</div></div>
