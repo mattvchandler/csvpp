@@ -241,3 +241,91 @@ while(1)
     }
 }
 ```
+
+## Compiling & Installation
+
+Requirements:
+* CMake
+* A C++ compiler with C++17 support
+* A C compiler with C11 support
+* No external libraries required!
+
+Installation is not strictly required. You can directly include the relevant
+files into your own project:
+
+* C++ library
+    * include/csvpp/csv.hpp
+* C library
+    * include/csvpp/csv.h
+    * src/csv.c
+* Embedded C library
+    * include/csvpp/embcsv.h
+    * src/embcsv.c
+
+To build and install:
+
+```
+mkdir build
+cd build
+cmake .. <build option arguments>
+make
+
+# installation
+make install
+# OR
+cpack
+```
+
+Build options
+
+* `-DCSVPP_ENABLE_CPP=1` - Enable C++ library. Enabled by default
+* `-DCSVPP_ENABLE_C=1` - Enable C library.
+* `-DCSVPP_ENABLE_EMBEDDED=1` - Enable embedded C library.
+* `-DCSVPP_ENABLE_ALL=1` - Enable all libraries
+* `-DCSVPP_EMBEDDED_NO_MALLOC=1` - Disable heap allocation for embedded library
+* `-DCSVPP_ENABLE_EXAMPLES=1` - Enable example utility programs
+* `-DCSVPP_INTERNAL_DOCS=1` - Include private method documentation for doc
+   target
+* `-DBUILD_TESTING=1` - Enable tests
+
+#### Including libraries in your project
+
+If installed, pkg-config and CMake files will be installed.
+
+To include libraries with pkg-config:
+
+* C++ library
+    `pkg-config --cflags csvpp`
+* C library
+    `pkg-config --cflags --libs csvpp-c`
+* Embedded C library
+    `pkg-config --cflags --libs csvpp-embcsv`
+
+To include libraries with CMake:
+
+```CMake
+find_package(csvpp)
+
+add_executable(myproj …)
+target_link_libraries(myproj … csvpp::csvpp) # for C++ library
+target_link_libraries(myproj … csvpp::csv) # for C library
+target_link_libraries(myproj … csvpp::embcsv) # for embedded C library
+```
+
+Or, if you have included the csvpp as a submodule of your project:
+
+```CMake
+add_subdirectory(csvpp)
+add_executable(myproj …)
+target_link_libraries(myproj … csvpp::csvpp) # for C++ library
+target_link_libraries(myproj … csvpp::csv) # for C library
+target_link_libraries(myproj … csvpp::embcsv) # for embedded C library
+```
+
+#### Testing
+
+To run test suite, generate with `-DBUILD_TESTING=1` and `make test`
+
+#### Documentation
+
+Documentation can be built with doxygen (if installed). `make doc`
