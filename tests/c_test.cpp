@@ -1,5 +1,7 @@
 #include "c_test.hpp"
 
+#include <array>
+
 #include "csvpp/csv.h"
 
 test::Result test_read_mine_c_field(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
