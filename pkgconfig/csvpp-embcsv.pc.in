@@ -1,8 +1,10 @@
 prefix=@CMAKE_INSTALL_PREFIX@
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib/csvpp
+includedir=${prefix}/include
 
 Name: @PROJECT_NAME@
 Description: @PROJECT_DESCRIPTION@
 Version: @PROJECT_VERSION@
 Libs: -L${libdir} -lembcsv
+Cflags: -I${includedir}
