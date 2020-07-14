@@ -25,103 +25,9 @@
 #include <string.h>
 #include <limits.h>
 
-#include <getopt.h>
-
 #include "csvpp/csv.h"
 
-void usage(const char * prog_name)
-{
-    fprintf(stderr, "usage: %s [-d DELIMITER] [-q QUOTE_CHAR] [-l] [-h] [CSV_FILE]\n", prog_name);
-}
-
-void help(const char * prog_name)
-{
-    usage(prog_name);
-    fputs("\n"
-        "CSV pretty-printer\n\n"
-        "positional arguments:\n"
-        "  CSV_FILE             CSV file to read. omit or pass '-' to read from stdin\n\n"
-        "optional arguments:\n"
-        "  -d, --delimiter      character to use as field delimiter (default: ,)\n"
-        "  -q, --quote          character to use for quoted fields  (default: \")\n"
-        "  -l, --lenient        parse incorrectly quoted fields leniently\n"
-        "  -h, --help           show this help message and exit\n",
-        stderr);
-}
-
-bool parse_args(int argc, char ** argv,
-                FILE ** file, char * delimiter, char * quote, bool * lenient)
-{
-    *file = stdin;
-    *delimiter = ',';
-    *quote = '"';
-    *lenient = false;
-
-    int opt = 0;
-    extern char * optarg;
-    extern int optind, optopt;
-
-    struct option longopts[] =
-    {
-        {"delimiter", required_argument, NULL, 'd'},
-        {"quote",     required_argument, NULL, 'q'},
-        {"lenient",   no_argument,       NULL, 'l'},
-        {"help",      no_argument,       NULL, 'h'},
-        {NULL,        0,                 NULL,  0}
-    };
-
-    const char * prog_name = argv[0] + strlen(argv[0]);
-    while(prog_name != argv[0] && *(prog_name - 1) != '/' && *(prog_name - 1) != '\\')
-        --prog_name;
-
-    int ind = 0;
-    while((opt = getopt_long(argc, argv, ":d:q:lh", longopts, &ind)) != -1)
-    {
-        switch(opt)
-        {
-        case 'd':
-            *delimiter = optarg[0];
-            break;
-        case 'q':
-            *quote = optarg[0];
-            break;
-        case 'l':
-            *lenient = true;
-            break;
-        case 'h':
-            help(prog_name);
-            return false;
-        case ':':
-            fprintf(stderr, "Argument required for -%c\n", (char)(optopt));
-            usage(prog_name);
-            return false;
-        case '?':
-        default:
-            fprintf(stderr, "unknown option: -%c\n", (char)(optopt));
-            usage(prog_name);
-            return false;
-        }
-    }
-
-    if(argc - optind > 1)
-    {
-        fputs("Too many arguments\n", stderr);
-        usage(prog_name);
-        return false;
-    }
-    else if(argc - optind == 1 && strcmp(argv[optind], "-") != 0)
-    {
-        *file = fopen(argv[optind], "rb");
-        if(!*file)
-        {
-            fprintf(stderr, "Unable to open input file %s: ", argv[optind]);
-            perror(NULL);
-            return false;
-        }
-    }
-
-    return true;
-}
+#include "parse_args.h"
 
 typedef struct vector
 {
@@ -184,17 +90,26 @@ void vector_free(vector * v)
 
 int main(int argc, char ** argv)
 {
-    FILE * file = NULL;
-    char delimiter, quote;
-    bool lenient;
-
-    if(!parse_args(argc, argv, &file, &delimiter, &quote, &lenient))
+    Args args;
+    if(!parse_args(&args, argc, argv))
         return EXIT_FAILURE;
 
+    FILE * file = stdin;
+    if(strcmp(args.filename, "-") != 0)
+    {
+        file = fopen(args.filename, "rb");
+        if(!file)
+        {
+            fprintf(stderr, "Unable to open input file %s: ", args.filename);
+            perror(NULL);
+            return false;
+        }
+    }
+
     CSV_reader * input = CSV_reader_init_from_file(file);
-    CSV_reader_set_delimiter(input, delimiter);
-    CSV_reader_set_quote(input, quote);
-    CSV_reader_set_lenient(input, lenient);
+    CSV_reader_set_delimiter(input, args.delimiter);
+    CSV_reader_set_quote(input, args.quote);
+    CSV_reader_set_lenient(input, args.lenient);
 
     vector * data = vector_init(sizeof(CSV_row *), (void(*)(void*))CSV_row_free);
     vector * col_size = vector_init(sizeof(int), NULL);
