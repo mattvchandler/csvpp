@@ -19,7 +19,7 @@ vector, the whole row will be converted to the same type)
 Some example usages:
 
 ```cpp
-#include <csvpp/csh.hpp>
+#include <csvpp/csv.hpp>
 
 …
 
@@ -48,7 +48,7 @@ csv::Reader mycsv3{csv::Reader::input_string, "A,B,C\nD,E,F\nG,H,I"}; // read fr
 
 char a;
 std::string b;
-My_type c; // can auto-convert any type that has an std::ostream & operator>>(std::ostream &)
+My_type c; // can auto-convert any type T that has an std::ostream & operator>>(std::ostream &, const T &)
 
 auto row = mycsv3.get_row();
 row >> a >> b >> c;
@@ -83,11 +83,11 @@ mycsv.write_row(row); // ranges supported too
 
 int field1 = …;
 std::string field2 = …;
-My_type field 3 = …";
+My_type field3 = …";
 
 mycsv << field1 << field2 << field3 << csv::end_row;
 
-mycsv_write_row_v(field1, field2, field3);
+mycsv.write_row_v(field1, field2, field3);
 ```
 
 ### Map_reader_iter / Map_writer_iter
@@ -96,14 +96,16 @@ mycsv_write_row_v(field1, field2, field3);
 Some example usages:
 
 ```cpp
-csv::Map_reader_iter mycsv{csv::Reader::input_string, "Col1,Col2,Col3\nA,B,C"};
-
-for(auto && row: mycsv)
+for(auto row = csv::Map_reader_iter{csv::Reader::input_string, "Col1,Col2,Col3\nA,B,C"}; row != csv::Map_reader_iter{}; ++row)
 {
-    assert(row["Col1"] == "A");
+    assert((*row)["Col1"] == "A");
+    for(auto && [k,v]: *row)
+    {
+        std::cout<<k<<": "<<v<<"\n";
+    }
 }
 
-csv::Map_writer_iter<std::string, int> mycsv2{"mycsv.csv", {"Col1, "Col2", Col3"}};
+csv::Map_writer_iter<std::string, int> mycsv{"mycsv4.csv", {"Col1", "Col2", "Col3"}};
 std::map<std::string, int> row;
 row["Col1"] = 1;
 row["Col2"] = 2;
@@ -125,14 +127,13 @@ Some example usages:
 
 CSV_reader * mycsv = CSV_reader_init_from_filename("mycsv.csv");
 CSV_row * row = NULL;
-while((row = CSV_reader_read_row(mycsv))
+while((row = CSV_reader_read_row(mycsv)))
 {
     size_t num_fields = CSV_row_size(row);
 
     if(num_fields >= 1)
     {
-        char * field = NULL;
-        CSV_strdup(field, CSV_row.get(row, 0));
+        char * field = CSV_strdup(CSV_row_get(row, 0));
 
         // Process field;
         free(field);
@@ -149,20 +150,25 @@ CSV_reader_free(mycsv);
 
 /******************************************************************************/
 
-CSV_reader * mycsv2 = CSV_reader_init_from_string("A,B,C\nD,E,F\n");
-CSV_row * row = NULL;
+CSV_reader * mycsv2 = CSV_reader_init_from_str("A,B,C\nD,E,F\n");
 
 while(1)
 {
     char * field = CSV_reader_read_field(mycsv2);
     if(!field)
     {
-        if(CSV_reader_get_error() != CSV_EOF)
-            fprintf(stderr, "Error: %s\n", CSV_reader_get_error_msg())
+        if(CSV_reader_get_error(mycsv2) != CSV_EOF)
+            fprintf(stderr, "Error: %s\n", CSV_reader_get_error_msg(mycsv2));
+
         break;
     }
-    if(CSV_end_of_row())
-        my_process_end_of_row();
+
+    // Process field
+
+    free(field);
+
+    if(CSV_reader_end_of_row(mycsv2))
+        // Process end of row
 }
 
 CSV_reader_free(mycsv2);
@@ -181,9 +187,9 @@ CSV_writer * mycsv = CSV_writer_init_from_filename("mycsv.csv");
 
 CSV_row * row = CSV_row_init();
 
-CSV_row_append(row, "field1");
-CSV_row_append(row, "field2");
-CSV_row_append(row, "field3");
+CSV_row_append(row, CSV_strdup("field1"));
+CSV_row_append(row, CSV_strdup("field2"));
+CSV_row_append(row, CSV_strdup("field3"));
 
 CSV_writer_write_row(mycsv, row);
 
@@ -191,7 +197,7 @@ CSV_row_free(row);
 
 /******************************************************************************/
 
-CSV_writer_write_row_v("A", "B", "C", NULL);
+CSV_writer_write_row_v(mycsv, "A", "B", "C", NULL);
 
 /******************************************************************************/
 
@@ -208,7 +214,6 @@ char * data[10];
 CSV_writer_write_row_ptr(mycsv, data, 10);
 
 CSV_writer_free(mycsv);
-
 ```
 
 ## embcsv.h - A stripped-down CSV reader ideal for embedded environments
@@ -225,10 +230,10 @@ Some example usages:
 
 EMBCSV_reader * mycsv = EMBCSV_reader_init();
 
-while(1)
+while(!my_done_reading_serial())
 {
     char c = my_wait_for_serial_byte();
-    char * field_out = NULL;
+    const char * field_out = NULL;
     EMBCSV_result r = EMBCSV_reader_parse_char(mycsv, c, &field_out);
 
     if(r == EMBCSV_PARSE_ERROR)
@@ -240,6 +245,8 @@ while(1)
             my_process_end_of_row();
     }
 }
+
+EMBCSV_reader_free(mycsv);
 ```
 
 ## Compiling & Installation
