@@ -90,13 +90,19 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
     include(CMakePackageConfigHelpers)
     write_basic_package_version_file(
-        csvVersion.cmake
+        csvppConfigVersion.cmake
         VERSION ${PACKAGE_VERSION}
         COMPATIBILITY AnyNewerVersion
         )
 
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/csvVersion.cmake"
-            DESTINATION lib/cmake/csv)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/csvppConfigVersion.cmake"
+            DESTINATION lib/cmake/csvpp)
+
+    install(EXPORT csvTargets
+            FILE csvppConfig.cmake
+            NAMESPACE csvpp::
+            DESTINATION lib/cmake/csvpp
+            )
 
     # CPack vars
     set(CPACK_GENERATOR TGZ)

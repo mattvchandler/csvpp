@@ -7,12 +7,8 @@ if(CSVPP_ENABLE_CPP)
                                      $<INSTALL_INTERFACE:include>
                                      )
     set_target_properties(csvpp PROPERTIES PUBLIC_HEADER ../include/csvpp/csv.hpp)
-
     install(TARGETS csvpp
             EXPORT csvTargets
-            LIBRARY DESTINATION lib/csvpp
-            ARCHIVE DESTINATION lib/csvpp
-            RUNTIME DESTINATION bin/csvpp
             PUBLIC_HEADER DESTINATION include/csvpp
             )
 endif()
@@ -56,9 +52,3 @@ if(CSVPP_ENABLE_EMBEDDED)
             PUBLIC_HEADER DESTINATION include/csvpp
             )
 endif()
-
-install(EXPORT csvTargets
-    FILE csvConfig.cmake
-        NAMESPACE csvpp::
-        DESTINATION lib/cmake/csvpp
-        )
