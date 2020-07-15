@@ -323,6 +323,7 @@ Or, if you have included the csvpp as a submodule of your project:
 
 ```CMake
 add_subdirectory(csvpp)
+
 add_executable(myproj …)
 target_link_libraries(myproj … csvpp::csvpp) # for C++ library
 target_link_libraries(myproj … csvpp::csv) # for C library
