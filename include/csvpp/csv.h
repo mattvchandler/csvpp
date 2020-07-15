@@ -92,7 +92,7 @@ size_t CSV_row_size(const CSV_row * rec);
 /// CSV_row array element access
 
 /// @param i index to access
-/// @returns string at index \c i (read-only)
+/// @returns string at index \c i (read-only - use CSV_strdup if you need a permanent copy)
 /// @ingroup c_row
 const char * CSV_row_get(const CSV_row * rec, size_t i);
 
@@ -174,7 +174,7 @@ void CSV_reader_set_lenient(CSV_reader * reader, const bool lenient);
 /// Read a single field.
 
 /// Check CSV_reader_end_of_row() to see if this is the last field in the current row
-/// @returns The next field from the row.
+/// @returns The next field from the row. Caller should free this with `free()`
 /// @returns NULL if past the end of the input or an error occurred.
 /// Check CSV_reader_get_error() to distinguish
 /// @ingroup c_reader
