@@ -352,7 +352,7 @@ NULL if unable to open the file. Use strerror / perror for details </dd></dl>
 </div><div class="memdoc">
 
 <p>Read a single field. </p>
-<p>Check <a class="el" href="group__c__reader.html#gae287839d068eeaf949c3096f65c57e8c" title="Check for end of current row.">CSV_reader_end_of_row()</a> to see if this is the last field in the current row </p><dl class="section return"><dt>Returns</dt><dd>The next field from the row. </dd>
+<p>Check <a class="el" href="group__c__reader.html#gae287839d068eeaf949c3096f65c57e8c" title="Check for end of current row.">CSV_reader_end_of_row()</a> to see if this is the last field in the current row </p><dl class="section return"><dt>Returns</dt><dd>The next field from the row. Caller should free this with <code>free()</code> </dd>
 <dd>
 NULL if past the end of the input or an error occurred. Check <a class="el" href="group__c__reader.html#gabe8390712c5e91755d5ce1d9df912aa6" title="Get error code for last error.">CSV_reader_get_error()</a> to distinguish </dd></dl>
 
