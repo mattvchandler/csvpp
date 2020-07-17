@@ -254,7 +254,9 @@ EMBCSV_reader_free(mycsv);
 Requirements:
 * CMake
 * A C++ compiler with C++17 support
-* A C compiler with C11 support
+* A C compiler with C99 support
+* CMake 3.14.2 or higher (only required if installing or building tests /
+examples)
 * No external libraries required!
 
 Installation is not strictly required. You can directly include the relevant

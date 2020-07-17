@@ -1,7 +1,4 @@
-cmake_minimum_required (VERSION 3.9...3.15)
-if(${CMAKE_VERSION} VERSION_LESS 3.12)
-    cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
-endif()
+cmake_minimum_required (VERSION 3.14.2...3.18)
 
 project(csvpp VERSION 1.0.0 LANGUAGES CXX C)
 set(PROJECT_DESCRIPTION "CSV parsing / writing libraries")
