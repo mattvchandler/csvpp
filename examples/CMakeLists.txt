@@ -1,6 +1,6 @@
 if(CSVPP_ENABLE_CPP OR CSVPP_ENABLE_C)
     add_library(parse_args OBJECT parse_args.c)
-    target_compile_features(parse_args INTERFACE c_std_11)
+    target_compile_features(parse_args PUBLIC c_std_11)
 endif()
 
 if(CSVPP_ENABLE_CPP)
