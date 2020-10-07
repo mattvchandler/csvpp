@@ -1,0 +1,5 @@
+<map id="csv::Reader::Row" name="csv::Reader::Row">
+<area shape="rect" id="node1" title="Represents a single row of CSV data." alt="" coords="7,199,142,225"/>
+<area shape="rect" id="node2" href="$classcsv_1_1Reader.html" title="Parses CSV data." alt="" coords="25,109,124,136"/>
+<area shape="rect" id="node3" href="$structcsv_1_1Reader_1_1input__string__t.html" title="Disambiguation tag type." alt="" coords="5,5,144,47"/>
+</map>
