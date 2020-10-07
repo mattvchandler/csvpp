@@ -37,6 +37,10 @@
 #include <cerrno>
 #include <cstring>
 
+#define CSVPP_VERSION_MAJOR 1
+#define CSVPP_VERSION_MINOR 0
+#define CSVPP_VERSION_PATCH 0
+
 /// @defgroup cpp C++ library
 
 /// CSV library namespace
@@ -46,6 +50,14 @@ namespace csv
 {
     /// @addtogroup cpp
     /// @{
+
+    /// Library version
+    static constexpr struct
+    {
+        int major {CSVPP_VERSION_MAJOR},
+            minor {CSVPP_VERSION_MINOR},
+            patch {CSVPP_VERSION_PATCH};
+    } version;
 
     /// Error base class
 

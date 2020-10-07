@@ -35,6 +35,10 @@ extern "C"
 #include <stdbool.h>
 #include <stdio.h>
 
+#define CSVPP_VERSION_MAJOR 1
+#define CSVPP_VERSION_MINOR 0
+#define CSVPP_VERSION_PATCH 0
+
 /// Status codes
 
 /// Status codes returned by CSV_reader and CSV_writer methods, or available
