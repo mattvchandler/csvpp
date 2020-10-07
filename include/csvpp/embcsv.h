@@ -48,9 +48,7 @@ extern "C"
 {
 #endif
 
-#define CSVPP_VERSION_MAJOR 1
-#define CSVPP_VERSION_MINOR 0
-#define CSVPP_VERSION_PATCH 0
+#include "version.h"
 
 #ifndef EMBCSV_FIELD_BUF_SIZE
 /// @brief Field buffer size. Any fields at or over this limit will be truncated

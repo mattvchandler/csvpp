@@ -37,9 +37,7 @@
 #include <cerrno>
 #include <cstring>
 
-#define CSVPP_VERSION_MAJOR 1
-#define CSVPP_VERSION_MINOR 0
-#define CSVPP_VERSION_PATCH 0
+#include "version.h"
 
 /// @defgroup cpp C++ library
 

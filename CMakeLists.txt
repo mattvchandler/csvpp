@@ -1,7 +1,18 @@
 cmake_minimum_required (VERSION 3.14.2...3.18)
 
-project(csvpp VERSION 1.0.0 LANGUAGES CXX C)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/include/csvpp/version.h" csvpp_version_defines
+     REGEX "#define CSVPP_VERSION_(MAJOR|MINOR|PATCH)")
+
+foreach(part ${csvpp_version_defines})
+    if(part MATCHES "#define CSVPP_VERSION_(MAJOR|MINOR|PATCH) +([^ ]+)$")
+        set(CSVPP_VERSION_${CMAKE_MATCH_1} "${CMAKE_MATCH_2}" CACHE INTERNAL "")
+    endif()
+endforeach()
+
+project(csvpp VERSION ${CSVPP_VERSION_MAJOR}.${CSVPP_VERSION_MINOR}.${CSVPP_VERSION_PATCH} LANGUAGES CXX C)
 set(PROJECT_DESCRIPTION "CSV parsing / writing libraries")
+
+message("CSVPP version ${PROJECT_VERSION}")
 
 set(AUTHOR "Matthew Chandler <tardarsauce@gmail.com>")
 
