@@ -37,7 +37,7 @@ std::optional<std::vector<std::vector<int>>> convert_to_int(const CSV_data & exp
     return expected_ints;
 }
 
-test::Result test_read_mine_cpp_read_all(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_read_all(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
@@ -50,7 +50,7 @@ test::Result test_read_mine_cpp_read_all(const std::string & csv_text, const CSV
     }
 }
 
-test::Result test_read_mine_cpp_read_row_vec(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_read_row_vec(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
@@ -74,7 +74,7 @@ test::Result test_read_mine_cpp_read_row_vec(const std::string & csv_text, const
     }
 }
 
-test::Result test_read_mine_cpp_read_all_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_read_all_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     auto expected_ints = convert_to_int(expected_data);
     if(!expected_ints)
@@ -108,7 +108,7 @@ test::Result test_read_mine_cpp_read_all_as_int(const std::string & csv_text, co
     }
 }
 
-test::Result test_read_mine_cpp_read_row(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_read_row(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
@@ -134,7 +134,7 @@ test::Result test_read_mine_cpp_read_row(const std::string & csv_text, const CSV
     }
 }
 
-test::Result test_read_mine_cpp_stream(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_stream(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
@@ -162,7 +162,7 @@ test::Result test_read_mine_cpp_stream(const std::string & csv_text, const CSV_d
     }
 }
 
-test::Result test_read_mine_cpp_fields(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_fields(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
@@ -189,7 +189,7 @@ test::Result test_read_mine_cpp_fields(const std::string & csv_text, const CSV_d
     }
 }
 
-test::Result test_read_mine_cpp_iters(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_iters(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
@@ -211,7 +211,7 @@ test::Result test_read_mine_cpp_iters(const std::string & csv_text, const CSV_da
     }
 }
 
-test::Result test_read_mine_cpp_range(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_range(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
@@ -234,7 +234,7 @@ test::Result test_read_mine_cpp_range(const std::string & csv_text, const CSV_da
     }
 }
 
-test::Result test_read_mine_cpp_row_fields(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_row_fields(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
@@ -264,7 +264,7 @@ test::Result test_read_mine_cpp_row_fields(const std::string & csv_text, const C
     }
 }
 
-test::Result test_read_mine_cpp_row_stream(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_row_stream(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
@@ -294,7 +294,7 @@ test::Result test_read_mine_cpp_row_stream(const std::string & csv_text, const C
     }
 }
 
-test::Result test_read_mine_cpp_row_vec(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_row_vec(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
@@ -312,7 +312,7 @@ test::Result test_read_mine_cpp_row_vec(const std::string & csv_text, const CSV_
     }
 }
 
-test::Result test_read_mine_cpp_row_vec_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_row_vec_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     auto expected_ints = convert_to_int(expected_data);
     if(!expected_ints)
@@ -349,7 +349,7 @@ test::Result test_read_mine_cpp_row_vec_as_int(const std::string & csv_text, con
     }
 }
 
-test::Result test_read_mine_cpp_map(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_map(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
@@ -416,7 +416,7 @@ test::Result test_read_mine_cpp_map(const std::string & csv_text, const CSV_data
     }
 }
 
-test::Result test_read_mine_cpp_map_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_map_as_int(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     auto expected_ints = convert_to_int(expected_data);
     if(!expected_ints)
@@ -490,7 +490,7 @@ test::Result test_read_mine_cpp_map_as_int(const std::string & csv_text, const C
     }
 }
 
-test::Result test_read_mine_cpp_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
@@ -546,7 +546,7 @@ test::Result test_read_mine_cpp_variadic(const std::string & csv_text, const CSV
     }
 }
 
-test::Result test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_tuple(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
@@ -621,7 +621,7 @@ test::Result test_read_mine_cpp_tuple(const std::string & csv_text, const CSV_da
     }
 }
 
-test::Result test_read_mine_cpp_row_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_row_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
@@ -677,7 +677,7 @@ test::Result test_read_mine_cpp_row_variadic(const std::string & csv_text, const
     }
 }
 
-test::Result test_read_mine_cpp_row_tuple(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_cpp_row_tuple(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     try
     {
@@ -750,7 +750,7 @@ test::Result test_read_mine_cpp_row_tuple(const std::string & csv_text, const CS
         return test::error();
     }
 }
-test::Result test_write_mine_cpp_stream(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_cpp_stream(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -765,7 +765,7 @@ test::Result test_write_mine_cpp_stream(const std::string & expected_text, const
     return CSV_test_suite::common_write_return(data, expected_text, str.str());
 }
 
-test::Result test_write_mine_cpp_fields(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_cpp_fields(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -779,7 +779,7 @@ test::Result test_write_mine_cpp_fields(const std::string & expected_text, const
     return CSV_test_suite::common_write_return(data, expected_text, str.str());
 }
 
-test::Result test_write_mine_cpp_row(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_cpp_row(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -792,7 +792,7 @@ test::Result test_write_mine_cpp_row(const std::string & expected_text, const CS
     return CSV_test_suite::common_write_return(data, expected_text, str.str());
 }
 
-test::Result test_write_mine_cpp_iter(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_cpp_iter(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -806,7 +806,7 @@ test::Result test_write_mine_cpp_iter(const std::string & expected_text, const C
     return CSV_test_suite::common_write_return(data, expected_text, str.str());
 }
 
-test::Result test_write_mine_cpp_stream_as_int(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_cpp_stream_as_int(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     auto int_data = convert_to_int(data);
     if(!int_data)
@@ -825,7 +825,7 @@ test::Result test_write_mine_cpp_stream_as_int(const std::string & expected_text
     return CSV_test_suite::common_write_return(data, expected_text, str.str());
 }
 
-test::Result test_write_mine_cpp_row_as_int(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_cpp_row_as_int(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     auto int_data = convert_to_int(data);
     if(!int_data)
@@ -842,7 +842,7 @@ test::Result test_write_mine_cpp_row_as_int(const std::string & expected_text, c
     return CSV_test_suite::common_write_return(data, expected_text, str.str());
 }
 
-test::Result test_write_mine_cpp_iter_as_int(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_cpp_iter_as_int(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     auto int_data = convert_to_int(data);
     if(!int_data)
@@ -860,7 +860,7 @@ test::Result test_write_mine_cpp_iter_as_int(const std::string & expected_text, 
     return CSV_test_suite::common_write_return(data, expected_text, str.str());
 }
 
-test::Result test_write_mine_cpp_variadic(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_cpp_variadic(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -894,7 +894,7 @@ test::Result test_write_mine_cpp_variadic(const std::string & expected_text, con
     }
     return CSV_test_suite::common_write_return(data, expected_text, str.str());
 }
-test::Result test_write_mine_cpp_tuple(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_cpp_tuple(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     { // scoped so dtor is called before checking result
@@ -929,7 +929,7 @@ test::Result test_write_mine_cpp_tuple(const std::string & expected_text, const 
     return CSV_test_suite::common_write_return(data, expected_text, str.str());
 }
 
-test::Result test_write_mine_cpp_map(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_cpp_map(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     std::ostringstream str;
     if(!std::empty(data))
@@ -953,33 +953,33 @@ test::Result test_write_mine_cpp_map(const std::string & expected_text, const CS
 
 void Cpp_test::register_tests(CSV_test_suite & tests) const
 {
-    tests.register_read_test(test_read_mine_cpp_read_all);
-    tests.register_read_test(test_read_mine_cpp_read_row_vec);
-    tests.register_read_test(test_read_mine_cpp_read_all_as_int);
-    tests.register_read_test(test_read_mine_cpp_read_row);
-    tests.register_read_test(test_read_mine_cpp_stream);
-    tests.register_read_test(test_read_mine_cpp_fields);
-    tests.register_read_test(test_read_mine_cpp_iters);
-    tests.register_read_test(test_read_mine_cpp_range);
-    tests.register_read_test(test_read_mine_cpp_row_fields);
-    tests.register_read_test(test_read_mine_cpp_row_stream);
-    tests.register_read_test(test_read_mine_cpp_row_vec);
-    tests.register_read_test(test_read_mine_cpp_row_vec_as_int);
-    tests.register_read_test(test_read_mine_cpp_map);
-    tests.register_read_test(test_read_mine_cpp_map_as_int);
-    tests.register_read_test(test_read_mine_cpp_variadic);
-    tests.register_read_test(test_read_mine_cpp_tuple);
-    tests.register_read_test(test_read_mine_cpp_row_variadic);
-    tests.register_read_test(test_read_mine_cpp_row_tuple);
+    tests.register_read_test(test_read_cpp_read_all);
+    tests.register_read_test(test_read_cpp_read_row_vec);
+    tests.register_read_test(test_read_cpp_read_all_as_int);
+    tests.register_read_test(test_read_cpp_read_row);
+    tests.register_read_test(test_read_cpp_stream);
+    tests.register_read_test(test_read_cpp_fields);
+    tests.register_read_test(test_read_cpp_iters);
+    tests.register_read_test(test_read_cpp_range);
+    tests.register_read_test(test_read_cpp_row_fields);
+    tests.register_read_test(test_read_cpp_row_stream);
+    tests.register_read_test(test_read_cpp_row_vec);
+    tests.register_read_test(test_read_cpp_row_vec_as_int);
+    tests.register_read_test(test_read_cpp_map);
+    tests.register_read_test(test_read_cpp_map_as_int);
+    tests.register_read_test(test_read_cpp_variadic);
+    tests.register_read_test(test_read_cpp_tuple);
+    tests.register_read_test(test_read_cpp_row_variadic);
+    tests.register_read_test(test_read_cpp_row_tuple);
 
-    tests.register_write_test(test_write_mine_cpp_stream);
-    tests.register_write_test(test_write_mine_cpp_fields);
-    tests.register_write_test(test_write_mine_cpp_row);
-    tests.register_write_test(test_write_mine_cpp_iter);
-    tests.register_write_test(test_write_mine_cpp_stream_as_int);
-    tests.register_write_test(test_write_mine_cpp_row_as_int);
-    tests.register_write_test(test_write_mine_cpp_iter_as_int);
-    tests.register_write_test(test_write_mine_cpp_variadic);
-    tests.register_write_test(test_write_mine_cpp_tuple);
-    tests.register_write_test(test_write_mine_cpp_map);
+    tests.register_write_test(test_write_cpp_stream);
+    tests.register_write_test(test_write_cpp_fields);
+    tests.register_write_test(test_write_cpp_row);
+    tests.register_write_test(test_write_cpp_iter);
+    tests.register_write_test(test_write_cpp_stream_as_int);
+    tests.register_write_test(test_write_cpp_row_as_int);
+    tests.register_write_test(test_write_cpp_iter_as_int);
+    tests.register_write_test(test_write_cpp_variadic);
+    tests.register_write_test(test_write_cpp_tuple);
+    tests.register_write_test(test_write_cpp_map);
 }

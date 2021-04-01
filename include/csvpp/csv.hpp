@@ -1471,7 +1471,7 @@ namespace csv
             write_fields(std::begin(data), std::end(data));
         }
 
-        /// Write fileds from a range, without ending the row
+        /// Write fields from a range, without ending the row
 
         /// A range in this context must support std::begin and std::end as at
         /// least input iterators. Most STL containers, such as std::vector will
@@ -1485,7 +1485,7 @@ namespace csv
             write_fields(std::begin(data), std::end(data));
         }
 
-        /// Write fileds from the given variadic parameters, without ending the row
+        /// Write fields from the given variadic parameters, without ending the row
 
         /// @param data Fields to write. Each must be convertible to std::string
         /// either directly, by \c to_string, or by `ostream::operator<<`
@@ -1496,7 +1496,7 @@ namespace csv
             (void)(*this << ... << data);
         }
 
-        /// Write fileds from a tuple, without ending the row
+        /// Write fields from a tuple, without ending the row
 
         /// @param data tuple of fields to write. Each element must be convertible to
         /// std::string either directly, by \c to_string, or by

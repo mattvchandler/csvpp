@@ -4,7 +4,7 @@
 
 #include "csvpp/csv.h"
 
-test::Result test_read_mine_c_field(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_c_field(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
@@ -55,7 +55,7 @@ test::Result test_read_mine_c_field(const std::string & csv_text, const CSV_data
     return CSV_test_suite::common_read_return(csv_text, expected_data, data);
 }
 
-test::Result test_read_mine_c_row(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_c_row(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
@@ -105,7 +105,7 @@ test::Result test_read_mine_c_row(const std::string & csv_text, const CSV_data &
     return CSV_test_suite::common_read_return(csv_text, expected_data, data);
 }
 
-test::Result test_read_mine_c_ptr(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_c_ptr(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
@@ -169,7 +169,7 @@ test::Result test_read_mine_c_ptr(const std::string & csv_text, const CSV_data &
     return CSV_test_suite::common_read_return(csv_text, expected_data, data);
 }
 
-test::Result test_read_mine_c_ptr_dyn(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_c_ptr_dyn(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
@@ -222,7 +222,7 @@ test::Result test_read_mine_c_ptr_dyn(const std::string & csv_text, const CSV_da
     return CSV_test_suite::common_read_return(csv_text, expected_data, data);
 }
 
-test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+test::Result test_read_c_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
     if(!r)
@@ -343,7 +343,7 @@ test::Result test_read_mine_c_variadic(const std::string & csv_text, const CSV_d
     return CSV_test_suite::common_read_return(csv_text, expected_data, data);
 }
 
-test::Result test_write_mine_c_field(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_c_field(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     CSV_writer * w = CSV_writer_init_to_str();
     if(!w)
@@ -374,7 +374,7 @@ test::Result test_write_mine_c_field(const std::string & expected_text, const CS
     return CSV_test_suite::common_write_return(data, expected_text, output);
 }
 
-test::Result test_write_mine_c_fields(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_c_fields(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     CSV_writer * w = CSV_writer_init_to_str();
     if(!w)
@@ -418,7 +418,7 @@ test::Result test_write_mine_c_fields(const std::string & expected_text, const C
     return CSV_test_suite::common_write_return(data, expected_text, output);
 }
 
-test::Result test_write_mine_c_row(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_c_row(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     CSV_writer * w = CSV_writer_init_to_str();
     if(!w)
@@ -456,7 +456,7 @@ test::Result test_write_mine_c_row(const std::string & expected_text, const CSV_
     return CSV_test_suite::common_write_return(data, expected_text, output);
 }
 
-test::Result test_write_mine_c_ptr(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_c_ptr(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     CSV_writer * w = CSV_writer_init_to_str();
     if(!w)
@@ -483,7 +483,7 @@ test::Result test_write_mine_c_ptr(const std::string & expected_text, const CSV_
     return CSV_test_suite::common_write_return(data, expected_text, output);
 }
 
-test::Result test_write_mine_c_variadic(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+test::Result test_write_c_variadic(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     CSV_writer * w = CSV_writer_init_to_str();
     if(!w)
@@ -534,15 +534,15 @@ test::Result test_write_mine_c_variadic(const std::string & expected_text, const
 
 void C_test::register_tests(CSV_test_suite & tests) const
 {
-    tests.register_read_test(test_read_mine_c_field);
-    tests.register_read_test(test_read_mine_c_row);
-    tests.register_read_test(test_read_mine_c_ptr);
-    tests.register_read_test(test_read_mine_c_ptr_dyn);
-    tests.register_read_test(test_read_mine_c_variadic);
+    tests.register_read_test(test_read_c_field);
+    tests.register_read_test(test_read_c_row);
+    tests.register_read_test(test_read_c_ptr);
+    tests.register_read_test(test_read_c_ptr_dyn);
+    tests.register_read_test(test_read_c_variadic);
 
-    tests.register_write_test(test_write_mine_c_field);
-    tests.register_write_test(test_write_mine_c_fields);
-    tests.register_write_test(test_write_mine_c_row);
-    tests.register_write_test(test_write_mine_c_ptr);
-    tests.register_write_test(test_write_mine_c_variadic);
+    tests.register_write_test(test_write_c_field);
+    tests.register_write_test(test_write_c_fields);
+    tests.register_write_test(test_write_c_row);
+    tests.register_write_test(test_write_c_ptr);
+    tests.register_write_test(test_write_c_variadic);
 }
