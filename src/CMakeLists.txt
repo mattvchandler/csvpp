@@ -6,7 +6,7 @@ if(CSVPP_ENABLE_CPP)
                                      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/../include>
                                      $<INSTALL_INTERFACE:include>
                                      )
-    set_target_properties(csvpp PROPERTIES PUBLIC_HEADER ../include/csvpp/csv.hpp)
+    set_target_properties(csvpp PROPERTIES PUBLIC_HEADER "../include/csvpp/csv.hpp;../include/csvpp/version.h")
     install(TARGETS csvpp
             EXPORT csvTargets
             PUBLIC_HEADER DESTINATION include/csvpp
@@ -23,7 +23,7 @@ if(CSVPP_ENABLE_C)
                                    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/../include>
                                    $<INSTALL_INTERFACE:include>
                                    )
-    set_target_properties(csv PROPERTIES PUBLIC_HEADER ../include/csvpp/csv.h)
+    set_target_properties(csv PROPERTIES PUBLIC_HEADER "../include/csvpp/csv.h;../include/csvpp/version.h")
     install(TARGETS csv
             EXPORT csvTargets
             LIBRARY DESTINATION lib/csvpp
@@ -43,7 +43,7 @@ if(CSVPP_ENABLE_EMBEDDED)
                                       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/../include>
                                       $<INSTALL_INTERFACE:include>
                                       )
-    set_target_properties(embcsv PROPERTIES PUBLIC_HEADER ../include/csvpp/embcsv.h)
+    set_target_properties(embcsv PROPERTIES PUBLIC_HEADER "../include/csvpp/embcsv.h;../include/csvpp/version.h")
     install(TARGETS embcsv
             EXPORT csvTargets
             LIBRARY DESTINATION lib/csvpp
