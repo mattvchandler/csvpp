@@ -1,6 +1,0 @@
-<map id="csv::Reader::Row::Iterator&lt; T &gt;" name="csv::Reader::Row::Iterator&lt; T &gt;">
-<area shape="rect" id="node1" title="Iterates over the fields within a Row." alt="" coords="5,288,233,315"/>
-<area shape="rect" id="node2" href="$classcsv_1_1Reader_1_1Row.html" title="Represents a single row of CSV data." alt="" coords="52,199,187,225"/>
-<area shape="rect" id="node3" href="$classcsv_1_1Reader.html" title="Parses CSV data." alt="" coords="70,109,169,136"/>
-<area shape="rect" id="node4" href="$structcsv_1_1Reader_1_1input__string__t.html" title="Disambiguation tag type." alt="" coords="50,5,189,47"/>
-</map>
