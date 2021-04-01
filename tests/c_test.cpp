@@ -374,6 +374,50 @@ test::Result test_write_mine_c_field(const std::string & expected_text, const CS
     return CSV_test_suite::common_write_return(data, expected_text, output);
 }
 
+test::Result test_write_mine_c_fields(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+{
+    CSV_writer * w = CSV_writer_init_to_str();
+    if(!w)
+        throw std::runtime_error{"Could not init CSV_writer"};
+
+    CSV_writer_set_delimiter(w, delimiter);
+    CSV_writer_set_quote(w, quote);
+
+    for(const auto & row: data)
+    {
+        auto rec = CSV_row_init();
+        if(!rec)
+        {
+            CSV_writer_free(w);
+            throw std::runtime_error{"Could not init CSV_row"};
+        }
+        for(auto & i: row)
+        {
+            auto field = CSV_strdup(i.c_str());
+            CSV_row_append(rec, field);
+        }
+
+        if(CSV_writer_write_fields(w, rec) != CSV_OK)
+        {
+            CSV_writer_free(w);
+            CSV_row_free(rec);
+            throw std::runtime_error{"error writing CSV"};
+        }
+
+        if(CSV_writer_end_row(w) != CSV_OK)
+        {
+            CSV_writer_free(w);
+            throw std::runtime_error{"error writing CSV"};
+        }
+
+        CSV_row_free(rec);
+    }
+    auto output = std::string{ CSV_writer_get_str(w) };
+    CSV_writer_free(w);
+
+    return CSV_test_suite::common_write_return(data, expected_text, output);
+}
+
 test::Result test_write_mine_c_row(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     CSV_writer * w = CSV_writer_init_to_str();
@@ -497,6 +541,7 @@ void C_test::register_tests(CSV_test_suite & tests) const
     tests.register_read_test(test_read_mine_c_variadic);
 
     tests.register_write_test(test_write_mine_c_field);
+    tests.register_write_test(test_write_mine_c_fields);
     tests.register_write_test(test_write_mine_c_row);
     tests.register_write_test(test_write_mine_c_ptr);
     tests.register_write_test(test_write_mine_c_variadic);

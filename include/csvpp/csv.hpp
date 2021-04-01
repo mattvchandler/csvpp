@@ -1447,6 +1447,67 @@ namespace csv
             start_of_row_ = true;
         }
 
+        /// Write fields from iterators, without ending the row
+        /// @param first Iterator to start of data to write. Dereferenced type
+        /// must be convertible to std::string either directly, by \c to_string,
+        /// or by `ostream::operator<<`
+        /// @param last Iterator to end of data to write
+        /// @throws IO_error if there is an error writing
+        template<typename Iter>
+        void write_fields(Iter first, Iter last)
+        {
+            for(; first != last; ++first)
+                write_field(*first);
+        }
+
+        /// Write fields from an initializer_list, without ending the row
+        /// @tparam T Type of data. Must be convertible to std::string either
+        /// directly, by \c to_string, or by `ostream::operator<<`
+        /// @param data list of fields to write
+        /// @throws IO_error if there is an error writing
+        template<typename T>
+        void write_fields(const std::initializer_list<T> & data)
+        {
+            write_fields(std::begin(data), std::end(data));
+        }
+
+        /// Write fileds from a range, without ending the row
+
+        /// A range in this context must support std::begin and std::end as at
+        /// least input iterators. Most STL containers, such as std::vector will
+        /// work. The ranges type must be convertible to std::string either
+        /// directly, by \c to_string, or by `ostream::operator<<`
+        /// @param data %Range of fields to write
+        /// @throws IO_error if there is an error writing
+        template<typename Range>
+        void write_fields(const Range & data)
+        {
+            write_fields(std::begin(data), std::end(data));
+        }
+
+        /// Write fileds from the given variadic parameters, without ending the row
+
+        /// @param data Fields to write. Each must be convertible to std::string
+        /// either directly, by \c to_string, or by `ostream::operator<<`
+        /// @throws IO_error if there is an error writing
+        template<typename ...Data>
+        void write_fields_v(const Data & ...data)
+        {
+            (void)(*this << ... << data);
+        }
+
+        /// Write fileds from a tuple, without ending the row
+
+        /// @param data tuple of fields to write. Each element must be convertible to
+        /// std::string either directly, by \c to_string, or by
+        /// `ostream::operator<<`
+        /// @throws IO_error if there is an error writing
+        template<typename ...Args>
+        void write_fields(const std::tuple<Args...> & data)
+        {
+            std::apply(&Writer::write_fields_v<Args...>, std::tuple_cat(std::tuple(std::ref(*this)), data));
+        }
+
         /// Write a row from iterators
         /// @param first Iterator to start of data to write. Dereferenced type
         /// must be convertible to std::string either directly, by \c to_string,
@@ -1456,11 +1517,7 @@ namespace csv
         template<typename Iter>
         void write_row(Iter first, Iter last)
         {
-            if(!start_of_row_)
-                end_row();
-
-            for(; first != last; ++first)
-                write_field(*first);
+            write_fields(first, last);
 
             end_row();
         }
@@ -1499,6 +1556,7 @@ namespace csv
         void write_row_v(const Data & ...data)
         {
             (void)(*this << ... << data);
+
             end_row();
         }
 

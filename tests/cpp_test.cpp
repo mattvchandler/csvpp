@@ -765,6 +765,20 @@ test::Result test_write_mine_cpp_stream(const std::string & expected_text, const
     return CSV_test_suite::common_write_return(data, expected_text, str.str());
 }
 
+test::Result test_write_mine_cpp_fields(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
+{
+    std::ostringstream str;
+    { // scoped so dtor is called before checking result
+        csv::Writer w(str, delimiter, quote);
+        for(const auto & row: data)
+        {
+            w.write_fields(row);
+            w<<csv::end_row;
+        }
+    }
+    return CSV_test_suite::common_write_return(data, expected_text, str.str());
+}
+
 test::Result test_write_mine_cpp_row(const std::string & expected_text, const CSV_data & data, const char delimiter, const char quote)
 {
     std::ostringstream str;
@@ -959,6 +973,7 @@ void Cpp_test::register_tests(CSV_test_suite & tests) const
     tests.register_read_test(test_read_mine_cpp_row_tuple);
 
     tests.register_write_test(test_write_mine_cpp_stream);
+    tests.register_write_test(test_write_mine_cpp_fields);
     tests.register_write_test(test_write_mine_cpp_row);
     tests.register_write_test(test_write_mine_cpp_iter);
     tests.register_write_test(test_write_mine_cpp_stream_as_int);

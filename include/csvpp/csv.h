@@ -318,6 +318,29 @@ CSV_status CSV_writer_end_row(CSV_writer * writer);
 /// @ingroup c_writer
 CSV_status CSV_writer_write_field(CSV_writer * writer, const char * field);
 
+/// Write a CSV_row without ending the current row
+
+/// @param fields CSV_row to write
+/// @ingroup c_writer
+CSV_status CSV_writer_write_fields(CSV_writer * writer, const CSV_row * fields);
+
+/// Write an array of strings without ending the current row
+
+/// @param fields Array of strings to write
+/// @param num_fields Size of \c fields array
+/// @returns #CSV_OK if successful
+/// @returns #CSV_IO_ERROR if an error occurs while writing
+/// @ingroup c_writer
+CSV_status CSV_writer_write_fields_ptr(CSV_writer * writer, const char *const * fields, const size_t num_fields);
+
+/// Write from the given variadic parameters without ending the current row
+
+/// @param ... `const char *` fields to write. Last parameter must be NULL
+/// @returns #CSV_OK if successful
+/// @returns #CSV_IO_ERROR if an error occurs while writing
+/// @ingroup c_writer
+CSV_status CSV_writer_write_fields_v(CSV_writer * writer, ...);
+
 /// Write a CSV_row
 
 /// @param fields CSV_row to write

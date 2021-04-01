@@ -958,7 +958,7 @@ CSV_status CSV_writer_write_field(CSV_writer * writer, const char * field)
     return CSV_OK;
 }
 
-CSV_status CSV_writer_write_row(CSV_writer * writer, const CSV_row * fields)
+CSV_status CSV_writer_write_fields(CSV_writer * writer, const CSV_row * fields)
 {
     if(!writer)
         return CSV_INTERNAL_ERROR;
@@ -970,10 +970,10 @@ CSV_status CSV_writer_write_row(CSV_writer * writer, const CSV_row * fields)
             return stat;
     }
 
-    return CSV_writer_end_row(writer);
+    return CSV_OK;
 }
 
-CSV_status CSV_writer_write_row_ptr(CSV_writer * writer, char const * const * fields, const size_t num_fields)
+CSV_status CSV_writer_write_fields_ptr(CSV_writer * writer, char const * const * fields, const size_t num_fields)
 {
     if(!writer)
         return CSV_INTERNAL_ERROR;
@@ -984,6 +984,53 @@ CSV_status CSV_writer_write_row_ptr(CSV_writer * writer, char const * const * fi
         if(stat != CSV_OK)
             return stat;
     }
+
+    return CSV_OK;
+}
+
+CSV_status CSV_writer_write_fields_v(CSV_writer * writer, ...)
+{
+    if(!writer)
+        return CSV_INTERNAL_ERROR;
+
+    va_list args;
+    va_start(args, writer);
+
+    const char * arg = NULL;
+    while((arg = va_arg(args, const char *)))
+    {
+        CSV_status stat = CSV_writer_write_field(writer, arg);
+        if(stat != CSV_OK)
+        {
+            va_end(args);
+            return stat;
+        }
+    }
+    va_end(args);
+
+    return CSV_OK;
+}
+
+CSV_status CSV_writer_write_row(CSV_writer * writer, const CSV_row * fields)
+{
+    if(!writer)
+        return CSV_INTERNAL_ERROR;
+
+    CSV_status result = CSV_writer_write_fields(writer, fields);
+    if(result != CSV_OK)
+        return result;
+
+    return CSV_writer_end_row(writer);
+}
+
+CSV_status CSV_writer_write_row_ptr(CSV_writer * writer, char const * const * fields, const size_t num_fields)
+{
+    if(!writer)
+        return CSV_INTERNAL_ERROR;
+
+    CSV_status result = CSV_writer_write_fields_ptr(writer, fields, num_fields);
+    if(result != CSV_OK)
+        return result;
 
     return CSV_writer_end_row(writer);
 }
@@ -1006,11 +1053,9 @@ CSV_status CSV_writer_write_row_v(CSV_writer * writer, ...)
             return stat;
         }
     }
-
-    CSV_writer_end_row(writer);
-
     va_end(args);
-    return CSV_OK;
+
+    return CSV_writer_end_row(writer);
 }
 
 const char * CSV_writer_get_str(CSV_writer * writer)
