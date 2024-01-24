@@ -207,6 +207,26 @@ const char * CSV_row_get(const CSV_row * rec, size_t i)
     return rec->fields_[i];
 }
 
+CSV_status CSV_row_read_v(CSV_row * rec, ...)
+{
+    if(!rec)
+        return CSV_INTERNAL_ERROR;
+
+    va_list args;
+    va_start(args, rec);
+
+    size_t i = 0;
+    for(const char ** arg = NULL; (arg = va_arg(args, const char **)); ++i)
+    {
+        if(i < CSV_row_size(rec))
+            *arg = CSV_row_get(rec, i);
+        else
+            *arg = NULL;
+    }
+    va_end(args);
+    return i <= CSV_row_size(rec) ? CSV_OK : CSV_TOO_MANY_FIELDS_WARNING;
+}
+
 const char * const * CSV_row_arr(const CSV_row * rec)
 {
     return (const char * const *)rec->fields_;
@@ -625,10 +645,9 @@ CSV_status CSV_reader_read_v(CSV_reader * reader, ...)
     va_list args;
     va_start(args, reader);
 
-    char ** arg = NULL;
-    while((arg = va_arg(args, char **)))
+    const char ** arg = NULL;
+    while((arg = va_arg(args, const char **)))
     {
-        *arg = NULL;
         *arg = CSV_reader_read_field(reader);
     }
 

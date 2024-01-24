@@ -98,6 +98,18 @@ size_t CSV_row_size(const CSV_row * rec);
 /// @ingroup c_row
 const char * CSV_row_get(const CSV_row * rec, size_t i);
 
+/// Reads fields into variadic arguments
+
+/// @param[out] ... \c char** variables to read into(read only). Last argument must be NULL
+/// If more parameters are passed than there are fields in the row,
+/// the remaining parameters will be set to NULL. Fewer parameters than
+/// contained in the row may be passed, resulting in only the first fields being copied
+/// The char *'s written out are owned by the CSV_row object, and shouldn't be freed
+/// @ingroup c_row
+/// @returns #CSV_OK on successful read
+/// @returns #CSV_TOO_MANY_FIELDS_WARNING when there are more parameters than fields
+CSV_status CSV_row_read_v(CSV_row * rec, ...);
+
 /// CSV_row array access
 
 /// @returns `char *` array within CSV_row (read only). May be useful for

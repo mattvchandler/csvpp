@@ -105,6 +105,100 @@ test::Result test_read_c_row(const std::string & csv_text, const CSV_data & expe
     return CSV_test_suite::common_read_return(csv_text, expected_data, data);
 }
 
+test::Result test_read_c_row_variadic(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
+{
+    CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
+    if(!r)
+        throw std::runtime_error("could not init CSV_reader");
+
+    CSV_reader_set_delimiter(r, delimiter);
+    CSV_reader_set_quote(r, quote);
+    CSV_reader_set_lenient(r, lenient);
+
+    CSV_data data;
+
+    while(true)
+    {
+        auto rec = CSV_reader_read_row(r);
+        if(rec)
+        {
+            std::vector<const char *> row(CSV_row_size(rec), nullptr);
+
+            CSV_status status = CSV_OK;
+            switch(CSV_row_size(rec))
+            {
+            case 0:
+                status = CSV_row_read_v(rec, NULL);
+                break;
+            case 1:
+                status = CSV_row_read_v(rec, &row[0], NULL);
+                break;
+            case 2:
+                status = CSV_row_read_v(rec, &row[0], &row[1], NULL);
+                break;
+            case 3:
+                status = CSV_row_read_v(rec, &row[0], &row[1], &row[2], NULL);
+                break;
+            case 4:
+                status = CSV_row_read_v(rec, &row[0], &row[1], &row[2], &row[3], NULL);
+                break;
+            case 5:
+                status = CSV_row_read_v(rec, &row[0], &row[1], &row[2], &row[3], &row[4], NULL);
+                break;
+            default:
+                CSV_row_free(rec);
+                CSV_reader_free(r);
+                return test::skip();
+            }
+
+            if(status != CSV_OK)
+            {
+                CSV_row_free(rec);
+                CSV_reader_free(r);
+
+                switch(status)
+                {
+                case CSV_TOO_MANY_FIELDS_WARNING:
+                    return test::skip();
+                default:
+                    throw std::runtime_error{"Got an error after checking for errors somehow"};
+                }
+            }
+
+            data.emplace_back(std::begin(row), std::end(row));
+            CSV_row_free(rec);
+
+        }
+
+        else if(CSV_reader_eof(r))
+            break;
+
+        else
+        {
+            auto msg = CSV_reader_get_error_msg(r);
+            switch(CSV_reader_get_error(r))
+            {
+            case CSV_PARSE_ERROR:
+                // std::cout<<msg<<'\n';
+                CSV_reader_free(r);
+                return test::error();
+
+            case CSV_IO_ERROR:
+                CSV_reader_free(r);
+                throw std::runtime_error{msg};
+
+            default:
+                CSV_reader_free(r);
+                throw std::runtime_error{std::string{"bad error for CSV_reader: "} + msg};
+            }
+        }
+    }
+
+    CSV_reader_free(r);
+
+    return CSV_test_suite::common_read_return(csv_text, expected_data, data);
+}
+
 test::Result test_read_c_ptr(const std::string & csv_text, const CSV_data & expected_data, const char delimiter, const char quote, const bool lenient)
 {
     CSV_reader * r = CSV_reader_init_from_str(csv_text.c_str());
@@ -536,6 +630,7 @@ void C_test::register_tests(CSV_test_suite & tests) const
 {
     tests.register_read_test(test_read_c_field);
     tests.register_read_test(test_read_c_row);
+    tests.register_read_test(test_read_c_row_variadic);
     tests.register_read_test(test_read_c_ptr);
     tests.register_read_test(test_read_c_ptr_dyn);
     tests.register_read_test(test_read_c_variadic);
