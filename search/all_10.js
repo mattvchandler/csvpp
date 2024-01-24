@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['_7ewriter_136',['~Writer',['../classcsv_1_1Writer.html#a1e4a398a1552724a5b84a054caa72709',1,'csv::Writer']]]
+  ['testing_0',['Testing',['../index.html#autotoc_md11',1,'']]],
+  ['type_1',['type',['../classcsv_1_1Parse__error.html#a5253deecae348e357512c980e04ea37b',1,'csv::Parse_error']]],
+  ['type_5fconversion_5ferror_2',['Type_conversion_error',['../structcsv_1_1Type__conversion__error.html',1,'csv::Type_conversion_error'],['../structcsv_1_1Type__conversion__error.html#aeece77008a476f39e5b4817788672362',1,'csv::Type_conversion_error::Type_conversion_error()']]]
 ];

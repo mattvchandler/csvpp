@@ -1,10 +1,9 @@
 var searchData=
 [
-  ['what_129',['what',['../classcsv_1_1Error.html#acd5262955e6462055d0ec86da54b0b4b',1,'csv::Error']]],
-  ['write_5ffield_130',['write_field',['../classcsv_1_1Writer.html#ac7bc3c1b9058f5c7be391a7878f98970',1,'csv::Writer']]],
-  ['write_5ffields_131',['write_fields',['../classcsv_1_1Writer.html#a341a0e0f622efd76eda5b026058afd41',1,'csv::Writer::write_fields(Iter first, Iter last)'],['../classcsv_1_1Writer.html#aa93cfa6222e02c6f356de4537e8a3604',1,'csv::Writer::write_fields(const std::initializer_list&lt; T &gt; &amp;data)'],['../classcsv_1_1Writer.html#ae016ece34c30b0ebd9c987a21a9f4d94',1,'csv::Writer::write_fields(const Range &amp;data)'],['../classcsv_1_1Writer.html#a05c1bd44aa5a47950e8dc3a9117dd496',1,'csv::Writer::write_fields(const std::tuple&lt; Args... &gt; &amp;data)']]],
-  ['write_5ffields_5fv_132',['write_fields_v',['../classcsv_1_1Writer.html#a87a6a9d71df2539b515b59d6dd0e6868',1,'csv::Writer']]],
-  ['write_5frow_133',['write_row',['../classcsv_1_1Writer.html#a0d7134cbf42ddbc9b891f2e3cb82616a',1,'csv::Writer::write_row(Iter first, Iter last)'],['../classcsv_1_1Writer.html#acd2834f7d36699799def55c458d18761',1,'csv::Writer::write_row(const std::initializer_list&lt; T &gt; &amp;data)'],['../classcsv_1_1Writer.html#a3c097b295461ace768f61727814c3c8e',1,'csv::Writer::write_row(const Range &amp;data)'],['../classcsv_1_1Writer.html#a57076d86f4e89bf0a9728156716d9790',1,'csv::Writer::write_row(const std::tuple&lt; Args... &gt; &amp;data)']]],
-  ['write_5frow_5fv_134',['write_row_v',['../classcsv_1_1Writer.html#aa928cbc6a8f62a3481e9e929ae2caef8',1,'csv::Writer']]],
-  ['writer_135',['Writer',['../classcsv_1_1Writer.html',1,'csv::Writer'],['../classcsv_1_1Writer.html#ab25fc6b9ef205cc3db0959120953c3d3',1,'csv::Writer::Writer(std::ostream &amp;output_stream, const char delimiter=&apos;,&apos;, const char quote=&apos;&quot;&apos;)'],['../classcsv_1_1Writer.html#a0b1598ce850ae70ca2288ce0b38cb5de',1,'csv::Writer::Writer(const std::string &amp;filename, const char delimiter=&apos;,&apos;, const char quote=&apos;&quot;&apos;)']]]
+  ['set_5fdelimiter_0',['set_delimiter',['../classcsv_1_1Reader.html#afcded84f1da3796379f7e03f34d04f09',1,'csv::Reader::set_delimiter()'],['../classcsv_1_1Writer.html#a94ccdc58780ecf55267676390eb27af5',1,'csv::Writer::set_delimiter()']]],
+  ['set_5flenient_1',['set_lenient',['../classcsv_1_1Reader.html#ac1bff874b30739c86d8939d61393e69e',1,'csv::Reader']]],
+  ['set_5fquote_2',['set_quote',['../classcsv_1_1Reader.html#ae113d6f5832fa970bc47cf33362c11fd',1,'csv::Reader::set_quote()'],['../classcsv_1_1Writer.html#a97a0ceabe3bc5c484eb59e9bf0803b18',1,'csv::Writer::set_quote()']]],
+  ['state_3',['state',['../structEMBCSV__reader.html#aca8866bee0ac2b29d316d82b1abf3a94',1,'EMBCSV_reader']]],
+  ['str_4',['str',['../group__cpp.html#ga7e016029607561f06defdbfcec9501fa',1,'csv']]],
+  ['stripped_20down_20csv_20reader_20ideal_20for_20embedded_20environments_5',['embcsv.h - A stripped-down CSV reader ideal for embedded environments',['../index.html#autotoc_md8',1,'']]]
 ];

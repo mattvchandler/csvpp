@@ -1,5 +1,7 @@
 var searchData=
 [
-  ['get_5fheaders_83',['get_headers',['../classcsv_1_1Map__reader__iter.html#a77d536e98fcd807e560be59adeb32f54',1,'csv::Map_reader_iter']]],
-  ['get_5frow_84',['get_row',['../classcsv_1_1Reader.html#a31ea8bb94eb3932f60ebffd13a92ff23',1,'csv::Reader']]]
+  ['field_0',['field',['../structEMBCSV__reader.html#a4b2c2389ac62cf1a2df34238b271d9f8',1,'EMBCSV_reader::field'],['../structcsv_1_1Type__conversion__error.html#a9e0a4502a92970bf680ecccd489acb02',1,'csv::Type_conversion_error::field()']]],
+  ['field_5falloc_1',['field_alloc',['../structEMBCSV__reader.html#a35620f497370dab32e80c510bcd0f347',1,'EMBCSV_reader']]],
+  ['field_5fsize_2',['field_size',['../structEMBCSV__reader.html#a143f5f329c4f912826cefe23b1ea3992',1,'EMBCSV_reader']]],
+  ['for_20embedded_20environments_3',['embcsv.h - A stripped-down CSV reader ideal for embedded environments',['../index.html#autotoc_md8',1,'']]]
 ];
